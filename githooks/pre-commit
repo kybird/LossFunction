@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# llm-wiki-template-version: 1 — 이 줄이 살아있으면 `llm-wiki init`이 정본(templates/)으로 갱신하고,
+# 지워져 있으면 사용자 수정본으로 보고 건너뛴다 (plan.md 6.1).
+# Drift 가드: CLAUDE.md(정본)와 복사본(agents.md, GEMINI.md ...)이 항상 같은지 확인.
+#  - CLAUDE.md가 스테이징된 채 바뀌었다면 → 모든 복사본으로 자동 동기화 + 재스테이징.
+#  - 복사본만 직접 편집했다면 → 커밋 거부 (정본 CLAUDE.md를 고치고 동기화할 것).
+set -uo pipefail
+
+canon="CLAUDE.md"
+mirrors=("agents.md" "GEMINI.md")
+
+staged_canon=$(git diff --cached --name-only -- "$canon" | wc -l)
+
+# 정본 또는 어떤 복사본이라도 스테이징됐는지 조사.
+any_staged=0
+for m in "${mirrors[@]}"; do
+  c=$(git diff --cached --name-only -- "$m" | wc -l)
+  [ "$c" -gt 0 ] && any_staged=1
+done
+
+# 각 복사본에 대해 drift 검사 (정본/복사본 둘 다 미스테이징이면 건너뜀).
+if [ "$staged_canon" -gt 0 ] || [ "$any_staged" -gt 0 ]; then
+  for m in "${mirrors[@]}"; do
+    if ! cmp -s "$canon" "$m"; then
+      if [ "$staged_canon" -gt 0 ]; then
+        # 정본이 바뀜 → 이 복사본으로 동기화.
+        cp -f "$canon" "$m"
+        git add "$m"
+        echo "[pre-commit] $canon(정본) 변경 감지 → $m 동기화 및 재스테이징." >&2
+      else
+        # 복사본만 직접 편집됨 → 거부.
+        echo "[pre-commit] $m 를 직접 편집함. 정본은 $canon 입니다." >&2
+        echo "[pre-commit] 변경사항을 $canon 에 적용 후 'scripts/sync_agent_docs.sh' 를 실행하거나," >&2
+        echo "[pre-commit] 이 커밋에서 $m 변경분을 빼세요 (git restore --staged $m)." >&2
+        exit 1
+      fi
+    fi
+  done
+fi
+
+# ── 미컴파일 raw 로그 넛지 ────────────────────────────────────
+# doc/raw/*.md가 커밋에 포함되면 compile list로 미컴파일 로그를 보여준다.
+# 경고만 하고 커밋은 막지 않는다. 무거운 QMD embed은 훅에서 돌리지 않는다 —
+# index 갱신(compile index)은 사람/세션이 직접 호출하는 것을 남긴다.
+if git diff --cached --name-only -- 'doc/raw/*.md' | grep -q .; then
+  if command -v llm-wiki >/dev/null 2>&1; then
+    echo "[pre-commit] doc/raw/ 로그가 커밋에 포함됨 — 미컴파일 항목 점검:" >&2
+    llm-wiki compile list >&2 || echo "[pre-commit] llm-wiki compile list 실행 실패 (무시하고 계속)." >&2
+  fi
+fi
+
+# ── 스킬 동기화 가드 ──────────────────────────────────────────
+# .agents/skills/(정본) ↔ .claude/skills/(복사본) 디렉토리 미러.
+skill_canon=".agents/skills"
+skill_mirror=".claude/skills"
+
+staged_skill_canon=$(git diff --cached --name-only -- "$skill_canon/" | wc -l)
+staged_skill_mirror=$(git diff --cached --name-only -- "$skill_mirror/" | wc -l)
+
+if [ "$staged_skill_canon" -gt 0 ] || [ "$staged_skill_mirror" -gt 0 ]; then
+  if ! diff -rq "$skill_canon" "$skill_mirror" >/dev/null 2>&1; then
+    if [ "$staged_skill_canon" -gt 0 ]; then
+      # 정본이 바뀜 → 복사본으로 미러 동기화.
+      bash "$(git rev-parse --show-toplevel)/scripts/sync_skills.sh" >&2
+      git add "$skill_mirror/"
+      echo "[pre-commit] $skill_canon/(정본) 변경 감지 → $skill_mirror/ 동기화 및 재스테이징." >&2
+    else
+      # 복사본만 직접 편집됨 → 거부.
+      echo "[pre-commit] $skill_mirror/ 를 직접 편집함. 정본은 $skill_canon/ 입니다." >&2
+      echo "[pre-commit] 변경사항을 $skill_canon/ 에 적용 후 'scripts/sync_skills.sh' 를 실행하거나," >&2
+      echo "[pre-commit] 이 커밋에서 $skill_mirror/ 변경분을 빼세요 (git restore --staged $skill_mirror/)." >&2
+      exit 1
+    fi
+  fi
+fi
+
+exit 0

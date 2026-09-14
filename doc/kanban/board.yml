@@ -1,0 +1,5 @@
+# 칸반 보드 설정 — 이 파일이 정본. board 뷰는 유도물이다.
+statuses: [todo, doing, review]   # cards/ 안의 활성 상태. 종결은 폴더(done/superseded/abandoned)가 말한다
+wip_limits:
+  doing: 2                        # 발산 방지 1차 방어 (개선계획 4-3)
+claim_timeout_minutes: 60         # 클레임 만료 — 죽은 세션의 카드를 자동으로 풀어준다
