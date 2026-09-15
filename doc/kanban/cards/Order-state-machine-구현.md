@@ -1,9 +1,11 @@
 ---
 title: Order state machine 구현
-status: todo
+status: doing
 ordinal: 11000
 created: 2026-09-14
 depends_on: ["Portfolio 및 Order 도메인 모델 구현"]
+claimed_by: zcode-main
+claimed_at: 2026-09-14T18:05-07:00
 ---
 
 ## Goal
