@@ -189,13 +189,30 @@ mod tests {
         assert_eq!(assembled, AssembledBroker::Memory);
     }
 
+    fn settings_with(
+        trading_mode: TradingMode,
+        confirmed: bool,
+        environment: KisEnvironment,
+        backend: PaperBackend,
+    ) -> Settings {
+        Settings {
+            trading_mode,
+            live_trading_confirmed: confirmed,
+            kis_environment: environment,
+            paper_backend: backend,
+            kis_account_number: "12345678-01".into(),
+            ..Settings::default()
+        }
+    }
+
     #[test]
     fn live_without_confirmation_refused() {
-        let mut settings = Settings::default();
-        settings.trading_mode = TradingMode::Live;
-        settings.live_trading_confirmed = false;
-        settings.kis_environment = KisEnvironment::Real;
-        settings.paper_backend = PaperBackend::Kis;
+        let settings = settings_with(
+            TradingMode::Live,
+            false,
+            KisEnvironment::Real,
+            PaperBackend::Kis,
+        );
         assert!(matches!(
             assemble_broker(&settings),
             Err(AssemblyError::LiveNotConfirmed)
@@ -204,12 +221,12 @@ mod tests {
 
     #[test]
     fn live_confirmed_assembles_real_kis() {
-        let mut settings = Settings::default();
-        settings.trading_mode = TradingMode::Live;
-        settings.live_trading_confirmed = true;
-        settings.kis_environment = KisEnvironment::Real;
-        settings.paper_backend = PaperBackend::Kis;
-        settings.kis_account_number = "12345678-01".into();
+        let settings = settings_with(
+            TradingMode::Live,
+            true,
+            KisEnvironment::Real,
+            PaperBackend::Kis,
+        );
         let (broker, assembled) = assemble_broker(&settings).unwrap();
         assert!(broker.is_some());
         assert_eq!(
@@ -222,9 +239,12 @@ mod tests {
 
     #[test]
     fn paper_kis_assembles_mock_domain() {
-        let mut settings = Settings::default();
-        settings.paper_backend = PaperBackend::Kis;
-        settings.kis_account_number = "12345678-01".into();
+        let settings = settings_with(
+            TradingMode::Paper,
+            false,
+            KisEnvironment::Mock,
+            PaperBackend::Kis,
+        );
         let (broker, assembled) = assemble_broker(&settings).unwrap();
         assert!(broker.is_some());
         assert_eq!(
