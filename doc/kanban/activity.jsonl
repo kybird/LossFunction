@@ -140,3 +140,5 @@
 {"ts":"2026-09-15T08:26:00.798Z","action":"claimed","title":"Rust 백테스팅 엔진","actor":"zcode-main"}
 {"ts":"2026-09-15T08:29:58.116Z","action":"done","title":"Rust 백테스팅 엔진"}
 {"ts":"2026-09-15T08:31:59.544Z","action":"claimed","title":"Rust KIS 인증 및 REST 클라이언트","actor":"zcode-main"}
+{"ts":"2026-09-15T09:11:51.552Z","action":"done","title":"Rust KIS 인증 및 REST 클라이언트"}
+{"ts":"2026-09-15T09:12:25.716Z","action":"claimed","title":"Rust GLM 클라이언트","actor":"zcode-main"}
