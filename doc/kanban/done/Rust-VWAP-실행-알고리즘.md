@@ -1,11 +1,9 @@
 ---
 title: Rust VWAP 실행 알고리즘
-status: doing
+status: done
 ordinal: 30000
 created: 2026-09-15
 depends_on: ["Rust 주문 게이트웨이 및 reconciler"]
-claimed_by: zcode-main
-claimed_at: 2026-09-15T12:09-07:00
 ---
 
 ## Goal
@@ -15,7 +13,7 @@ claimed_at: 2026-09-15T12:09-07:00
 
 ## Acceptance Criteria
 <!-- kanban:ac:begin -->
-- [ ] #1 주문 분할 스케줄과 진행률 추적이 테스트로 검증된다
+- [x] #1 주문 분할 스케줄과 진행률 추적이 테스트로 검증된다
 <!-- kanban:ac:end -->
 
 ## Plan
@@ -25,3 +23,4 @@ claimed_at: 2026-09-15T12:09-07:00
 ## Handoff
 
 ## Result
+- 2026-09-15T12:10-07:00 — VwapSchedule(균등 분할, 포화 기록, Decimal 진행률, 불가분/무효 거부)+vwap() 정확 가격(손계산 단정). 리스크는 기존 게이트웨이 경로 유지. 검증: cargo test 104 passed, clippy/fmt 클린

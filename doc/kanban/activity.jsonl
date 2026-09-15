@@ -159,3 +159,7 @@
 {"ts":"2026-09-15T19:08:44.392Z","action":"done","title":"Rust 12-1 모멘텀 로테이션 전략"}
 {"ts":"2026-09-15T19:08:44.873Z","action":"done","title":"Rust MACD 교차 전략"}
 {"ts":"2026-09-15T19:09:01.854Z","action":"claimed","title":"Rust VWAP 실행 알고리즘","actor":"zcode-main"}
+{"ts":"2026-09-15T19:10:31.264Z","action":"done","title":"Rust VWAP 실행 알고리즘"}
+{"ts":"2026-09-15T19:11:07.833Z","action":"claimed","title":"Python 참조 구현 패리티 리뷰","actor":"zcode-main"}
+{"ts":"2026-09-15T19:13:00.961Z","action":"created","title":"Rust 런타임 KIS 백엔드 조립"}
+{"ts":"2026-09-15T19:13:01.745Z","action":"done","title":"Python 참조 구현 패리티 리뷰"}
