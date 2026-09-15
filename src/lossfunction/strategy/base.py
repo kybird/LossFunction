@@ -25,6 +25,9 @@ class MarketSnapshot(BaseModel):
     quotes: dict[str, Quote]
     positions: dict[str, PositionState]
     as_of: str  # opaque session label; ordering handled upstream
+    # Advisory model outputs (MLP/GLM). Models never order directly;
+    # strategies consume these through the same deterministic interface.
+    signals: dict[str, Any] = {}
 
 
 class OrderIntent(BaseModel):
