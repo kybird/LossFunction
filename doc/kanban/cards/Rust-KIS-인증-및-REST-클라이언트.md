@@ -1,9 +1,11 @@
 ---
 title: Rust KIS 인증 및 REST 클라이언트
-status: todo
+status: doing
 ordinal: 16000
 created: 2026-09-15
 depends_on: ["Rust Broker 트레이트 및 MockBroker"]
+claimed_by: zcode-main
+claimed_at: 2026-09-15T01:31-07:00
 ---
 
 ## Goal

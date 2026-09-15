@@ -11,6 +11,7 @@ pub mod config;
 pub mod domain;
 pub mod execution;
 pub mod history;
+pub mod kis;
 pub mod risk;
 pub mod runtime;
 pub mod storage;
