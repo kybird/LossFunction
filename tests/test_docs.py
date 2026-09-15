@@ -47,6 +47,17 @@ def test_readme_clone_to_test_commands() -> None:
         assert command in README
 
 
+def test_deploy_scripts_exist() -> None:
+    for name in ("deploy.ps1", "status.ps1", "logs.ps1", "stop.ps1", "start.ps1"):
+        path = ROOT / "scripts" / "deploy" / name
+        assert path.is_file(), f"missing deploy script: {name}"
+        text = path.read_text(encoding="utf-8")
+        # Phoenix rule: Windows OpenSSH binaries, never PATH-resolved ssh.
+        assert "C:\\Windows\\System32\\OpenSSH\\ssh.exe" in text, name
+        # Remote paths stay ~/-relative (MSYS-safe).
+        assert "~/" in text, name
+
+
 def test_example_env_has_no_filled_secrets() -> None:
     example = (ROOT / ".env.example").read_text(encoding="utf-8")
     for line in example.splitlines():

@@ -1,9 +1,11 @@
 ---
 title: PowerShell 배포 스크립트 및 배포 구성
-status: todo
+status: doing
 ordinal: 24000
 created: 2026-09-14
 depends_on: ["저장 계층 SQLite 전환"]
+claimed_by: zcode-main
+claimed_at: 2026-09-14T20:06-07:00
 ---
 
 ## Goal

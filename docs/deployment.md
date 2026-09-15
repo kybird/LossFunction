@@ -17,17 +17,28 @@ runtime 서비스, SQLite 데이터 볼륨). 재시작 정책은 `restart: unles
 
 ## 2. 배포
 
+Windows 개발 머신에서 스크립트 한 줄 (피닉스 VPS `vault` 대상, Windows
+OpenSSH 필수 — `scripts/deploy/`):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\deploy\deploy.ps1
+# 완료: 패키징 → 업로드 → 원격 빌드 → 기동 → 헬스 확인까지 자동
+
+powershell -ExecutionPolicy Bypass -File scripts\deploy\status.ps1   # 상태+헬스+데이터
+powershell -ExecutionPolicy Bypass -File scripts\deploy\logs.ps1     # 로그 팔로우
+powershell -ExecutionPolicy Bypass -File scripts\deploy\stop.ps1     # 중지(볼륨 유지)
+powershell -ExecutionPolicy Bypass -File scripts\deploy\start.ps1    # 재기동(빌드 없음)
+```
+
+다른 호스트에 배포할 때는 `-HostName <ssh-alias>` 지정. 수동 배포(임의
+리눅스 머신)는 기존대로:
+
 ```bash
 git clone https://github.com/<owner>/LossFunction.git
 cd LossFunction
-
-# 자격증명은 호스트 env 파일로만 주입 (.env 는 gitignored)
-cp .env.example .env   # KIS_* 등 기입 (paper 모드면 모의 키)
-
 docker compose up -d --build
-docker compose ps       # runtime 이 healthy 상태인지 확인
-curl http://127.0.0.1:8080/healthz
-# {"status": "ok", "trading_mode": "paper", "broker": "MockBroker", ...}
+docker compose ps
+curl http://127.0.0.1:18080/healthz
 ```
 
 ## 3. 모드 전환
@@ -40,10 +51,12 @@ curl http://127.0.0.1:8080/healthz
 
 ## 4. 운영
 
-- 헬스: `GET /healthz`(모드/브로커/업타임). 컨테이너 HEALTHCHECK가 30초마다
+- 헬스: `GET /healthz`(모드/브로커/업타임, 호스트 127.0.0.1:18080 → SSH로 확인).
+  컨테이너 HEALTHCHECK가 30초마다
   검사, 3회 연속 실패 시 unhealthy 표시.
-- 크래시: `restart: unless-stopped`로 자동 재기동. 재기동 후 복구 절차는
-  docs/recovery.md.
+- 크래시: `restart: unless-stopped`로 자동 재기동(실증: 프로세스 SIGKILL 후
+  재기동+헬스 회복 확인). `docker stop`/`docker kill`은 의도적 정지로 취급되어
+  자동 재기동 안 함. 재기동 후 복구 절차는 docs/recovery.md.
 - 로그: `docker compose logs -f runtime`.
 - 업그레이드: `git pull && docker compose up -d --build`.
 - 백업: SQLite 볼륨(`lossfunction-data`) 안의 단일 파일 — 주문/체결/감사

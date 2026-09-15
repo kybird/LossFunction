@@ -66,3 +66,5 @@
 {"ts":"2026-09-15T02:58:40.613Z","action":"created","title":"저장 계층 SQLite 전환"}
 {"ts":"2026-09-15T02:58:40.853Z","action":"created","title":"PowerShell 배포 스크립트 및 배포 구성"}
 {"ts":"2026-09-15T02:58:41.081Z","action":"claimed","title":"저장 계층 SQLite 전환","actor":"zcode-main"}
+{"ts":"2026-09-15T03:06:27.623Z","action":"done","title":"저장 계층 SQLite 전환"}
+{"ts":"2026-09-15T03:06:27.899Z","action":"claimed","title":"PowerShell 배포 스크립트 및 배포 구성","actor":"zcode-main"}

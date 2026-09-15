@@ -82,7 +82,13 @@ python -m lossfunction.runtime.cli        # 헬스 서버(0.0.0.0:8080)
 curl http://127.0.0.1:8080/healthz
 ```
 
-컨테이너 배포(OCI 포함)는 [docs/deployment.md](docs/deployment.md).
+컨테이너 배포(피닉스 VPS 실증 완료):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\deploy\deploy.ps1
+```
+
+상세한 배포/운영 절차는 [docs/deployment.md](docs/deployment.md).
 
 ## 프로젝트 구조
 
