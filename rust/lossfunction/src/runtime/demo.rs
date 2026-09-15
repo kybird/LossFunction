@@ -87,6 +87,7 @@ impl DemoLoop {
             Box::new(strategy) as Box<dyn Strategy>,
             risk,
             "ord",
+            120,
         );
         Self {
             runtime,

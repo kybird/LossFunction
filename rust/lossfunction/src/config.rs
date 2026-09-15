@@ -84,6 +84,8 @@ pub struct Settings {
     pub kis_account_number: String,
     pub database_path: String,
     pub risk: RiskSettings,
+    /// Bounded past-closes window handed to indicator strategies.
+    pub history_window_bars: usize,
 }
 
 impl Default for Settings {
@@ -98,6 +100,7 @@ impl Default for Settings {
             kis_account_number: String::new(),
             database_path: "data/lossfunction.db".to_string(),
             risk: RiskSettings::default(),
+            history_window_bars: 120,
         }
     }
 }

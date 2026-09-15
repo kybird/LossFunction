@@ -18,6 +18,9 @@ pub struct MarketSnapshot {
     pub positions: HashMap<Symbol, PositionState>,
     /// Opaque session label; ordering is handled upstream.
     pub as_of: String,
+    /// Completed past-bar closes per symbol (oldest first) — the only past
+    /// data strategies may see; look-ahead is impossible by construction.
+    pub history: HashMap<Symbol, Vec<Price>>,
 }
 
 /// A desired trade, before risk checks and id assignment.
@@ -190,6 +193,7 @@ mod tests {
             quotes,
             positions: HashMap::new(),
             as_of: "session-1".to_string(),
+            history: HashMap::new(),
         }
     }
 

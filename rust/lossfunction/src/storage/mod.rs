@@ -47,9 +47,8 @@ impl Repository {
     /// pending migrations.
     pub async fn open(path: &str) -> Result<Self, StorageError> {
         if let Some(parent) = std::path::Path::new(path).parent() {
-            std::fs::create_dir_all(parent).map_err(|error| {
-                StorageError::Internal(error.to_string())
-            })?;
+            std::fs::create_dir_all(parent)
+                .map_err(|error| StorageError::Internal(error.to_string()))?;
         }
         let options = SqliteConnectOptions::new()
             .filename(path)

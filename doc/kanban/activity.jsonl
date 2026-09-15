@@ -133,3 +133,4 @@
 {"ts":"2026-09-15T08:08:46.781Z","action":"done","title":"Rust 오케스트레이터 및 데모 루프"}
 {"ts":"2026-09-15T08:11:37.603Z","action":"claimed","title":"Rust axum 서버 (헬스/상태 페이지/제어)","actor":"zcode-main"}
 {"ts":"2026-09-15T08:18:36.002Z","action":"done","title":"Rust axum 서버 (헬스/상태 페이지/제어)"}
+{"ts":"2026-09-15T08:19:10.067Z","action":"claimed","title":"Rust 시세 이력 윈도우 (전략 입력 확장)","actor":"zcode-main"}

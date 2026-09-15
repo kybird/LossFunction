@@ -1,9 +1,11 @@
 ---
 title: Rust 시세 이력 윈도우 (전략 입력 확장)
-status: todo
+status: doing
 ordinal: 24000
 created: 2026-09-15
 depends_on: ["Rust 전략 인터페이스 및 결정 레이어"]
+claimed_by: zcode-main
+claimed_at: 2026-09-15T01:19-07:00
 ---
 
 ## Goal

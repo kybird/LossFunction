@@ -30,6 +30,7 @@ pub struct TradingRuntime {
     risk: Arc<RiskManager>,
     machine: StateMachine,
     gateway: OrderGateway,
+    history: crate::history::HistoryWindow,
     quotes: HashMap<Symbol, Quote>,
     portfolio: Portfolio,
     order_prefix: String,
@@ -44,6 +45,7 @@ impl TradingRuntime {
         strategy: Box<dyn Strategy>,
         risk: Arc<RiskManager>,
         order_prefix: impl Into<String>,
+        history_capacity: usize,
     ) -> Self {
         Self {
             reconciler: Reconciler::new(Arc::clone(&broker)),
@@ -52,6 +54,7 @@ impl TradingRuntime {
             decisions: DecisionLayer::new(strategy),
             risk,
             machine: StateMachine::new(),
+            history: crate::history::HistoryWindow::new(history_capacity),
             quotes: HashMap::new(),
             portfolio: Portfolio::new(),
             order_prefix: order_prefix.into(),
@@ -92,6 +95,7 @@ impl TradingRuntime {
                 .map(|position| (position.symbol.clone(), position.clone()))
                 .collect(),
             as_of: format!("{}-session", self.order_prefix),
+            history: self.history.snapshot(),
         }
     }
 
