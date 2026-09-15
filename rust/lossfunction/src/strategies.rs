@@ -5,7 +5,7 @@
 //! signal is reproducible from stored bars alone. Sells only fire when a
 //! position is actually held.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
 use rust_decimal::Decimal;
 
