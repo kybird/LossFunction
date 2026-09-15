@@ -154,3 +154,4 @@
 {"ts":"2026-09-15T18:57:04.200Z","action":"created","title":"Rust VWAP 실행 알고리즘"}
 {"ts":"2026-09-15T18:57:26.666Z","action":"done","title":"퀀트 자동매매 알고리즘 조사 및 전략 카드 발행"}
 {"ts":"2026-09-15T18:57:27.366Z","action":"done","title":"Rust MLP/GLM 전략 조사"}
+{"ts":"2026-09-15T18:58:14.417Z","action":"claimed","title":"Rust 볼린저 밴드 역추세 전략","actor":"zcode-main"}

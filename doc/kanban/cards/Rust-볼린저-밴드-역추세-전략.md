@@ -1,9 +1,11 @@
 ---
 title: Rust 볼린저 밴드 역추세 전략
-status: todo
+status: doing
 ordinal: 27000
 created: 2026-09-15
 depends_on: ["Rust 시세 이력 윈도우 (전략 입력 확장)"]
+claimed_by: zcode-main
+claimed_at: 2026-09-15T11:58-07:00
 ---
 
 ## Goal
