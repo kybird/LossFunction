@@ -119,7 +119,10 @@ impl DemoLoop {
     /// Advance the synthetic market by one step (public for tests).
     pub async fn tick(&mut self) -> Result<(), crate::storage::StorageError> {
         let now = Utc::now();
-        let symbols: Vec<Symbol> = self.prices.keys().cloned().collect();
+        // Deterministic iteration: HashMap order varies per instance and
+        // would change the rng draw sequence between same-seed loops.
+        let mut symbols: Vec<Symbol> = self.prices.keys().cloned().collect();
+        symbols.sort();
         for symbol in &symbols {
             let drift = self.rng.next_uniform() * 0.008 - 0.004; // ±0.4%
             let price = self.prices.get_mut(symbol).unwrap();
