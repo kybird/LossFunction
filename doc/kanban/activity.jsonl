@@ -111,3 +111,6 @@
 {"ts":"2026-09-15T07:06:25.688Z","action":"superseded","title":"Rust 실행 계층 (상태머신/게이트웨이/reconciliation)","detail":"by Rust 주문 상태머신, Rust 주문 게이트웨이 및 reconciler"}
 {"ts":"2026-09-15T07:06:25.987Z","action":"superseded","title":"Rust KIS 클라이언트 (auth/REST/WS)","detail":"by Rust KIS 인증 및 REST 클라이언트, Rust KIS WebSocket 클라이언트"}
 {"ts":"2026-09-15T07:06:26.291Z","action":"superseded","title":"Rust 런타임 (오케스트레이터/서버/상태 페이지)","detail":"by Rust 오케스트레이터 및 데모 루프, Rust axum 서버 (헬스/상태 페이지/제어)"}
+{"ts":"2026-09-15T07:15:37.619Z","action":"created","title":"Rust 시세 이력 윈도우 (전략 입력 확장)"}
+{"ts":"2026-09-15T07:15:37.909Z","action":"created","title":"Rust 기본 전략 3종 (골든크로스·RSI·돈키안)"}
+{"ts":"2026-09-15T07:15:38.198Z","action":"created","title":"퀀트 자동매매 알고리즘 조사 및 전략 카드 발행"}
