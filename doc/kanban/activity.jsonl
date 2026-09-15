@@ -69,3 +69,5 @@
 {"ts":"2026-09-15T03:06:27.623Z","action":"done","title":"저장 계층 SQLite 전환"}
 {"ts":"2026-09-15T03:06:27.899Z","action":"claimed","title":"PowerShell 배포 스크립트 및 배포 구성","actor":"zcode-main"}
 {"ts":"2026-09-15T03:18:35.091Z","action":"done","title":"PowerShell 배포 스크립트 및 배포 구성"}
+{"ts":"2026-09-15T04:36:13.692Z","action":"created","title":"경량 상태 페이지 (런타임 내장 대시보드)"}
+{"ts":"2026-09-15T04:36:14.024Z","action":"claimed","title":"경량 상태 페이지 (런타임 내장 대시보드)","actor":"zcode-main"}

@@ -212,6 +212,40 @@ class Repository:
             rows = await cursor.fetchall()
         return [OrderRecord(row) for row in rows]
 
+    async def list_recent_orders(self, limit: int = 50) -> list[OrderRecord]:
+        cursor = await self._db.execute(
+            "SELECT * FROM orders ORDER BY created_at DESC, rowid DESC LIMIT ?",
+            (limit,),
+        )
+        rows = await cursor.fetchall()
+        return [OrderRecord(row) for row in rows]
+
+    async def latest_quotes(self) -> dict[str, Decimal]:
+        """Latest stored price per symbol (for mark-to-market display)."""
+        cursor = await self._db.execute(
+            "SELECT symbol, price FROM quotes "
+            "WHERE id IN (SELECT MAX(id) FROM quotes GROUP BY symbol)"
+        )
+        rows = await cursor.fetchall()
+        return {row["symbol"]: int_to_money(row["price"]) for row in rows}
+
+    async def latest_audit(self, limit: int = 20) -> list[dict[str, Any]]:
+        cursor = await self._db.execute(
+            "SELECT * FROM audit_log ORDER BY id DESC LIMIT ?", (limit,)
+        )
+        rows = await cursor.fetchall()
+        events = [
+            {
+                "id": row["id"],
+                "event_type": row["event_type"],
+                "subject": row["subject"],
+                "payload": json.loads(row["payload"]),
+                "occurred_at": _parse_timestamp(row["occurred_at"]),
+            }
+            for row in rows
+        ]
+        return list(reversed(events))
+
     # ── fills ──────────────────────────────────────────────────────
 
     async def record_fill(
@@ -250,6 +284,23 @@ class Repository:
         cursor = await self._db.execute(
             "SELECT * FROM fills WHERE client_order_id = ? ORDER BY executed_at",
             (client_order_id,),
+        )
+        rows = await cursor.fetchall()
+        return [
+            {
+                "id": row["id"],
+                "client_order_id": row["client_order_id"],
+                "quantity": row["quantity"],
+                "price": int_to_money(row["price"]),
+                "executed_at": _parse_timestamp(row["executed_at"]),
+            }
+            for row in rows
+        ]
+
+    async def list_recent_fills(self, limit: int = 50) -> list[dict[str, Any]]:
+        cursor = await self._db.execute(
+            "SELECT * FROM fills ORDER BY executed_at DESC, id DESC LIMIT ?",
+            (limit,),
         )
         rows = await cursor.fetchall()
         return [

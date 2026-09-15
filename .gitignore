@@ -30,3 +30,6 @@ htmlcov/
 .pgdata/
 .pgenv16/
 .pgdata16/
+
+# Local SQLite database (dev default path)
+data/

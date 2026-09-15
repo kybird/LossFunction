@@ -52,6 +52,8 @@ curl http://127.0.0.1:18080/healthz
 ## 4. 운영
 
 - 헬스: `GET /healthz`(모드/브로커/업타임, 호스트 127.0.0.1:18080 → SSH로 확인).
+  **상태 페이지**: `GET /` — SSH 터널 후 브라우저로 접속
+  (`ssh -L 18080:127.0.0.1:18080 vault` → `http://127.0.0.1:18080/`).
   컨테이너 HEALTHCHECK가 30초마다
   검사, 3회 연속 실패 시 unhealthy 표시.
 - 크래시: `restart: unless-stopped`로 자동 재기동(실증: 프로세스 SIGKILL 후

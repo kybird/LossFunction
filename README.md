@@ -25,7 +25,8 @@ OCI에서 24/7 무인 운영.
   스케일링), 버전화된 모델 번들
 - **GLM 분석 통합** — 엄격한 스키마 검증, 장애 시 명시적 폴백(거래 지속)
 - **운영** — Docker/compose 배포, 헬스 체크, 자동 재시작 + 재시작 복구,
-  메트릭/알림(웹훅 옵트인)
+  메트릭/알림(웹훅 옵트인), 경량 상태 페이지(`GET /` — 포지션/주문/체결/
+  감사 이력, 프레임워크 없음)
 
 아키텍처 개요와 모듈 경계는 [docs/architecture.md](docs/architecture.md),
 재시작 복구 절차는 [docs/recovery.md](docs/recovery.md),
@@ -78,8 +79,9 @@ cp .env.example .env
 ## 실행
 
 ```bash
-python -m lossfunction.runtime.cli        # 헬스 서버(0.0.0.0:8080)
-curl http://127.0.0.1:8080/healthz
+python -m lossfunction.runtime.cli        # 헬스(8080) + 상태 페이지
+curl http://127.0.0.1:8080/healthz        # JSON 헬스
+# 브라우저에서 http://127.0.0.1:8080/     # SQLite 기반 상태 페이지
 ```
 
 컨테이너 배포(피닉스 VPS 실증 완료):
