@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     # (KIS 모의투자 domain, requires mock credentials).
     paper_backend: Literal["memory", "kis"] = "memory"
 
+    # Alerting: webhook is opt-in; console logging is always active.
+    alert_webhook_url: str = ""
+    alert_min_interval_seconds: float = 30.0
+
     # KIS credentials — environment only, never committed.
     kis_app_key: SecretStr = SecretStr("")
     kis_app_secret: SecretStr = SecretStr("")
