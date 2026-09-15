@@ -268,6 +268,7 @@ mod tests {
     use super::*;
     use crate::domain::portfolio::PositionState;
     use chrono::Utc;
+    use std::collections::HashMap;
     use std::str::FromStr;
 
     fn symbol() -> Symbol {
