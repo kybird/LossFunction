@@ -60,3 +60,6 @@
 {"ts":"2026-09-15T01:38:02.558Z","action":"claimed","title":"모니터링 및 알림 구현","actor":"zcode-main"}
 {"ts":"2026-09-15T01:40:28.076Z","action":"done","title":"모니터링 및 알림 구현"}
 {"ts":"2026-09-15T01:40:28.392Z","action":"claimed","title":"README 및 공개 문서 작성","actor":"zcode-main"}
+{"ts":"2026-09-15T01:42:09.837Z","action":"created","title":"오픈소스 라이선스 선택"}
+{"ts":"2026-09-15T01:42:10.120Z","action":"handoff","title":"오픈소스 라이선스 선택","detail":"라이선스를 무엇으로 할지 결정해 주세요. 금융 코드 특성상 Apache-2.0(특허 조항 포함)이 일반적이나 MIT이 더 단순합니다. 결정 주시면 LICENSE 파일+pyproject+README를 정리합니다."}
+{"ts":"2026-09-15T01:42:34.907Z","action":"done","title":"README 및 공개 문서 작성"}
