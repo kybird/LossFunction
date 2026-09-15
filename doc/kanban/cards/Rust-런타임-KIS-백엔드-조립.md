@@ -1,9 +1,11 @@
 ---
 title: Rust 런타임 KIS 백엔드 조립
-status: todo
+status: doing
 ordinal: 24000
 created: 2026-09-15
 depends_on: ["Rust KIS 인증 및 REST 클라이언트"]
+claimed_by: zcode-main
+claimed_at: 2026-09-15T12:13-07:00
 ---
 
 ## Goal

@@ -6,6 +6,7 @@
 //! pending orders re-registered at Unknown and reconciled against the
 //! broker, then the portfolio rebuilt from broker-side positions.
 
+pub mod assembly;
 pub mod demo;
 pub mod server;
 pub mod web;
