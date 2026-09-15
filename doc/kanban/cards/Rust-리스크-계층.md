@@ -1,9 +1,11 @@
 ---
 title: Rust 리스크 계층
-status: todo
+status: doing
 ordinal: 5000
 created: 2026-09-14
 depends_on: ["Rust 도메인 모델 (Order/Portfolio)"]
+claimed_by: zcode-main
+claimed_at: 2026-09-15T00:29-07:00
 ---
 
 ## Goal

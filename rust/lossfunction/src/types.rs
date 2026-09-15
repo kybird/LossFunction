@@ -3,6 +3,7 @@
 //! Prices are exact `Decimal` (KRW); quantities are whole shares (Korean
 //! equities do not trade fractionally); symbols are 6-digit domestic tickers.
 
+use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -80,4 +81,12 @@ mod tests {
             "\"limit\""
         );
     }
+}
+
+/// A point-in-time price snapshot for one symbol.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Quote {
+    pub symbol: Symbol,
+    pub last_price: Price,
+    pub timestamp: DateTime<Utc>,
 }

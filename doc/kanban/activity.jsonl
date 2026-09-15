@@ -117,3 +117,5 @@
 {"ts":"2026-09-15T07:19:32.657Z","action":"claimed","title":"Rust 도메인 모델 (Order/Portfolio)","actor":"zcode-main"}
 {"ts":"2026-09-15T07:23:09.084Z","action":"done","title":"Rust 도메인 모델 (Order/Portfolio)"}
 {"ts":"2026-09-15T07:23:09.329Z","action":"claimed","title":"Rust 저장 계층 (SQLite)","actor":"zcode-main"}
+{"ts":"2026-09-15T07:29:13.617Z","action":"done","title":"Rust 저장 계층 (SQLite)"}
+{"ts":"2026-09-15T07:29:13.877Z","action":"claimed","title":"Rust 리스크 계층","actor":"zcode-main"}
