@@ -193,7 +193,7 @@ impl BacktestEngine {
             for intent in decision.intents {
                 let order = self.build_request(&mut order_seq, &intent);
                 let notional = self.preflight(&order, &portfolio, &live_quotes);
-                let Some(notional) = notional else {
+                let Some(_notional) = notional else {
                     continue;
                 };
                 if let Ok(ack) = broker.submit_order(&order).await {
