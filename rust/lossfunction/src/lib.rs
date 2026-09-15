@@ -5,6 +5,7 @@
 //! (UNKNOWN semantics), risk check ordering, and the SQLite conventions
 //! (scaled-integer money, app-supplied UTC timestamps).
 
+pub mod broker;
 pub mod config;
 pub mod domain;
 pub mod risk;

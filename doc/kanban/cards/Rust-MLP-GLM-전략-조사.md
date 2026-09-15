@@ -1,8 +1,10 @@
 ---
 title: Rust MLP/GLM 전략 조사
-status: todo
+status: doing
 ordinal: 10000
 created: 2026-09-14
+claimed_by: zcode-main
+claimed_at: 2026-09-15T00:32-07:00
 ---
 
 ## Goal

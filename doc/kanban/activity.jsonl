@@ -119,3 +119,6 @@
 {"ts":"2026-09-15T07:23:09.329Z","action":"claimed","title":"Rust 저장 계층 (SQLite)","actor":"zcode-main"}
 {"ts":"2026-09-15T07:29:13.617Z","action":"done","title":"Rust 저장 계층 (SQLite)"}
 {"ts":"2026-09-15T07:29:13.877Z","action":"claimed","title":"Rust 리스크 계층","actor":"zcode-main"}
+{"ts":"2026-09-15T07:32:09.257Z","action":"done","title":"Rust 리스크 계층"}
+{"ts":"2026-09-15T07:32:34.616Z","action":"claimed","title":"Rust MLP/GLM 전략 조사","actor":"zcode-main"}
+{"ts":"2026-09-15T07:33:07.548Z","action":"claimed","title":"Rust Broker 트레이트 및 MockBroker","actor":"zcode-main"}
