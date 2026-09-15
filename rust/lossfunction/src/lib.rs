@@ -8,6 +8,7 @@
 pub mod broker;
 pub mod config;
 pub mod domain;
+pub mod execution;
 pub mod risk;
 pub mod storage;
 pub mod types;

@@ -123,3 +123,4 @@
 {"ts":"2026-09-15T07:32:34.616Z","action":"claimed","title":"Rust MLP/GLM 전략 조사","actor":"zcode-main"}
 {"ts":"2026-09-15T07:33:07.548Z","action":"claimed","title":"Rust Broker 트레이트 및 MockBroker","actor":"zcode-main"}
 {"ts":"2026-09-15T07:35:03.680Z","action":"done","title":"Rust Broker 트레이트 및 MockBroker"}
+{"ts":"2026-09-15T07:44:37.362Z","action":"claimed","title":"Rust 주문 상태머신","actor":"zcode-main"}

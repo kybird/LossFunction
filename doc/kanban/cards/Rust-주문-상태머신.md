@@ -1,9 +1,11 @@
 ---
 title: Rust 주문 상태머신
-status: todo
+status: doing
 ordinal: 14000
 created: 2026-09-15
 depends_on: ["Rust 도메인 모델 (Order/Portfolio)"]
+claimed_by: zcode-main
+claimed_at: 2026-09-15T00:44-07:00
 ---
 
 ## Goal
