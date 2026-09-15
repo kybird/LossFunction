@@ -111,7 +111,10 @@ pub enum ConfigError {
     #[error("trading_mode=live requires kis_environment=real")]
     LiveRequiresRealEnvironment,
     #[error("invalid {field}: {message}")]
-    Invalid { field: &'static str, message: String },
+    Invalid {
+        field: &'static str,
+        message: String,
+    },
 }
 
 impl Settings {
@@ -155,10 +158,8 @@ impl Settings {
         }
 
         settings.kis_app_key = Secret(read_optional("KIS_APP_KEY")?.unwrap_or_default());
-        settings.kis_app_secret =
-            Secret(read_optional("KIS_APP_SECRET")?.unwrap_or_default());
-        settings.kis_account_number =
-            read_optional("KIS_ACCOUNT_NUMBER")?.unwrap_or_default();
+        settings.kis_app_secret = Secret(read_optional("KIS_APP_SECRET")?.unwrap_or_default());
+        settings.kis_account_number = read_optional("KIS_ACCOUNT_NUMBER")?.unwrap_or_default();
         if let Some(path) = read_optional("DATABASE_PATH")? {
             settings.database_path = path;
         }
@@ -168,11 +169,14 @@ impl Settings {
             "RISK_MAX_POSITION_QUANTITY",
             settings.risk.max_position_quantity,
         )?;
-        settings.risk.gross_exposure = read_number("RISK_GROSS_EXPOSURE", settings.risk.gross_exposure)?;
+        settings.risk.gross_exposure =
+            read_number("RISK_GROSS_EXPOSURE", settings.risk.gross_exposure)?;
         settings.risk.daily_loss_limit =
             read_number("RISK_DAILY_LOSS_LIMIT", settings.risk.daily_loss_limit)?;
-        settings.risk.stale_quote_seconds =
-            read_number("RISK_STALE_QUOTE_SECONDS", settings.risk.stale_quote_seconds)?;
+        settings.risk.stale_quote_seconds = read_number(
+            "RISK_STALE_QUOTE_SECONDS",
+            settings.risk.stale_quote_seconds,
+        )?;
 
         settings.validate()?;
         Ok(settings)

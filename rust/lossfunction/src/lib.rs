@@ -6,4 +6,5 @@
 //! (scaled-integer money, app-supplied UTC timestamps).
 
 pub mod config;
+pub mod domain;
 pub mod types;

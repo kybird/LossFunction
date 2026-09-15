@@ -114,3 +114,4 @@
 {"ts":"2026-09-15T07:15:37.619Z","action":"created","title":"Rust 시세 이력 윈도우 (전략 입력 확장)"}
 {"ts":"2026-09-15T07:15:37.909Z","action":"created","title":"Rust 기본 전략 3종 (골든크로스·RSI·돈키안)"}
 {"ts":"2026-09-15T07:15:38.198Z","action":"created","title":"퀀트 자동매매 알고리즘 조사 및 전략 카드 발행"}
+{"ts":"2026-09-15T07:19:32.657Z","action":"claimed","title":"Rust 도메인 모델 (Order/Portfolio)","actor":"zcode-main"}

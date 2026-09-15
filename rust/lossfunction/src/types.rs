@@ -28,7 +28,7 @@ pub enum OrderType {
 }
 
 /// A validated 6-digit domestic ticker (e.g. `"005930"`).
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Symbol(String);
 
 #[derive(Debug, thiserror::Error)]
@@ -75,6 +75,9 @@ mod tests {
     #[test]
     fn sides_and_types_serialize_lowercase() {
         assert_eq!(serde_json::to_string(&OrderSide::Buy).unwrap(), "\"buy\"");
-        assert_eq!(serde_json::to_string(&OrderType::Limit).unwrap(), "\"limit\"");
+        assert_eq!(
+            serde_json::to_string(&OrderType::Limit).unwrap(),
+            "\"limit\""
+        );
     }
 }

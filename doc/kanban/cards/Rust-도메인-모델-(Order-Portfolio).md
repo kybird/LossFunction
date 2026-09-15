@@ -1,9 +1,11 @@
 ---
 title: Rust 도메인 모델 (Order/Portfolio)
-status: todo
+status: doing
 ordinal: 2000
 created: 2026-09-14
 depends_on: ["Rust 워크스페이스 부트스트랩"]
+claimed_by: zcode-main
+claimed_at: 2026-09-15T00:19-07:00
 ---
 
 ## Goal
