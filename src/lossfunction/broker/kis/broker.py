@@ -20,18 +20,9 @@ from lossfunction.broker.base import (
     Quote,
 )
 from lossfunction.broker.kis.rest import AuditCallback, KISRestClient
-from lossfunction.domain.types import OrderType
+from lossfunction.domain.types import OrderSide, OrderType
 
 _ORD_DVSN = {OrderType.LIMIT: "00", OrderType.MARKET: "01"}
-
-
-class PendingReconciliationError(NotImplementedError):
-    """Raised by operations that require the reconciliation layer.
-
-    The broker keeps only in-session order context; cross-restart order
-    state and terminal-state lookup (inquire-daily-ccld) belong to the
-    reconciliation layer built on top of this broker.
-    """
 
 
 class KISBroker(Broker):
@@ -78,12 +69,50 @@ class KISBroker(Broker):
         )
 
     async def get_execution_report(self, broker_order_id: str) -> ExecutionReport:
-        msg = (
-            "terminal-state lookup (inquire-daily-ccld) is provided by the "
-            "reconciliation layer; this broker reports only via open-order "
-            "queries once that lands"
+        """Terminal/current execution state via inquire-daily-ccld.
+
+        Field mapping follows the documented response shape; any missing
+        field fails loudly (MALFORMED) instead of guessing. Orders absent
+        from today's response raise LookupError — the reconciliation layer
+        decides what that means.
+        """
+        from datetime import UTC, datetime
+        from decimal import Decimal
+
+        from lossfunction.broker.kis.rest import APIErrorKind, KISAPIError
+
+        row = await self._rest.fetch_order_ccld_row(broker_order_id)
+        try:
+            symbol = str(row["pdno"])
+            order_quantity = int(str(row["ord_qty"]))
+            filled_quantity = int(str(row.get("tot_ccld_qty") or "0"))
+            side = OrderSide.BUY if str(row["sll_buy_dvsn_cd"]) == "02" else OrderSide.SELL
+            cancelled = str(row.get("cncl_yn", "N")) == "Y"
+            ord_dvsn = str(row.get("ord_dvsn_cd", "00"))
+        except (KeyError, ValueError) as exc:
+            msg = f"inquire-daily-ccld row missing/invalid fields: {row!r:.200}"
+            raise KISAPIError(APIErrorKind.MALFORMED, msg) from exc
+
+        average_fill_price = None
+        if filled_quantity > 0:
+            amount_raw = row.get("tot_ccld_amt")
+            if amount_raw in (None, "", "0"):
+                msg = f"ccld row has fills but no tot_ccld_amt: {row!r:.200}"
+                raise KISAPIError(APIErrorKind.MALFORMED, msg)
+            average_fill_price = Decimal(str(amount_raw)) / filled_quantity
+
+        return ExecutionReport(
+            broker_order_id=broker_order_id,
+            client_order_id="",
+            symbol=symbol,
+            side=side,
+            order_type=OrderType.LIMIT if ord_dvsn == "00" else OrderType.MARKET,
+            order_quantity=order_quantity,
+            filled_quantity=filled_quantity,
+            average_fill_price=average_fill_price,
+            open=not cancelled and filled_quantity < order_quantity,
+            timestamp=datetime.now(tz=UTC),
         )
-        raise PendingReconciliationError(msg)
 
     async def get_positions(self) -> list[Position]:
         return await self._rest.fetch_positions()

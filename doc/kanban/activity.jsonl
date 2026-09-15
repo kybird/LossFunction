@@ -40,3 +40,5 @@
 {"ts":"2026-09-15T00:59:26.850Z","action":"claimed","title":"Paper/live 트레이딩 환경 분리 구현","actor":"zcode-main"}
 {"ts":"2026-09-15T01:05:02.991Z","action":"done","title":"Paper/live 트레이딩 환경 분리 구현"}
 {"ts":"2026-09-15T01:05:23.438Z","action":"claimed","title":"Order state machine 구현","actor":"zcode-main"}
+{"ts":"2026-09-15T01:06:47.575Z","action":"done","title":"Order state machine 구현"}
+{"ts":"2026-09-15T01:06:47.860Z","action":"claimed","title":"Order reconciliation 및 duplicate order 방지 구현","actor":"zcode-main"}

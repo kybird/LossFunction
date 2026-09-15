@@ -1,9 +1,11 @@
 ---
 title: Order reconciliation 및 duplicate order 방지 구현
-status: todo
+status: doing
 ordinal: 12000
 created: 2026-09-14
 depends_on: ["Order state machine 구현","KIS REST 클라이언트 구현"]
+claimed_by: zcode-main
+claimed_at: 2026-09-14T18:06-07:00
 ---
 
 ## Goal

@@ -17,7 +17,7 @@ import asyncio
 import time
 import uuid
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
 from decimal import Decimal
 from enum import StrEnum
 from typing import Any
@@ -30,6 +30,7 @@ from lossfunction.domain.types import OrderSide, OrderType
 
 _ORDER_PATH = "/uapi/domestic-stock/v1/trading/order-cash"
 _RVCNCL_PATH = "/uapi/domestic-stock/v1/trading/order-rvsecncl"
+_CCLD_PATH = "/uapi/domestic-stock/v1/trading/inquire-daily-ccld"
 _BALANCE_PATH = "/uapi/domestic-stock/v1/trading/inquire-balance"
 _PRICE_PATH = "/uapi/domestic-stock/v1/quotations/inquire-price"
 
@@ -364,6 +365,62 @@ class KISRestClient:
                 f"inquire-price response missing/invalid stck_prpr: {raw_price!r}",
             ) from None
         return Quote(symbol=symbol, last_price=price, timestamp=self._clock())
+
+    async def fetch_order_ccld_row(self, broker_order_id: str) -> dict[str, Any]:
+        """Fetch today's order/execution row for one order (inquire-daily-ccld).
+
+        Endpoint per official sample: GET
+        /uapi/domestic-stock/v1/trading/inquire-daily-ccld, tr_id TTTC0081R
+        (real) / VTTC0081R (mock), filtered by ODNO. Field names used here
+        (odno, ord_qty, tot_ccld_qty, tot_ccld_amt, cncl_yn, sll_buy_dvsn_cd,
+        pdno, ord_dvsn_cd) follow the documented response; parsing fails
+        loudly on any missing field rather than guessing.
+        """
+        today = datetime.now(tz=timezone(timedelta(hours=9))).strftime("%Y%m%d")
+        params = {
+            "CANO": self._cano,
+            "ACNT_PRDT_CD": self._prdt,
+            "INQR_STRT_DT": today,
+            "INQR_END_DT": today,
+            "SLL_BUY_DVSN_CD": "00",
+            "PDNO": "",
+            "CCLD_DVSN": "00",
+            "INQR_DVSN": "01",
+            "INQR_DVSN_3": "00",
+            "ORD_GNO_BRNO": "",
+            "ODNO": broker_order_id,
+            "INQR_DVSN_1": "",
+            "CTX_AREA_FK100": "",
+            "CTX_AREA_NK100": "",
+            "EXCG_ID_DVSN_CD": "KRX",
+        }
+        tr_id = "VTTC0081R" if self._environment == "mock" else "TTTC0081R"
+        payload = await self._request(
+            "GET",
+            _CCLD_PATH,
+            tr_id,
+            params=params,
+            order_summary={
+                "client_order_id": "",
+                "symbol": "",
+                "side": "",
+                "order_type": "",
+                "quantity": "",
+                "limit_price": "",
+                "trading_mode": self._trading_mode,
+                "action": "reconcile",
+                "broker_order_id": broker_order_id,
+            },
+        )
+        rows = payload.get("output1")
+        if not isinstance(rows, list):
+            msg = "inquire-daily-ccld response missing output1 list"
+            raise KISAPIError(APIErrorKind.MALFORMED, msg)
+        for row in rows:
+            if isinstance(row, dict) and str(row.get("odno", "")) == broker_order_id:
+                return row
+        msg = f"order {broker_order_id} not found in today's ccld response"
+        raise LookupError(msg)
 
     # ── internals ──────────────────────────────────────────────────
 

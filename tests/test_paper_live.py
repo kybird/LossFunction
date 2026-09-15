@@ -8,7 +8,7 @@ import pytest
 
 from lossfunction.broker.base import OrderRequest
 from lossfunction.broker.factory import build_broker
-from lossfunction.broker.kis.broker import KISBroker, PendingReconciliationError
+from lossfunction.broker.kis.broker import KISBroker
 from lossfunction.broker.mock import MockBroker
 from lossfunction.config import Settings, TradingMode
 from lossfunction.domain.types import OrderSide, OrderType
@@ -187,8 +187,42 @@ async def test_cancel_unknown_order_requires_reconciliation() -> None:
         await broker.cancel_order("UNKNOWN-ODNO")
 
 
-async def test_execution_report_awaits_reconciliation_layer() -> None:
-    calls: list[httpx.Request] = []
-    broker = build_broker(_settings(paper_backend="kis"), transport=_kis_handler(calls))
-    with pytest.raises(PendingReconciliationError):
-        await broker.get_execution_report("00001234")
+async def test_execution_report_mapped_from_ccld_response() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/oauth2/tokenP":
+            return httpx.Response(
+                200,
+                json={
+                    "access_token": "token-1",
+                    "access_token_token_expired": "2099-01-01 00:00:00",
+                },
+            )
+        assert request.url.path.endswith("inquire-daily-ccld")
+        assert request.headers["tr_id"] == "VTTC0081R"
+        assert request.url.params["ODNO"] == "00001234"
+        return httpx.Response(
+            200,
+            json={
+                "rt_cd": "0",
+                "output1": [
+                    {
+                        "odno": "00001234",
+                        "pdno": "005930",
+                        "ord_qty": "10",
+                        "tot_ccld_qty": "10",
+                        "tot_ccld_amt": "790000",
+                        "cncl_yn": "N",
+                        "sll_buy_dvsn_cd": "02",
+                        "ord_dvsn_cd": "00",
+                    }
+                ],
+            },
+        )
+
+    broker = build_broker(_settings(paper_backend="kis"), transport=httpx.MockTransport(handler))
+    report = await broker.get_execution_report("00001234")
+    assert report.order_quantity == 10
+    assert report.filled_quantity == 10
+    assert report.average_fill_price == Decimal("79000")
+    assert not report.open
+    assert report.symbol == "005930"
