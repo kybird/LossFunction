@@ -1,9 +1,11 @@
 ---
 title: Rust 백테스팅 엔진
-status: todo
+status: doing
 ordinal: 8000
 created: 2026-09-14
 depends_on: ["Rust 전략 인터페이스 및 결정 레이어","Rust Broker 트레이트 및 MockBroker","Rust 리스크 계층"]
+claimed_by: zcode-main
+claimed_at: 2026-09-15T01:26-07:00
 ---
 
 ## Goal
