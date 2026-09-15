@@ -1,9 +1,11 @@
 ---
 title: Rust 전략 인터페이스 및 결정 레이어
-status: todo
+status: doing
 ordinal: 11000
 created: 2026-09-15
 depends_on: ["Rust 도메인 모델 (Order/Portfolio)"]
+claimed_by: zcode-main
+claimed_at: 2026-09-15T00:46-07:00
 ---
 
 ## Goal
