@@ -342,9 +342,7 @@ impl Strategy for MacdCrossStrategy {
 mod tests {
     use super::*;
     use crate::domain::portfolio::PositionState;
-    use chrono::Utc;
-    use rust_decimal::prelude::{Decimal, ToPrimitive};
-    use std::str::FromStr;
+    use std::collections::HashMap;
 
     fn symbol(code: &str) -> Symbol {
         Symbol::parse(code).unwrap()
