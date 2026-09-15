@@ -94,3 +94,4 @@
 {"ts":"2026-09-15T06:57:36.141Z","action":"created","title":"Rust 배포 (Docker/스크립트)"}
 {"ts":"2026-09-15T06:57:36.381Z","action":"created","title":"Rust MLP/GLM 전략 조사"}
 {"ts":"2026-09-15T06:57:57.197Z","action":"claimed","title":"Rust 워크스페이스 부트스트랩","actor":"zcode-main"}
+{"ts":"2026-09-15T07:00:03.829Z","action":"done","title":"Rust 워크스페이스 부트스트랩"}
