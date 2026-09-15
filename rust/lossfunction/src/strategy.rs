@@ -8,8 +8,6 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Mutex;
 
-use rust_decimal::Decimal;
-
 use crate::domain::portfolio::PositionState;
 use crate::types::{OrderSide, OrderType, Price, Quantity, Quote, Symbol};
 
@@ -50,10 +48,12 @@ pub trait Strategy: Send + Sync {
     fn decide(&self, snapshot: &MarketSnapshot) -> StrategyDecision;
 }
 
+type DecisionCallback = Box<dyn Fn(&StrategyDecision, &MarketSnapshot) + Send + Sync>;
+
 /// Runs a strategy and records every decision for audit/replay.
 pub struct DecisionLayer {
     strategy: Box<dyn Strategy>,
-    on_decision: Option<Box<dyn Fn(&StrategyDecision, &MarketSnapshot) + Send + Sync>>,
+    on_decision: Option<DecisionCallback>,
     decisions: Mutex<Vec<StrategyDecision>>,
 }
 
