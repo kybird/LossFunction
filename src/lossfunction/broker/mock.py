@@ -53,7 +53,18 @@ class MockBroker(Broker):
         )
         self._next_broker_id += 1
 
-        if request.order_type is OrderType.MARKET:
+        fills_immediately = request.order_type is OrderType.MARKET or (
+            request.order_type is OrderType.LIMIT
+            and request.limit_price is not None
+            and (
+                (request.side is OrderSide.BUY and price <= request.limit_price)
+                or (request.side is OrderSide.SELL and price >= request.limit_price)
+            )
+        )
+        # Limit orders fill at their limit price when the market crosses it.
+        fill_price = price if request.order_type is OrderType.MARKET else request.limit_price
+
+        if fills_immediately:
             report = ExecutionReport(
                 broker_order_id=ack.broker_order_id,
                 client_order_id=request.client_order_id,
@@ -62,11 +73,11 @@ class MockBroker(Broker):
                 order_type=request.order_type,
                 order_quantity=request.quantity,
                 filled_quantity=request.quantity,
-                average_fill_price=price,
+                average_fill_price=fill_price,
                 open=False,
                 timestamp=self._now(),
             )
-            self._apply_fill(request.symbol, request.side, request.quantity, price)
+            self._apply_fill(request.symbol, request.side, request.quantity, fill_price or price)
         else:
             report = ExecutionReport(
                 broker_order_id=ack.broker_order_id,

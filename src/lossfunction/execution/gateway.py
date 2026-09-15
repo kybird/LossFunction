@@ -112,7 +112,7 @@ class Reconciler:
                 reason="not found at broker during reconciliation",
             )
 
-        target = self._target_status(report.filled_quantity, report.order_quantity, report.open)
+        target = self.target_status(report.filled_quantity, report.order_quantity, report.open)
         return self._machine.transition(
             client_order_id,
             target,
@@ -136,7 +136,7 @@ class Reconciler:
         return results
 
     @staticmethod
-    def _target_status(filled_quantity: int, order_quantity: int, open_: bool) -> OrderStatus:
+    def target_status(filled_quantity: int, order_quantity: int, open_: bool) -> OrderStatus:
         if not open_ and filled_quantity >= order_quantity:
             return OrderStatus.FILLED
         if open_:

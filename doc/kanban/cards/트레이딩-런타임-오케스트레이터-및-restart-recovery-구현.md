@@ -1,9 +1,11 @@
 ---
 title: 트레이딩 런타임 오케스트레이터 및 restart recovery 구현
-status: todo
+status: doing
 ordinal: 15000
 created: 2026-09-14
 depends_on: ["Order reconciliation 및 duplicate order 방지 구현","Risk management 계층 구현","Strategy 인터페이스 및 deterministic decision layer 구현","KIS WebSocket 실시간 클라이언트 구현"]
+claimed_by: zcode-main
+claimed_at: 2026-09-14T18:16-07:00
 ---
 
 ## Goal
