@@ -1,11 +1,9 @@
 ---
 title: Python 참조 구현 아카이브 전환
-status: doing
+status: done
 ordinal: 21000
 created: 2026-09-15
 depends_on: ["Python 참조 구현 패리티 리뷰","Rust 배포 (Docker/스크립트)"]
-claimed_by: zcode-main
-claimed_at: 2026-09-15T12:16-07:00
 ---
 
 ## Goal
@@ -15,7 +13,7 @@ Rust 실증 후 Python 구현을 참조 아카이브로 정리한다(제거 또�
 
 ## Acceptance Criteria
 <!-- kanban:ac:begin -->
-- [ ] #1 저장소가 Rust 중심 구조로 정리되고 Python 참조 접근 경로가 문서화된다
+- [x] #1 저장소가 Rust 중심 구조로 정리되고 Python 참조 접근 경로가 문서화된다
 <!-- kanban:ac:end -->
 
 ## Plan
@@ -25,3 +23,4 @@ Rust 실증 후 Python 구현을 참조 아카이브로 정리한다(제거 또�
 ## Handoff
 
 ## Result
+- 2026-09-15T12:16-07:00 — src/tests/pyproject/.dockerignore를 reference/로 이동+아카이브 README(실행법·위치·패리티 근거) 작성. 저장소가 rust/ 중심 구조로 정리됨. 참조 실행 경로 문서화

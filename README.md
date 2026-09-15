@@ -24,9 +24,7 @@ OCI에서 24/7 무인 운영.
 - **MLP 파이프라인** — 시계열 leakage 방어(인과 feature, embargo, 분할
   스케일링), 버전화된 모델 번들
 - **GLM 분석 통합** — 엄격한 스키마 검증, 장애 시 명시적 폴백(거래 지속)
-- **운영** — Docker/compose 배포, 헬스 체크, 자동 재시작 + 재시작 복구,
-  메트릭/알림(웹훅 옵트인), 경량 상태 페이지(`GET /` — 포지션/주문/체결/
-  감사 이력, 프레임워크 없음)
+- **Rust 구현** — 단일 바이너리(상주 메모리 37.6MiB, distroless), 위 전부
 
 아키텍처 개요와 모듈 경계는 [docs/architecture.md](docs/architecture.md),
 재시작 복구 절차는 [docs/recovery.md](docs/recovery.md),
@@ -80,7 +78,7 @@ cp .env.example .env
 ## 실행
 
 ```bash
-python -m lossfunction.runtime.cli        # 헬스(8080) + 상태 페이지
+cd rust && cargo run --release            # 헬스(8080) + 상태 페이지
 curl http://127.0.0.1:8080/healthz        # JSON 헬스
 # 브라우저에서 http://127.0.0.1:8080/     # SQLite 기반 상태 페이지
 ```
@@ -92,11 +90,12 @@ powershell -ExecutionPolicy Bypass -File scripts\deploy\deploy.ps1
 ```
 
 상세한 배포/운영 절차는 [docs/deployment.md](docs/deployment.md).
+(피닉스 VPS에 Rust 이미지 배포 실증 완료 — 상주 메모리 37.6MiB)
 
 ## 프로젝트 구조
 
 ```
-src/lossfunction/
+rust/lossfunction/src/
 ├── domain/       # 순수 도메인 (주문 규칙, 포트폴리오 집계)
 ├── broker/       # Broker 추상화 + KIS 구현 + 메모리 mock
 ├── marketdata/   # KIS WebSocket (재구독 replay)
@@ -105,8 +104,8 @@ src/lossfunction/
 ├── strategy/     # 결정론적 전략 인터페이스 + 결정 녹화
 ├── storage/      # SQLite 마이그레이션/저장소/감사
 ├── backtest/     # 이벤트 시뮬레이션 (비용, look-ahead 차단)
-├── ml/           # MLP 파이프라인 ([ml] extra)
 ├── analysis/     # GLM 통합 (스키마 검증 + 폴백)
+├── strategies2/  # 볼린저·모멘텀·MACD
 ├── runtime/      # 오케스트레이터 + 컨테이너 진입점
 └── ops/          # 메트릭 + 알림
 ```

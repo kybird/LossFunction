@@ -1,7 +1,7 @@
 # 배포 및 운영 절차 (OCI, 24/7)
 
-구성 요소: `Dockerfile`(런타임 이미지), `docker-compose.yml`(단일
-runtime 서비스, SQLite 데이터 볼륨). 재시작 정책은 `restart: unless-stopped` — 크래시 시 컨테이너
+구성 요소: `rust/Dockerfile`(multi-stage Rust 빌드 → distroless,
+상주 37.6MiB), `docker-compose.yml`(단일 runtime 서비스, SQLite 볼륨). 재시작 정책은 `restart: unless-stopped` — 크래시 시 컨테이너
 런타임이 자동으로 재기동하고, 런타임의 `recover()` 절차(docs/recovery.md)가
 미결제 주문과 포트폴리오를 복구한다.
 

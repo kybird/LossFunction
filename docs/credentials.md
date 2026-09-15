@@ -49,15 +49,16 @@ LossFunction은 기본(paper + memory)이면 **아무 자격증명 없이** 동�
 1. [Zhipu 개방플랫폼](https://open.bigmodel.cn) 가입 후 API 키 발급.
 2. 현재 코드는 OpenAI 호환 `/chat/completions` 엔드포인트 사용(기본
    `https://open.bigmodel.cn/api/paas/v4`, 모델 `glm-4-flash`).
-3. 키는 아직 설정 필드가 연결되지 않았습니다 — 연동 시 `.env`에
-   `GLM_API_KEY`로 추가 예정 (미설정 시 분석이 명시적 폴백으로 동작).
+3. Rust 런타임은 아직 GLM을 자동 호출하지 않습니다(analysis 크레이트는
+   구현 완료). 연동 시 `.env`의 `GLM_API_KEY`로 활성화 예정.
 
-## 4. 아무것도 없이 시작하기 (데모)
+## 4. 아무것도 없이 시작하기 (데모, Rust)
 
 ```ini
 TRADING_MODE=paper
 PAPER_BACKEND=memory
 DEMO_LOOP=true                 # 가상 시세로 전략-주문-체결이 흐름
+# 실행: cd rust && DEMO_LOOP=true cargo run --release
 ```
 
 ## 참고

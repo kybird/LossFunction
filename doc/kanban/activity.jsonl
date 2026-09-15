@@ -166,3 +166,5 @@
 {"ts":"2026-09-15T19:13:22.066Z","action":"claimed","title":"Rust 런타임 KIS 백엔드 조립","actor":"zcode-main"}
 {"ts":"2026-09-15T19:15:01.905Z","action":"done","title":"Rust 런타임 KIS 백엔드 조립"}
 {"ts":"2026-09-15T19:16:06.379Z","action":"claimed","title":"Python 참조 구현 아카이브 전환","actor":"zcode-main"}
+{"ts":"2026-09-15T19:16:56.735Z","action":"done","title":"Python 참조 구현 아카이브 전환"}
+{"ts":"2026-09-15T19:17:14.004Z","action":"claimed","title":"문서 Rust 중심 갱신","actor":"zcode-main"}

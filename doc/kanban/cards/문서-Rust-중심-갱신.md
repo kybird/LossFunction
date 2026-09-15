@@ -1,9 +1,11 @@
 ---
 title: 문서 Rust 중심 갱신
-status: todo
+status: doing
 ordinal: 22000
 created: 2026-09-15
 depends_on: ["Rust 배포 (Docker/스크립트)"]
+claimed_by: zcode-main
+claimed_at: 2026-09-15T12:17-07:00
 ---
 
 ## Goal
