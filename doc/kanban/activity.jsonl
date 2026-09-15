@@ -52,3 +52,5 @@
 {"ts":"2026-09-15T01:22:11.040Z","action":"claimed","title":"Backtesting 엔진 구현","actor":"zcode-main"}
 {"ts":"2026-09-15T01:24:53.271Z","action":"done","title":"Backtesting 엔진 구현"}
 {"ts":"2026-09-15T01:24:53.567Z","action":"claimed","title":"MLP 학습 및 추론 파이프라인 구현","actor":"zcode-main"}
+{"ts":"2026-09-15T01:30:13.326Z","action":"done","title":"MLP 학습 및 추론 파이프라인 구현"}
+{"ts":"2026-09-15T01:30:13.676Z","action":"claimed","title":"GLM 시장 분석 통합 구현","actor":"zcode-main"}

@@ -1,9 +1,11 @@
 ---
 title: GLM 시장 분석 통합 구현
-status: todo
+status: doing
 ordinal: 18000
 created: 2026-09-14
 depends_on: ["PostgreSQL 스키마 및 저장 계층 구현"]
+claimed_by: zcode-main
+claimed_at: 2026-09-14T18:30-07:00
 ---
 
 ## Goal

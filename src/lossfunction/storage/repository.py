@@ -229,6 +229,11 @@ class Repository:
 
     # ── audit ──────────────────────────────────────────────────────
 
+    async def record_analysis(self, kind: str, payload: dict[str, Any]) -> None:
+        """Persist a model-analysis result (GLM/MLP) for auditability."""
+        async with self._pool.acquire() as connection:
+            await self._audit(connection, f"analysis.{kind}", f"analysis:{kind}", payload)
+
     async def get_audit_log(self, subject: str | None = None) -> list[dict[str, Any]]:
         async with self._pool.acquire() as connection:
             if subject is None:
@@ -237,7 +242,17 @@ class Repository:
                 rows = await connection.fetch(
                     "SELECT * FROM audit_log WHERE subject = $1 ORDER BY id", subject
                 )
-        return [dict(row) for row in rows]
+        return [self._decode(row) for row in rows]
+
+    @staticmethod
+    def _decode(row: asyncpg.Record) -> dict[str, Any]:
+        """Normalize a row: asyncpg returns jsonb columns as text."""
+        import json
+
+        record = dict(row)
+        if isinstance(record.get("payload"), str):
+            record["payload"] = json.loads(record["payload"])
+        return record
 
     @staticmethod
     async def _audit(
