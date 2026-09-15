@@ -169,6 +169,7 @@ impl Strategy for EntryPriceStrategy {
 mod tests {
     use super::*;
     use chrono::Utc;
+    use rust_decimal::Decimal;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
 
