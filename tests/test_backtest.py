@@ -44,7 +44,6 @@ class BuyOnceStrategy(Strategy):
         from lossfunction.domain.order import OrderSide, OrderType
         from lossfunction.strategy import OrderIntent, StrategyDecision
 
-        quote = snapshot.quotes["005930"]
         if self.calls == 0:
             intent = OrderIntent(
                 symbol="005930", side=OrderSide.BUY, order_type=OrderType.MARKET, quantity=10
