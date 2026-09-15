@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     # KIS API domain: "mock" (모의투자, safe default) or "real".
     kis_environment: Literal["real", "mock"] = "mock"
 
+    # Paper-mode broker: "memory" (in-process, no network) or "kis"
+    # (KIS 모의투자 domain, requires mock credentials).
+    paper_backend: Literal["memory", "kis"] = "memory"
+
     # KIS credentials — environment only, never committed.
     kis_app_key: SecretStr = SecretStr("")
     kis_app_secret: SecretStr = SecretStr("")

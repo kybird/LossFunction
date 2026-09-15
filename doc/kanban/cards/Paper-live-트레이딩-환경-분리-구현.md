@@ -1,9 +1,11 @@
 ---
 title: Paper/live 트레이딩 환경 분리 구현
-status: todo
+status: doing
 ordinal: 10000
 created: 2026-09-14
 depends_on: ["Broker abstraction 인터페이스 정의","Configuration 및 secrets 환경 분리 구현"]
+claimed_by: zcode-main
+claimed_at: 2026-09-14T17:59-07:00
 ---
 
 ## Goal

@@ -36,3 +36,5 @@
 {"ts":"2026-09-15T00:33:35.503Z","action":"claimed","title":"PostgreSQL 스키마 및 저장 계층 구현","actor":"zcode-main"}
 {"ts":"2026-09-15T00:55:50.179Z","action":"done","title":"PostgreSQL 스키마 및 저장 계층 구현"}
 {"ts":"2026-09-15T00:55:50.426Z","action":"claimed","title":"Portfolio 및 Order 도메인 모델 구현","actor":"zcode-main"}
+{"ts":"2026-09-15T00:59:26.580Z","action":"done","title":"Portfolio 및 Order 도메인 모델 구현"}
+{"ts":"2026-09-15T00:59:26.850Z","action":"claimed","title":"Paper/live 트레이딩 환경 분리 구현","actor":"zcode-main"}

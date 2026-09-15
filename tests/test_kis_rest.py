@@ -95,11 +95,11 @@ async def test_submit_order_builds_official_request_shape() -> None:
         return _order_ok()
 
     harness = KISHarness(handler)
-    ack = await harness.rest.submit_cash_order(_order_request())
+    ack, output = await harness.rest.submit_cash_order(_order_request())
 
-    assert ack == ("c-1", "00001234") or (
-        ack.client_order_id == "c-1" and ack.broker_order_id == "00001234"
-    )
+    assert ack.client_order_id == "c-1"
+    assert ack.broker_order_id == "00001234"
+    assert output["ORD_TMD"] == "093012"
     request = calls[0]
     assert request.method == "POST"
     assert request.url.path == "/uapi/domestic-stock/v1/trading/order-cash"
@@ -224,7 +224,7 @@ async def test_server_error_retried_then_classified() -> None:
         return _order_ok()
 
     harness = KISHarness(handler)
-    ack = await harness.rest.submit_cash_order(_order_request())
+    ack, _ = await harness.rest.submit_cash_order(_order_request())
     assert ack.broker_order_id == "00001234"
     assert len(calls) == 2
     await harness.close()
@@ -241,7 +241,7 @@ async def test_expired_token_reissued_once() -> None:
         return _order_ok()
 
     harness = KISHarness(handler)
-    ack = await harness.rest.submit_cash_order(_order_request())
+    ack, _ = await harness.rest.submit_cash_order(_order_request())
     assert ack.broker_order_id == "00001234"
     # Order attempt with token-1 → 401 → token re-issued as token-2 → retry OK.
     assert len(calls) == 2

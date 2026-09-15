@@ -29,6 +29,7 @@ from lossfunction.broker.kis.auth import KISAuthClient
 from lossfunction.domain.types import OrderSide, OrderType
 
 _ORDER_PATH = "/uapi/domestic-stock/v1/trading/order-cash"
+_RVCNCL_PATH = "/uapi/domestic-stock/v1/trading/order-rvsecncl"
 _BALANCE_PATH = "/uapi/domestic-stock/v1/trading/inquire-balance"
 _PRICE_PATH = "/uapi/domestic-stock/v1/quotations/inquire-price"
 
@@ -160,6 +161,7 @@ class KISRestClient:
         sleep: Callable[[float], Awaitable[None]] | None = None,
         audit: AuditCallback | None = None,
         max_retries: int = 3,
+        trading_mode: str = "paper",
     ) -> None:
         if environment not in ("real", "mock"):
             msg = f"environment must be 'real' or 'mock', got {environment!r}"
@@ -167,6 +169,7 @@ class KISRestClient:
         self._auth = auth
         self._cano, self._prdt = _parse_account_number(account_number)
         self._environment = environment
+        self._trading_mode = trading_mode
         self._base_url = (base_url or self._default_base_url(environment)).rstrip("/")
         self._transport = transport
         self._clock = clock or (lambda: datetime.now(tz=UTC))
@@ -197,8 +200,12 @@ class KISRestClient:
 
     # ── public operations ──────────────────────────────────────────
 
-    async def submit_cash_order(self, request: OrderRequest) -> OrderAck:
-        """Submit a domestic-stock cash order (order-cash)."""
+    async def submit_cash_order(self, request: OrderRequest) -> tuple[OrderAck, dict[str, Any]]:
+        """Submit a domestic-stock cash order (order-cash).
+
+        Returns the ack plus the raw output dict (carries
+        KRX_FWDG_ORD_ORGNO needed for later cancellation).
+        """
         tr_id = self._order_tr_id(request.side)
         body = {
             "CANO": self._cano,
@@ -225,12 +232,58 @@ class KISRestClient:
                 "order_type": request.order_type.value,
                 "quantity": str(request.quantity),
                 "limit_price": str(request.limit_price or ""),
+                "trading_mode": self._trading_mode,
             },
         )
-        odno = payload.get("output", {}).get("ODNO")
+        output = payload.get("output", {})
+        odno = output.get("ODNO")
         if not isinstance(odno, str) or not odno:
             raise KISAPIError(APIErrorKind.MALFORMED, "order-cash response missing output.ODNO")
-        return OrderAck(client_order_id=request.client_order_id, broker_order_id=odno)
+        ack = OrderAck(client_order_id=request.client_order_id, broker_order_id=odno)
+        return ack, output if isinstance(output, dict) else {}
+
+    async def cancel_cash_order(
+        self,
+        *,
+        broker_order_id: str,
+        krx_fwdg_ord_orgno: str,
+        ord_dvsn: str,
+    ) -> None:
+        """Cancel the full remainder of an order (order-rvsecncl).
+
+        RVSE_CNCL_DVSN_CD "02" = cancel; QTY_ALL_ORD_YN "Y" = full remainder,
+        so quantity/price are placeholders ("0").
+        """
+        body = {
+            "CANO": self._cano,
+            "ACNT_PRDT_CD": self._prdt,
+            "KRX_FWDG_ORD_ORGNO": krx_fwdg_ord_orgno,
+            "ORGN_ODNO": broker_order_id,
+            "ORD_DVSN": ord_dvsn,
+            "RVSE_CNCL_DVSN_CD": "02",
+            "ORD_QTY": "0",
+            "ORD_UNPR": "0",
+            "QTY_ALL_ORD_YN": "Y",
+            "EXCG_ID_DVSN_CD": "KRX",
+        }
+        tr_id = "VTTC0013U" if self._environment == "mock" else "TTTC0013U"
+        await self._request(
+            "POST",
+            _RVCNCL_PATH,
+            tr_id,
+            json_body=body,
+            order_summary={
+                "client_order_id": "",
+                "symbol": "",
+                "side": "",
+                "order_type": "",
+                "quantity": "",
+                "limit_price": "",
+                "trading_mode": self._trading_mode,
+                "action": "cancel",
+                "broker_order_id": broker_order_id,
+            },
+        )
 
     async def fetch_positions(self) -> list[Position]:
         """Fetch held positions (inquire-balance), following pagination."""
