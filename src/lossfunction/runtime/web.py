@@ -30,6 +30,10 @@ _STYLE = """
     .pill.filled { color: #8fd694; } .pill.cancelled { color: #c9a86a; }
     .pill.rejected { color: #ff9c9c; } .pill.unknown { color: #e2b93b; }
     footer { margin-top: 28px; color: #566070; font-size: 12px; }
+    .kill { font-size: 12px; padding: 2px 8px; border-radius: 4px;
+            background: #5a1f1f; color: #ff9c9c; }
+    .kill button { margin-left: 8px; font-size: 12px; padding: 2px 10px;
+                   cursor: pointer; }
 """
 
 _STATUS_PILL = {"filled", "cancelled", "rejected", "unknown"}
@@ -74,6 +78,8 @@ def render_status_page(
     trading_mode: str,
     broker: str,
     database_path: str,
+    kill_switch: bool = False,
+    kill_reason: str | None = None,
     positions: list[dict[str, Any]],
     orders: list[Any],
     fills: list[dict[str, Any]],
@@ -141,7 +147,13 @@ def render_status_page(
 <title>LossFunction · {_esc(trading_mode)}</title>
 <style>{_STYLE}</style></head>
 <body>
-<h1>LossFunction <span class="mode{_esc(mode_class)}">{_esc(trading_mode)}</span></h1>
+<h1>LossFunction <span class="mode{_esc(mode_class)}">{_esc(trading_mode)}</span>
+<span class="kill">{
+        "KILL SWITCH ON" + (" · " + _esc(kill_reason) if kill_reason else "") if kill_switch else ""
+    }
+<button onclick="toggleKill({str(not kill_switch).lower()})">{
+        "해제" if kill_switch else "KILL"
+    }</button></span></h1>
 <p class="meta">broker {_esc(broker)} · db {_esc(database_path)} ·
 {_esc(now.astimezone(UTC).strftime("%Y-%m-%d %H:%M:%S UTC"))} · 새로고침 5초</p>
 
@@ -163,5 +175,17 @@ def render_status_page(
 <h2>Recent audit events</h2>
 {_table(["at", "event", "subject", "payload"], audit_rows, numeric_from=99)}
 
-<footer>JSON: <code>GET /healthz</code> · 이 페이지는 읽기 전용입니다</footer>
+<footer>JSON: <code>GET /healthz</code> · 제어: <code>POST /control/kill-switch</code>
+(loopback 전용)</footer>
+<script>
+function toggleKill(on) {{
+  var msg = on ? 'kill switch를 켭니다. 새 주문이 차단됩니다.' : 'kill switch를 해제합니다.';
+  if (!confirm(msg)) return;
+  fetch('/control/kill-switch', {{
+    method: 'POST',
+    headers: {{'Content-Type': 'application/json'}},
+    body: JSON.stringify({{activate: on, reason: 'manual (web)'}})
+  }}).then(function () {{ location.reload(); }});
+}}
+</script>
 </body></html>"""

@@ -349,6 +349,11 @@ class Repository:
 
     # ── audit ──────────────────────────────────────────────────────
 
+    async def record_event(self, event_type: str, subject: str, payload: dict[str, Any]) -> None:
+        """Persist an operational event (controls, lifecycle) to the audit log."""
+        async with self._transaction() as db:
+            await self._audit(db, event_type, subject, payload)
+
     async def record_analysis(self, kind: str, payload: dict[str, Any]) -> None:
         """Persist a model-analysis result (GLM/MLP) for auditability."""
         async with self._transaction() as db:

@@ -79,3 +79,5 @@
 {"ts":"2026-09-15T05:34:12.603Z","action":"created","title":"상태 페이지 최소 제어 기능"}
 {"ts":"2026-09-15T05:34:12.883Z","action":"created","title":"Paper 데모 루프"}
 {"ts":"2026-09-15T05:34:26.325Z","action":"claimed","title":"자격증명 획득 가이드 문서화","actor":"zcode-main"}
+{"ts":"2026-09-15T05:35:22.726Z","action":"done","title":"자격증명 획득 가이드 문서화"}
+{"ts":"2026-09-15T05:35:23.009Z","action":"claimed","title":"상태 페이지 최소 제어 기능","actor":"zcode-main"}

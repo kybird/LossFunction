@@ -42,6 +42,13 @@ class Settings(BaseSettings):
     alert_webhook_url: str = ""
     alert_min_interval_seconds: float = 30.0
 
+    # Risk limits (KRW; enforce everywhere a RiskManager is built).
+    risk_max_order_notional: int = 5_000_000
+    risk_max_position_quantity: int = 50
+    risk_gross_exposure: int = 20_000_000
+    risk_daily_loss_limit: int = 500_000
+    risk_stale_quote_seconds: int = 30
+
     # KIS credentials — environment only, never committed.
     kis_app_key: SecretStr = SecretStr("")
     kis_app_secret: SecretStr = SecretStr("")

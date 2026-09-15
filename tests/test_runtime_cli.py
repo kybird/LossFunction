@@ -125,3 +125,76 @@ async def test_status_page_serves_seeded_sqlite_data(tmp_path) -> None:
     finally:
         process.terminate()
         process.wait(timeout=10)
+
+
+async def test_kill_switch_control_endpoint(tmp_path) -> None:
+    from lossfunction.storage import Repository
+
+    db_path = tmp_path / "control.db"
+    port = _free_port()
+    env = {
+        **os.environ,
+        "HEALTH_PORT": str(port),
+        "TRADING_MODE": "paper",
+        "DATABASE_PATH": str(db_path),
+    }
+    process = subprocess.Popen(
+        [PYTHON, "-m", "lossfunction.runtime.cli"],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        health = _wait_for_health(port)
+        assert health["kill_switch"] is False
+
+        # Activate via the control endpoint.
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{port}/control/kill-switch",
+            data=json.dumps({"activate": True, "reason": "integration test"}).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            result = json.loads(response.read().decode())
+        assert result == {
+            "ok": True,
+            "kill_switch": True,
+            "reason": "integration test",
+        }
+
+        health = _wait_for_health(port)
+        assert health["kill_switch"] is True
+        assert health["kill_reason"] == "integration test"
+
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=5) as response:
+            page = response.read().decode("utf-8")
+        assert "KILL SWITCH ON" in page
+        assert "integration test" in page
+
+        # The action is audited.
+        repository = await Repository.connect(db_path)
+        try:
+            events = await repository.get_audit_log(subject="operator")
+            assert events[-1]["event_type"] == "control.kill_switch"
+            assert events[-1]["payload"] == {
+                "activate": True,
+                "reason": "integration test",
+                "source": "web",
+            }
+        finally:
+            await repository.close()
+
+        # Release.
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{port}/control/kill-switch",
+            data=b'{"activate": false}',
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            result = json.loads(response.read().decode())
+        assert result["kill_switch"] is False
+    finally:
+        process.terminate()
+        process.wait(timeout=10)

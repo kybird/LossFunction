@@ -23,7 +23,7 @@ def test_credentials_guide_covers_all_key_kinds() -> None:
         "KIS_APP_SECRET",
         "KIS_ACCOUNT_NUMBER",
         "LIVE_TRADING_CONFIRMED",
-        "모의투자",          # mock credentials are separate from real ones
+        "모의투자",  # mock credentials are separate from real ones
         "PAPER_BACKEND=kis",
         "open.bigmodel.cn",
         "DEMO_LOOP=true",

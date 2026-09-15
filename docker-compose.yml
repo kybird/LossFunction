@@ -6,6 +6,8 @@ services:
       # SQLite file inside the mounted volume survives redeploys/restarts.
       DATABASE_PATH: /data/lossfunction.db
       TRADING_MODE: ${TRADING_MODE:-paper}
+      # Synthetic paper market so the status page shows a living pipeline.
+      DEMO_LOOP: ${DEMO_LOOP:-true}
       # Secrets (KIS_*, GLM_*) come from the host env or an env-file — never
       # baked into the image or the repository.
     env_file:
