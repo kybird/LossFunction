@@ -75,12 +75,14 @@ def test_secrets_are_masked_in_repr(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_env_files_are_gitignored() -> None:
-    """`.env` files must be blocked by .gitignore before they can leak secrets."""
+    """`.env` files must be blocked by the repo root .gitignore (archive lives
+    one level down, so run git from the repository root)."""
+    root = Path(__file__).resolve().parents[2]
     result = subprocess.run(
-        ["git", "check-ignore", ".env", ".env.local", ".env.production"],
+        ["git", "-C", str(root), "check-ignore", ".env", ".env.local", ".env.production"],
         capture_output=True,
         text=True,
     )
     assert result.returncode == 0, f"not all .env variants ignored: {result.stderr}"
-    ignore_rules = Path(".gitignore").read_text(encoding="utf-8")
+    ignore_rules = (root / ".gitignore").read_text(encoding="utf-8")
     assert ".env" in ignore_rules and ".env.*" in ignore_rules
