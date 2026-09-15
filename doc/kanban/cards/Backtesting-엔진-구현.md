@@ -1,9 +1,11 @@
 ---
 title: Backtesting 엔진 구현
-status: todo
+status: doing
 ordinal: 16000
 created: 2026-09-14
 depends_on: ["Strategy 인터페이스 및 deterministic decision layer 구현","Broker abstraction 인터페이스 정의"]
+claimed_by: zcode-main
+claimed_at: 2026-09-14T18:22-07:00
 ---
 
 ## Goal

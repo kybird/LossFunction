@@ -48,3 +48,5 @@
 {"ts":"2026-09-15T01:15:13.497Z","action":"claimed","title":"Strategy 인터페이스 및 deterministic decision layer 구현","actor":"zcode-main"}
 {"ts":"2026-09-15T01:16:35.902Z","action":"done","title":"Strategy 인터페이스 및 deterministic decision layer 구현"}
 {"ts":"2026-09-15T01:16:59.235Z","action":"claimed","title":"트레이딩 런타임 오케스트레이터 및 restart recovery 구현","actor":"zcode-main"}
+{"ts":"2026-09-15T01:22:10.770Z","action":"done","title":"트레이딩 런타임 오케스트레이터 및 restart recovery 구현"}
+{"ts":"2026-09-15T01:22:11.040Z","action":"claimed","title":"Backtesting 엔진 구현","actor":"zcode-main"}
