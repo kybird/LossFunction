@@ -224,6 +224,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn caches_until_margin_then_reissues() {
         let server = MockServer::start().await;
         // First issue returns token-1 (KST expiry 10:00 = 01:00 UTC); every
@@ -256,6 +257,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn invalid_credentials_not_retried() {
         let server = MockServer::start().await;
         Mock::given(method("POST"))

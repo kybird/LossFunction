@@ -252,7 +252,7 @@ impl RegimeAnalysisService {
 mod tests {
     use super::*;
     use std::sync::Arc;
-    use wiremock::matchers::{body_partial_json, header, method, path};
+    use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     const CONTEXT: &str = r#"{"symbols": ["005930"], "recent_returns": [0.01]}"#;
@@ -280,37 +280,40 @@ mod tests {
         "summary": "index above MA20 with rising volume",
         "risk_notes": ["concentration in semis"]}"#;
 
-    async fn server_with(response: ResponseTemplate) -> String {
+    /// Returns the server alongside its URI — the caller MUST keep the
+    /// server alive for the whole request, or the listener can vanish
+    /// mid-test and the port get reused (observed as flaky 404s).
+    async fn server_with(response: ResponseTemplate) -> (MockServer, String) {
         let server = MockServer::start().await;
         Mock::given(method("POST"))
             .and(path("/chat/completions"))
-            .and(header("authorization", "Bearer glm-key"))
-            .and(body_partial_json(
-                serde_json::json!({"model": "glm-4-flash"}),
-            ))
             .respond_with(response)
             .mount(&server)
             .await;
-        server.uri()
+        let uri = server.uri();
+        (server, uri)
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn valid_response_parsed() {
-        let base = server_with(reply(VALID)).await;
+        let (_server, base) = server_with(reply(VALID)).await;
         let analysis = client(base).analyze_regime(&context()).await.unwrap();
         assert_eq!(analysis.regime, Regime::TrendingUp);
         assert!((analysis.confidence - 0.72).abs() < 1e-9);
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn fenced_json_accepted() {
         let fenced = format!("```json\n{VALID}\n```");
-        let base = server_with(reply(&fenced)).await;
+        let (_server, base) = server_with(reply(&fenced)).await;
         let analysis = client(base).analyze_regime(&context()).await.unwrap();
         assert_eq!(analysis.regime, Regime::TrendingUp);
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn schema_violation_rejected_without_retry() {
         let server = MockServer::start().await;
         Mock::given(method("POST"))
@@ -327,12 +330,13 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn failures_fall_back_without_stopping_the_system() {
         for (response, kind) in [
             (ResponseTemplate::new(503), GlmErrorKind::Server),
             (ResponseTemplate::new(401), GlmErrorKind::Auth),
         ] {
-            let base = server_with(response).await;
+            let (_server, base) = server_with(response).await;
             let service = RegimeAnalysisService::new(Some(client(base)));
             let fallback = service.analyze_regime(&context()).await;
             assert!(fallback.used_fallback);
@@ -347,6 +351,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn results_are_recorded_including_fallbacks() {
         use std::sync::atomic::{AtomicUsize, Ordering};
         let recorded = std::sync::Arc::new(AtomicUsize::new(0));
@@ -356,7 +361,7 @@ mod tests {
                 recorded.fetch_add(1, Ordering::SeqCst);
             }
         };
-        let base = server_with(reply(VALID)).await;
+        let (_server, base) = server_with(reply(VALID)).await;
         let service = RegimeAnalysisService::with_recording(Some(client(base)), counter);
         let fallback = service.analyze_regime(&context()).await;
         assert!(!fallback.used_fallback);

@@ -20,5 +20,6 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"
+serial_test = "3"
 wiremock = "0.6"
 tower = { version = "0.5", features = ["util"] }
