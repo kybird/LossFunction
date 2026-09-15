@@ -147,3 +147,10 @@
 {"ts":"2026-09-15T17:46:49.083Z","action":"done","title":"Rust KIS WebSocket 클라이언트"}
 {"ts":"2026-09-15T17:47:19.276Z","action":"claimed","title":"Rust 배포 (Docker/스크립트)","actor":"zcode-main"}
 {"ts":"2026-09-15T18:54:52.012Z","action":"done","title":"Rust 배포 (Docker/스크립트)"}
+{"ts":"2026-09-15T18:56:03.147Z","action":"claimed","title":"퀀트 자동매매 알고리즘 조사 및 전략 카드 발행","actor":"zcode-main"}
+{"ts":"2026-09-15T18:57:03.417Z","action":"created","title":"Rust 볼린저 밴드 역추세 전략"}
+{"ts":"2026-09-15T18:57:03.655Z","action":"created","title":"Rust 12-1 모멘텀 로테이션 전략"}
+{"ts":"2026-09-15T18:57:03.918Z","action":"created","title":"Rust MACD 교차 전략"}
+{"ts":"2026-09-15T18:57:04.200Z","action":"created","title":"Rust VWAP 실행 알고리즘"}
+{"ts":"2026-09-15T18:57:26.666Z","action":"done","title":"퀀트 자동매매 알고리즘 조사 및 전략 카드 발행"}
+{"ts":"2026-09-15T18:57:27.366Z","action":"done","title":"Rust MLP/GLM 전략 조사"}
