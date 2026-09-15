@@ -186,9 +186,11 @@ pub struct AnalysisFallback {
     pub error_kind: Option<GlmErrorKind>,
 }
 
+type ResultCallback = Box<dyn Fn(&Value) + Send + Sync>;
+
 pub struct RegimeAnalysisService {
     client: Option<GlmClient>,
-    on_result: Option<Box<dyn Fn(&Value) + Send + Sync>>,
+    on_result: Option<ResultCallback>,
 }
 
 impl RegimeAnalysisService {
