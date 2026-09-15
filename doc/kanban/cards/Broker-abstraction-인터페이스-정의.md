@@ -1,9 +1,11 @@
 ---
 title: Broker abstraction 인터페이스 정의
-status: todo
+status: doing
 ordinal: 4000
 created: 2026-09-14
 depends_on: ["시스템 아키텍처 설계 문서화"]
+claimed_by: zcode-main
+claimed_at: 2026-09-14T17:03-07:00
 ---
 
 ## Goal

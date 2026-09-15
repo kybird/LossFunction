@@ -24,3 +24,5 @@
 {"ts":"2026-09-15T00:00:50.192Z","action":"claimed","title":"시스템 아키텍처 설계 문서화","actor":"zcode-main"}
 {"ts":"2026-09-15T00:02:03.720Z","action":"done","title":"시스템 아키텍처 설계 문서화"}
 {"ts":"2026-09-15T00:02:03.973Z","action":"claimed","title":"Configuration 및 secrets 환경 분리 구현","actor":"zcode-main"}
+{"ts":"2026-09-15T00:03:53.642Z","action":"done","title":"Configuration 및 secrets 환경 분리 구현"}
+{"ts":"2026-09-15T00:03:53.874Z","action":"claimed","title":"Broker abstraction 인터페이스 정의","actor":"zcode-main"}
