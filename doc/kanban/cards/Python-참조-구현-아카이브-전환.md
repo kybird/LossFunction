@@ -1,9 +1,11 @@
 ---
 title: Python 참조 구현 아카이브 전환
-status: todo
+status: doing
 ordinal: 21000
 created: 2026-09-15
 depends_on: ["Python 참조 구현 패리티 리뷰","Rust 배포 (Docker/스크립트)"]
+claimed_by: zcode-main
+claimed_at: 2026-09-15T12:16-07:00
 ---
 
 ## Goal
