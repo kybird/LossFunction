@@ -24,3 +24,9 @@ htmlcov/
 .idea/
 .vscode/
 .DS_Store
+
+# Local test PostgreSQL (binaries + data)
+.pgenv/
+.pgdata/
+.pgenv16/
+.pgdata16/
