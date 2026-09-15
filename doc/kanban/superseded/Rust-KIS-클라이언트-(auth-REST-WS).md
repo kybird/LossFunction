@@ -1,9 +1,10 @@
 ---
 title: Rust KIS 클라이언트 (auth/REST/WS)
-status: todo
+status: superseded
 ordinal: 6000
 created: 2026-09-14
 depends_on: ["Rust 워크스페이스 부트스트랩"]
+superseded_by: ["Rust KIS 인증 및 REST 클라이언트","Rust KIS WebSocket 클라이언트"]
 ---
 
 ## Goal

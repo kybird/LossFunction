@@ -1,9 +1,10 @@
 ---
 title: Rust 실행 계층 (상태머신/게이트웨이/reconciliation)
-status: todo
+status: superseded
 ordinal: 4000
 created: 2026-09-14
 depends_on: ["Rust 저장 계층 (SQLite)"]
+superseded_by: ["Rust 주문 상태머신","Rust 주문 게이트웨이 및 reconciler"]
 ---
 
 ## Goal

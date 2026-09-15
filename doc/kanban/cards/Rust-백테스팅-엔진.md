@@ -3,7 +3,7 @@ title: Rust 백테스팅 엔진
 status: todo
 ordinal: 8000
 created: 2026-09-14
-depends_on: ["Rust 런타임 (오케스트레이터/서버/상태 페이지)"]
+depends_on: ["Rust 전략 인터페이스 및 결정 레이어","Rust Broker 트레이트 및 MockBroker","Rust 리스크 계층"]
 ---
 
 ## Goal

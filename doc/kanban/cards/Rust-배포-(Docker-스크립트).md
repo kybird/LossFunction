@@ -3,7 +3,7 @@ title: Rust 배포 (Docker/스크립트)
 status: todo
 ordinal: 9000
 created: 2026-09-14
-depends_on: ["Rust 런타임 (오케스트레이터/서버/상태 페이지)"]
+depends_on: ["Rust axum 서버 (헬스/상태 페이지/제어)"]
 ---
 
 ## Goal

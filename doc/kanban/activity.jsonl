@@ -95,3 +95,19 @@
 {"ts":"2026-09-15T06:57:36.381Z","action":"created","title":"Rust MLP/GLM 전략 조사"}
 {"ts":"2026-09-15T06:57:57.197Z","action":"claimed","title":"Rust 워크스페이스 부트스트랩","actor":"zcode-main"}
 {"ts":"2026-09-15T07:00:03.829Z","action":"done","title":"Rust 워크스페이스 부트스트랩"}
+{"ts":"2026-09-15T07:06:07.050Z","action":"created","title":"Rust 전략 인터페이스 및 결정 레이어"}
+{"ts":"2026-09-15T07:06:07.314Z","action":"created","title":"Rust Broker 트레이트 및 MockBroker"}
+{"ts":"2026-09-15T07:06:07.599Z","action":"created","title":"Rust GLM 클라이언트"}
+{"ts":"2026-09-15T07:06:07.890Z","action":"created","title":"Rust 주문 상태머신"}
+{"ts":"2026-09-15T07:06:08.163Z","action":"created","title":"Rust 주문 게이트웨이 및 reconciler"}
+{"ts":"2026-09-15T07:06:08.452Z","action":"created","title":"Rust KIS 인증 및 REST 클라이언트"}
+{"ts":"2026-09-15T07:06:08.722Z","action":"created","title":"Rust KIS WebSocket 클라이언트"}
+{"ts":"2026-09-15T07:06:09.026Z","action":"created","title":"Rust 오케스트레이터 및 데모 루프"}
+{"ts":"2026-09-15T07:06:09.330Z","action":"created","title":"Rust axum 서버 (헬스/상태 페이지/제어)"}
+{"ts":"2026-09-15T07:06:09.641Z","action":"created","title":"Python 참조 구현 패리티 리뷰"}
+{"ts":"2026-09-15T07:06:09.937Z","action":"created","title":"Python 참조 구현 아카이브 전환"}
+{"ts":"2026-09-15T07:06:10.266Z","action":"created","title":"문서 Rust 중심 갱신"}
+{"ts":"2026-09-15T07:06:10.557Z","action":"created","title":"최종 QA (보안/안전장치/위키 정합성)"}
+{"ts":"2026-09-15T07:06:25.688Z","action":"superseded","title":"Rust 실행 계층 (상태머신/게이트웨이/reconciliation)","detail":"by Rust 주문 상태머신, Rust 주문 게이트웨이 및 reconciler"}
+{"ts":"2026-09-15T07:06:25.987Z","action":"superseded","title":"Rust KIS 클라이언트 (auth/REST/WS)","detail":"by Rust KIS 인증 및 REST 클라이언트, Rust KIS WebSocket 클라이언트"}
+{"ts":"2026-09-15T07:06:26.291Z","action":"superseded","title":"Rust 런타임 (오케스트레이터/서버/상태 페이지)","detail":"by Rust 오케스트레이터 및 데모 루프, Rust axum 서버 (헬스/상태 페이지/제어)"}
