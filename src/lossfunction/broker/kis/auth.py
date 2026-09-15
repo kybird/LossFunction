@@ -100,6 +100,22 @@ class KISAuthClient:
         self._issue_lock = asyncio.Lock()
         self._client: httpx.AsyncClient | None = None
 
+    @property
+    def app_key(self) -> str:
+        return self._app_key
+
+    @property
+    def app_secret(self) -> str:
+        return self._app_secret
+
+    @property
+    def base_url(self) -> str:
+        return self._base_url
+
+    def invalidate(self) -> None:
+        """Drop the cached token so the next `get_access_token()` re-issues."""
+        self._token = None
+
     def _http(self) -> httpx.AsyncClient:
         if self._client is None:
             self._client = (

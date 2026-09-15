@@ -1,9 +1,11 @@
 ---
 title: KIS REST 클라이언트 구현
-status: todo
+status: doing
 ordinal: 6000
 created: 2026-09-14
 depends_on: ["KIS API 인증 클라이언트 구현"]
+claimed_by: zcode-main
+claimed_at: 2026-09-14T17:10-07:00
 ---
 
 ## Goal
