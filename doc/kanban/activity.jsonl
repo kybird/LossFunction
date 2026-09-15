@@ -30,3 +30,5 @@
 {"ts":"2026-09-15T00:06:43.713Z","action":"claimed","title":"KIS API 인증 클라이언트 구현","actor":"zcode-main"}
 {"ts":"2026-09-15T00:10:50.983Z","action":"done","title":"KIS API 인증 클라이언트 구현"}
 {"ts":"2026-09-15T00:10:51.219Z","action":"claimed","title":"KIS REST 클라이언트 구현","actor":"zcode-main"}
+{"ts":"2026-09-15T00:15:53.869Z","action":"done","title":"KIS REST 클라이언트 구현"}
+{"ts":"2026-09-15T00:15:54.119Z","action":"claimed","title":"KIS WebSocket 실시간 클라이언트 구현","actor":"zcode-main"}

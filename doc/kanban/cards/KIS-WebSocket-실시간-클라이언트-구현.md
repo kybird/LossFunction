@@ -1,9 +1,11 @@
 ---
 title: KIS WebSocket 실시간 클라이언트 구현
-status: todo
+status: doing
 ordinal: 7000
 created: 2026-09-14
 depends_on: ["Broker abstraction 인터페이스 정의"]
+claimed_by: zcode-main
+claimed_at: 2026-09-14T17:15-07:00
 ---
 
 ## Goal
