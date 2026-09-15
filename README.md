@@ -117,4 +117,4 @@ src/lossfunction/
 
 ## 라이선스
 
-미정 — 공개 전 유지자가 결정합니다 (kanban 카드로 추적 중).
+[MIT](LICENSE) © kybird

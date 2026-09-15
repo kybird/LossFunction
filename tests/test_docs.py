@@ -58,6 +58,18 @@ def test_deploy_scripts_exist() -> None:
         assert "~/" in text, name
 
 
+def test_license_is_mit_and_declared_everywhere() -> None:
+    license_text = (ROOT / "LICENSE").read_text(encoding="utf-8")
+    assert license_text.startswith("MIT License")
+    assert "Permission is hereby granted" in license_text
+
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'license = "MIT"' in pyproject
+
+    assert "MIT" in README
+    assert "미정" not in README
+
+
 def test_example_env_has_no_filled_secrets() -> None:
     example = (ROOT / ".env.example").read_text(encoding="utf-8")
     for line in example.splitlines():

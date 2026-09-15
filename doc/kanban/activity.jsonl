@@ -72,3 +72,6 @@
 {"ts":"2026-09-15T04:36:13.692Z","action":"created","title":"경량 상태 페이지 (런타임 내장 대시보드)"}
 {"ts":"2026-09-15T04:36:14.024Z","action":"claimed","title":"경량 상태 페이지 (런타임 내장 대시보드)","actor":"zcode-main"}
 {"ts":"2026-09-15T04:42:38.093Z","action":"done","title":"경량 상태 페이지 (런타임 내장 대시보드)"}
+{"ts":"2026-09-15T04:53:00.509Z","action":"resumed","title":"오픈소스 라이선스 선택","detail":"결정: MIT 라이선스로 공개"}
+{"ts":"2026-09-15T04:53:00.853Z","action":"claimed","title":"오픈소스 라이선스 선택","actor":"zcode-main"}
+{"ts":"2026-09-15T04:54:26.287Z","action":"done","title":"오픈소스 라이선스 선택"}
