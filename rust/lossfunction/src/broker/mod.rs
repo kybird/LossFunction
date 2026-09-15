@@ -66,6 +66,10 @@ pub enum BrokerError {
     InsufficientPosition { symbol: String },
     #[error("order {0} not found")]
     UnknownOrder(String),
+    /// Definitive venue rejection — retrying cannot help; the order never
+    /// reached the matching engine.
+    #[error("broker rejected: {0}")]
+    Rejected(String),
     #[error("broker failure: {0}")]
     Internal(String),
 }
