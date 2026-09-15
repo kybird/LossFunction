@@ -83,3 +83,14 @@
 {"ts":"2026-09-15T05:35:23.009Z","action":"claimed","title":"상태 페이지 최소 제어 기능","actor":"zcode-main"}
 {"ts":"2026-09-15T05:54:14.359Z","action":"done","title":"상태 페이지 최소 제어 기능"}
 {"ts":"2026-09-15T05:54:14.917Z","action":"done","title":"Paper 데모 루프"}
+{"ts":"2026-09-15T06:57:34.032Z","action":"created","title":"Rust 워크스페이스 부트스트랩"}
+{"ts":"2026-09-15T06:57:34.303Z","action":"created","title":"Rust 도메인 모델 (Order/Portfolio)"}
+{"ts":"2026-09-15T06:57:34.573Z","action":"created","title":"Rust 저장 계층 (SQLite)"}
+{"ts":"2026-09-15T06:57:34.879Z","action":"created","title":"Rust 실행 계층 (상태머신/게이트웨이/reconciliation)"}
+{"ts":"2026-09-15T06:57:35.166Z","action":"created","title":"Rust 리스크 계층"}
+{"ts":"2026-09-15T06:57:35.408Z","action":"created","title":"Rust KIS 클라이언트 (auth/REST/WS)"}
+{"ts":"2026-09-15T06:57:35.654Z","action":"created","title":"Rust 런타임 (오케스트레이터/서버/상태 페이지)"}
+{"ts":"2026-09-15T06:57:35.896Z","action":"created","title":"Rust 백테스팅 엔진"}
+{"ts":"2026-09-15T06:57:36.141Z","action":"created","title":"Rust 배포 (Docker/스크립트)"}
+{"ts":"2026-09-15T06:57:36.381Z","action":"created","title":"Rust MLP/GLM 전략 조사"}
+{"ts":"2026-09-15T06:57:57.197Z","action":"claimed","title":"Rust 워크스페이스 부트스트랩","actor":"zcode-main"}

@@ -33,3 +33,4 @@ htmlcov/
 
 # Local SQLite database (dev default path)
 data/
+rust/target/
