@@ -20,3 +20,5 @@
 {"ts":"2026-09-14T23:57:24.115Z","action":"created","title":"모니터링 및 알림 구현"}
 {"ts":"2026-09-14T23:57:24.361Z","action":"created","title":"README 및 공개 문서 작성"}
 {"ts":"2026-09-14T23:57:51.433Z","action":"claimed","title":"Project scaffold 및 Python 패키지 기반 구축","actor":"zcode-main"}
+{"ts":"2026-09-15T00:00:40.567Z","action":"done","title":"Project scaffold 및 Python 패키지 기반 구축"}
+{"ts":"2026-09-15T00:00:50.192Z","action":"claimed","title":"시스템 아키텍처 설계 문서화","actor":"zcode-main"}
