@@ -44,3 +44,5 @@
 {"ts":"2026-09-15T01:06:47.860Z","action":"claimed","title":"Order reconciliation 및 duplicate order 방지 구현","actor":"zcode-main"}
 {"ts":"2026-09-15T01:12:58.674Z","action":"done","title":"Order reconciliation 및 duplicate order 방지 구현"}
 {"ts":"2026-09-15T01:12:59.001Z","action":"claimed","title":"Risk management 계층 구현","actor":"zcode-main"}
+{"ts":"2026-09-15T01:15:13.197Z","action":"done","title":"Risk management 계층 구현"}
+{"ts":"2026-09-15T01:15:13.497Z","action":"claimed","title":"Strategy 인터페이스 및 deterministic decision layer 구현","actor":"zcode-main"}
