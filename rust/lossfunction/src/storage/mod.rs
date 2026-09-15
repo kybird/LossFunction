@@ -24,6 +24,8 @@ pub enum StorageError {
     Db(#[from] sqlx::Error),
     #[error("invalid symbol in row: {0}")]
     BadSymbol(String),
+    #[error("storage failure: {0}")]
+    Internal(String),
 }
 
 pub struct Repository {
@@ -44,6 +46,11 @@ impl Repository {
     /// Open (creating if needed) the database in WAL mode and apply
     /// pending migrations.
     pub async fn open(path: &str) -> Result<Self, StorageError> {
+        if let Some(parent) = std::path::Path::new(path).parent() {
+            std::fs::create_dir_all(parent).map_err(|error| {
+                StorageError::Internal(error.to_string())
+            })?;
+        }
         let options = SqliteConnectOptions::new()
             .filename(path)
             .create_if_missing(true)

@@ -1,9 +1,11 @@
 ---
 title: Rust axum 서버 (헬스/상태 페이지/제어)
-status: todo
+status: doing
 ordinal: 19000
 created: 2026-09-15
 depends_on: ["Rust 저장 계층 (SQLite)","Rust 리스크 계층","Rust 오케스트레이터 및 데모 루프"]
+claimed_by: zcode-main
+claimed_at: 2026-09-15T01:11-07:00
 ---
 
 ## Goal

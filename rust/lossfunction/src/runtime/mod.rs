@@ -7,6 +7,8 @@
 //! broker, then the portfolio rebuilt from broker-side positions.
 
 pub mod demo;
+pub mod server;
+pub mod web;
 
 use std::collections::HashMap;
 use std::sync::Arc;
