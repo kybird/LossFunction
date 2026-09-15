@@ -46,7 +46,9 @@ pub struct KisRestClient {
     base_url: String,
     cano: String,
     prdt: String,
-    /// Recorded into order traces (audit mode tagging).
+    /// Recorded into order traces (audit mode tagging); consumed by the
+    /// runtime wiring when assembling brokers.
+    #[allow(dead_code)]
     trading_mode: String,
 }
 

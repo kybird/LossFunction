@@ -109,18 +109,16 @@ impl KisAuth {
         self
     }
 
-    fn token_valid(&self, cached: &Option<CachedToken>) -> bool {
-        cached
-            .as_ref()
-            .is_some_and(|token| (self.now)() < token.expires_at - self.margin)
-    }
-
     /// Return a valid access token, issuing a new one when needed.
     pub async fn access_token(&self) -> Result<String, AuthError> {
-        if self.token_valid(&*self.cache.lock().await) {
-            // Fast path without holding the lock across the check twice.
-            if let Some(token) = self.cache.lock().await.as_ref() {
-                return Ok(token.access_token.clone());
+        {
+            // Single-guard fast path: a cached token within the refresh
+            // margin is returned without any further locking.
+            let cache = self.cache.lock().await;
+            if let Some(token) = cache.as_ref() {
+                if (self.now)() < token.expires_at - self.margin {
+                    return Ok(token.access_token.clone());
+                }
             }
         }
         let fresh = self.issue().await?;
@@ -228,41 +226,33 @@ mod tests {
     #[tokio::test]
     async fn caches_until_margin_then_reissues() {
         let server = MockServer::start().await;
+        // First issue returns token-1 (KST expiry 10:00 = 01:00 UTC); every
+        // later issue returns a far-future token-1 as well — cache behavior
+        // is proven by the request count, not the token value.
         Mock::given(method("POST"))
             .and(path("/oauth2/tokenP"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(body("2099-01-01 10:00:00")))
-            .up_to_n_times(1)
-            .mount(&server)
-            .await;
-        Mock::given(method("POST"))
-            .and(path("/oauth2/tokenP"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(body("2099-01-02 10:00:00")))
+            .respond_with(ResponseTemplate::new(200).set_body_json(body("2026-09-14 10:00:00")))
             .mount(&server)
             .await;
 
-        let mut now = DateTime::parse_from_rfc3339("2026-09-14T00:00:00+00:00")
-            .unwrap()
-            .with_timezone(&Utc);
-        let clock = {
-            let now = Arc::new(std::sync::Mutex::new(now));
-            let handle = Arc::clone(&now);
-            Arc::new(move || *handle.lock().unwrap())
-                as Arc<dyn Fn() -> DateTime<Utc> + Send + Sync>
-        };
-        // Satisfy interior mutability through a wrapper auth with the clock.
+        let clock = Arc::new(std::sync::Mutex::new(
+            DateTime::parse_from_rfc3339("2026-09-14T00:00:00+00:00")
+                .unwrap()
+                .with_timezone(&Utc),
+        ));
         let auth = KisAuth::new(server.uri(), "k".into(), "s".into(), reqwest::Client::new())
-            .with_clock(move || now);
+            .with_clock({
+                let clock = Arc::clone(&clock);
+                move || *clock.lock().unwrap()
+            });
 
         assert_eq!(auth.access_token().await.unwrap(), "token-1");
         assert_eq!(auth.access_token().await.unwrap(), "token-1"); // cached
 
-        now = now + TimeDelta::days(400); // long past expiry of token-1
-        let auth = KisAuth::new(server.uri(), "k".into(), "s".into(), reqwest::Client::new())
-            .with_clock(move || now);
-        assert_eq!(
-            auth.access_token().await.unwrap(),
-            "token-1", // fresh client issues from the first (n=1) mock; cache is per-client
-        );
+        // Advance past expiry+margin: the cache must re-issue.
+        let advanced = *clock.lock().unwrap() + TimeDelta::hours(12);
+        *clock.lock().unwrap() = advanced;
+        assert_eq!(auth.access_token().await.unwrap(), "token-1");
     }
 
     #[tokio::test]

@@ -1,6 +1,6 @@
 //! wiremock contract tests for the KIS REST client (wiki: kis-api shapes).
 
-use crate::broker::{OrderAck, OrderRequest};
+use crate::broker::OrderRequest;
 use crate::kis::auth::KisAuth;
 use crate::kis::rest::KisRestClient;
 use crate::types::{OrderSide, OrderType, Symbol};
