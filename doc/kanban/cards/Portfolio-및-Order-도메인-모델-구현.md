@@ -1,9 +1,11 @@
 ---
 title: Portfolio 및 Order 도메인 모델 구현
-status: todo
+status: doing
 ordinal: 9000
 created: 2026-09-14
 depends_on: ["시스템 아키텍처 설계 문서화"]
+claimed_by: zcode-main
+claimed_at: 2026-09-14T17:55-07:00
 ---
 
 ## Goal
