@@ -10,6 +10,7 @@ pub mod config;
 pub mod domain;
 pub mod execution;
 pub mod risk;
+pub mod runtime;
 pub mod storage;
 pub mod strategy;
 pub mod types;

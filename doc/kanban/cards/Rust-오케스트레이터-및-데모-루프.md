@@ -1,9 +1,11 @@
 ---
 title: Rust 오케스트레이터 및 데모 루프
-status: todo
+status: doing
 ordinal: 18000
 created: 2026-09-15
 depends_on: ["Rust 전략 인터페이스 및 결정 레이어","Rust 저장 계층 (SQLite)","Rust 주문 게이트웨이 및 reconciler","Rust 리스크 계층"]
+claimed_by: zcode-main
+claimed_at: 2026-09-15T01:04-07:00
 ---
 
 ## Goal

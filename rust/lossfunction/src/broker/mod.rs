@@ -1,6 +1,6 @@
 //! Broker abstraction — the only boundary where venue specifics may appear.
 
-mod mock;
+pub mod mock;
 
 pub use mock::MockBroker;
 

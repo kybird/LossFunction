@@ -128,3 +128,5 @@
 {"ts":"2026-09-15T07:46:30.137Z","action":"claimed","title":"Rust 전략 인터페이스 및 결정 레이어","actor":"zcode-main"}
 {"ts":"2026-09-15T08:01:18.038Z","action":"done","title":"Rust 전략 인터페이스 및 결정 레이어"}
 {"ts":"2026-09-15T08:02:33.498Z","action":"claimed","title":"Rust 주문 게이트웨이 및 reconciler","actor":"zcode-main"}
+{"ts":"2026-09-15T08:04:04.461Z","action":"done","title":"Rust 주문 게이트웨이 및 reconciler"}
+{"ts":"2026-09-15T08:04:36.643Z","action":"claimed","title":"Rust 오케스트레이터 및 데모 루프","actor":"zcode-main"}
