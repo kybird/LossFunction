@@ -1,9 +1,11 @@
 ---
 title: README 및 공개 문서 작성
-status: todo
+status: doing
 ordinal: 21000
 created: 2026-09-14
 depends_on: ["Project scaffold 및 Python 패키지 기반 구축"]
+claimed_by: zcode-main
+claimed_at: 2026-09-14T18:40-07:00
 ---
 
 ## Goal

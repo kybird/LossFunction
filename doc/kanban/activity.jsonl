@@ -58,3 +58,5 @@
 {"ts":"2026-09-15T01:34:13.210Z","action":"claimed","title":"OCI 배포 및 24/7 운영 구성","actor":"zcode-main"}
 {"ts":"2026-09-15T01:38:02.242Z","action":"done","title":"OCI 배포 및 24/7 운영 구성"}
 {"ts":"2026-09-15T01:38:02.558Z","action":"claimed","title":"모니터링 및 알림 구현","actor":"zcode-main"}
+{"ts":"2026-09-15T01:40:28.076Z","action":"done","title":"모니터링 및 알림 구현"}
+{"ts":"2026-09-15T01:40:28.392Z","action":"claimed","title":"README 및 공개 문서 작성","actor":"zcode-main"}
