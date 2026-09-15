@@ -89,7 +89,7 @@ impl BacktestFeed {
         self.cursor < self.bars.len()
     }
 
-    pub fn next(&mut self) -> Option<Bar> {
+    pub fn advance(&mut self) -> Option<Bar> {
         let bar = self.bars.get(self.cursor).cloned()?;
         self.cursor += 1;
         Some(bar)
@@ -97,6 +97,11 @@ impl BacktestFeed {
 
     pub fn cursor(&self) -> usize {
         self.cursor
+    }
+
+    #[cfg(test)]
+    fn bars_first(&self) -> Price {
+        self.bars[0].close
     }
 
     /// Only past/current bars are addressable (look-ahead guard).
@@ -161,7 +166,7 @@ impl BacktestEngine {
         let mut order_seq = 0u64;
         let mut portfolio = crate::domain::portfolio::Portfolio::new();
 
-        while let Some(bar) = feed.next() {
+        while let Some(bar) = feed.advance() {
             if let Some(hook) = &self.bar_hook {
                 hook(&bar);
             }
@@ -313,7 +318,6 @@ mod tests {
     use crate::strategy::StrategyDecision;
     use crate::types::OrderType;
     use chrono::TimeZone;
-    use std::str::FromStr;
 
     fn symbol() -> Symbol {
         Symbol::parse("005930").unwrap()
@@ -377,7 +381,7 @@ mod tests {
     fn feed_rejects_future_access_and_sorts() {
         let series = bars(&[1, 2, 3]);
         let mut feed = BacktestFeed::new(series);
-        feed.next().unwrap();
+        feed.advance().unwrap();
         assert!(feed.bar_at(1).is_err());
         assert!(feed.bar_at(2).is_err());
         assert_eq!(feed.bar_at(0).unwrap().close, Decimal::from(1));
@@ -402,7 +406,6 @@ mod tests {
             calls: std::sync::atomic::AtomicUsize::new(0),
         });
         let engine = BacktestEngine::new(strategy, config.clone());
-        let broker = MockBroker::new();
         let priced_broker = std::sync::Arc::new(MockBroker::new());
         let hook_broker = std::sync::Arc::clone(&priced_broker);
         let engine = engine.with_bar_hook(std::sync::Arc::new(move |bar: &Bar| {
@@ -490,12 +493,5 @@ mod tests {
         let first = run().await;
         let second = run().await;
         assert_eq!(first, second);
-    }
-}
-
-impl BacktestFeed {
-    #[cfg(test)]
-    fn bars_first(&self) -> Price {
-        self.bars[0].close
     }
 }
