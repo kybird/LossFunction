@@ -1,11 +1,9 @@
 ---
 title: Rust 시세 이력 윈도우 (전략 입력 확장)
-status: doing
+status: done
 ordinal: 24000
 created: 2026-09-15
 depends_on: ["Rust 전략 인터페이스 및 결정 레이어"]
-claimed_by: zcode-main
-claimed_at: 2026-09-15T01:19-07:00
 ---
 
 ## Goal
@@ -15,8 +13,8 @@ MarketSnapshot에 최근 N봉 이력 창(종가 시계열)을 함께 전달해 �
 
 ## Acceptance Criteria
 <!-- kanban:ac:begin -->
-- [ ] #1 전략이 받는 이력 창에 현재 바 이후 데이터가 존재할 수 없음이 테스트로 단정된다
-- [ ] #2 창 크기가 설정으로 관리된다
+- [x] #1 전략이 받는 이력 창에 현재 바 이후 데이터가 존재할 수 없음이 테스트로 단정된다
+- [x] #2 창 크기가 설정으로 관리된다
 <!-- kanban:ac:end -->
 
 ## Plan
@@ -26,3 +24,4 @@ MarketSnapshot에 최근 N봉 이력 창(종가 시계열)을 함께 전달해 �
 ## Handoff
 
 ## Result
+- 2026-09-15T01:20-07:00 — HistoryWindow(용량 설정 관리, 값 복사 스냅샷 — 이후 push가 기존 스냅샷 불변 단정=look-ahead 구조 차단)+정확 Decimal SMA+런타임 스냅샷 조립. 검증: cargo test 65 passed, clippy/fmt 클린

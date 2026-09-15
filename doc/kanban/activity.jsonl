@@ -134,3 +134,5 @@
 {"ts":"2026-09-15T08:11:37.603Z","action":"claimed","title":"Rust axum 서버 (헬스/상태 페이지/제어)","actor":"zcode-main"}
 {"ts":"2026-09-15T08:18:36.002Z","action":"done","title":"Rust axum 서버 (헬스/상태 페이지/제어)"}
 {"ts":"2026-09-15T08:19:10.067Z","action":"claimed","title":"Rust 시세 이력 윈도우 (전략 입력 확장)","actor":"zcode-main"}
+{"ts":"2026-09-15T08:20:59.651Z","action":"done","title":"Rust 시세 이력 윈도우 (전략 입력 확장)"}
+{"ts":"2026-09-15T08:21:24.624Z","action":"claimed","title":"Rust 기본 전략 3종 (골든크로스·RSI·돈키안)","actor":"zcode-main"}

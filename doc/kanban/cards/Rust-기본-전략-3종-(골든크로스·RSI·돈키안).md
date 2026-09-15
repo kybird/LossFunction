@@ -1,9 +1,11 @@
 ---
 title: Rust 기본 전략 3종 (골든크로스·RSI·돈키안)
-status: todo
+status: doing
 ordinal: 25000
 created: 2026-09-15
 depends_on: ["Rust 시세 이력 윈도우 (전략 입력 확장)"]
+claimed_by: zcode-main
+claimed_at: 2026-09-15T01:21-07:00
 ---
 
 ## Goal

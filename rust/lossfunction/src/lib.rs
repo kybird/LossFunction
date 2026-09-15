@@ -13,5 +13,6 @@ pub mod history;
 pub mod risk;
 pub mod runtime;
 pub mod storage;
+pub mod strategies;
 pub mod strategy;
 pub mod types;
