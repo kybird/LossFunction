@@ -44,7 +44,7 @@ graph TB
     end
 
     subgraph Persistence["저장"]
-        PG[(PostgreSQL<br/>시세/주문/체결/포트폴리오/audit)]
+        DB[(SQLite<br/>시세/주문/체결/포트폴리오/audit)]
     end
 
     subgraph Research["연구/검증"]
@@ -78,7 +78,7 @@ sequenceDiagram
     participant RK as Risk
     participant OS as Order SM
     participant BR as Broker(live/paper)
-    participant DB as PostgreSQL
+    participant DB as SQLite
 
     WS->>RT: 실시간 시세/체결 이벤트
     RT->>DB: 시세 저장
@@ -117,7 +117,7 @@ import하지 않는다).
 | `strategy/` | `Strategy` 인터페이스, deterministic decision layer, 신호 기록 | 직접 주문 제출 |
 | `risk/` | 주문 사전 검증: 포지션/집중도/손실 한도, drawdown, stale data, kill switch | 전략 신호 변경 |
 | `execution/` | order state machine, reconciliation, duplicate 방지 | 한도 결정 |
-| `storage/` | PostgreSQL 스키마, 저장 계층, audit 로그 | 비즈니스 규칙 |
+| `storage/` | SQLite 스키마(WAL), 저장 계층, audit 로그 | 비즈니스 규칙 |
 | `runtime/` | 이벤트 루프, 컴포넌트 조립, restart/recovery 절차 | 도메인 규칙 |
 | `backtest/` | 이벤트 시뮬레이션, 수수료/세금/슬리피지, look-ahead 차단 | 실계좌 접근 |
 | `ml/` | MLP feature/학습/추론/버전관리, GLM 분석 스키마 검증 | 실시간 주문 경로 직접 제어 |
@@ -161,9 +161,8 @@ import하지 않는다).
 ```
 OCI VM
 └── Docker
-    ├── lossfunction-runtime   (거래 런타임, paper/live)
-    ├── postgres               (상태/audit 저장)
-    └── (선택) 모니터링 에이전트
+    └── lossfunction-runtime        (거래 런타임, paper/live)
+        └── /data/lossfunction.db   (SQLite 단일 파일 볼륨 — 상태/audit)
 ```
 
 재시작 시나리오: 컨테이너 재기동 → 저장계층에서 포트폴리오/미결제 주문 복구 →

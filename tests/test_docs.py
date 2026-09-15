@@ -42,7 +42,7 @@ def test_readme_clone_to_test_commands() -> None:
         "python -m venv .venv",
         'pip install -e ".[dev]"',
         "pytest",
-        "scripts/dev_postgres.sh start",
+        "ruff check",
     ):
         assert command in README
 

@@ -63,3 +63,6 @@
 {"ts":"2026-09-15T01:42:09.837Z","action":"created","title":"오픈소스 라이선스 선택"}
 {"ts":"2026-09-15T01:42:10.120Z","action":"handoff","title":"오픈소스 라이선스 선택","detail":"라이선스를 무엇으로 할지 결정해 주세요. 금융 코드 특성상 Apache-2.0(특허 조항 포함)이 일반적이나 MIT이 더 단순합니다. 결정 주시면 LICENSE 파일+pyproject+README를 정리합니다."}
 {"ts":"2026-09-15T01:42:34.907Z","action":"done","title":"README 및 공개 문서 작성"}
+{"ts":"2026-09-15T02:58:40.613Z","action":"created","title":"저장 계층 SQLite 전환"}
+{"ts":"2026-09-15T02:58:40.853Z","action":"created","title":"PowerShell 배포 스크립트 및 배포 구성"}
+{"ts":"2026-09-15T02:58:41.081Z","action":"claimed","title":"저장 계층 SQLite 전환","actor":"zcode-main"}

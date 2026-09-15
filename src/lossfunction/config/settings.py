@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     kis_app_secret: SecretStr = SecretStr("")
     kis_account_number: str = ""
 
-    database_url: str = "postgresql://localhost:5432/lossfunction"
+    database_path: str = "data/lossfunction.db"
 
     @model_validator(mode="after")
     def _validate_mode_consistency(self) -> "Settings":

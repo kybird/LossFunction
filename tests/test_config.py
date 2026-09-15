@@ -17,10 +17,10 @@ def test_default_mode_is_paper(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_env_vars_are_loaded_and_validated(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("TRADING_MODE", "paper")
-    monkeypatch.setenv("DATABASE_URL", "postgresql://db.example:5432/lf")
+    monkeypatch.setenv("DATABASE_PATH", "data/custom.db")
     settings = load_settings()
     assert settings.trading_mode is TradingMode.PAPER
-    assert settings.database_url == "postgresql://db.example:5432/lf"
+    assert settings.database_path == "data/custom.db"
 
 
 def test_invalid_mode_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -59,12 +59,12 @@ def test_live_mode_requires_real_kis_environment(
 
 
 def test_dotenv_settings_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    for var in ("TRADING_MODE", "DATABASE_URL", "LIVE_TRADING_CONFIRMED"):
+    for var in ("TRADING_MODE", "DATABASE_PATH", "LIVE_TRADING_CONFIRMED"):
         monkeypatch.delenv(var, raising=False)
     env_file = tmp_path / ".env"
-    env_file.write_text("DATABASE_URL=postgresql://from-file:5432/x\n", encoding="utf-8")
+    env_file.write_text("DATABASE_PATH=data/from-file.db\n", encoding="utf-8")
     settings = Settings(_env_file=env_file)  # type: ignore[call-arg]
-    assert settings.database_url == "postgresql://from-file:5432/x"
+    assert settings.database_path == "data/from-file.db"
 
 
 def test_secrets_are_masked_in_repr(monkeypatch: pytest.MonkeyPatch) -> None:

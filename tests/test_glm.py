@@ -1,6 +1,5 @@
 """GLM analysis integration tests — schema, persistence, fallback."""
 
-import os
 from typing import Any
 
 import httpx
@@ -174,21 +173,10 @@ async def test_results_persisted_to_storage() -> None:
 
 
 @pytest.mark.integration
-async def test_repository_records_analysis() -> None:
-    import asyncpg
-
+async def test_repository_records_analysis(tmp_path) -> None:
     from lossfunction.storage import Repository
 
-    dsn = os.environ.get(
-        "LOSSFUNCTION_TEST_DSN",
-        "postgresql://postgres@127.0.0.1:5433/lossfunction_test",
-    )
-    try:
-        await asyncpg.connect(dsn, timeout=2)
-    except OSError:
-        pytest.skip("PostgreSQL not reachable")
-
-    repo = await Repository.connect(dsn)
+    repo = await Repository.connect(tmp_path / "glm.db")
     try:
         await repo.migrate()
         await repo.record_analysis(

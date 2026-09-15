@@ -17,8 +17,8 @@ OCI에서 24/7 무인 운영.
   reconciliation 대기(재시도 금지), client id 기반 중복 주문 차단
 - **리스크 계층** — 주문 한도/포지션 상한/총 노출/일일 손실 한도/시세 신선도
   검사 + kill switch
-- **PostgreSQL 저장** — 주문/체결/포지션/감사(audit) 이력, 쓰기 트랜잭션에
-  포함된 감사 기록
+- **SQLite 저장** — 단일 파일(WAL)에 주문/체결/포지션/감사(audit) 이력,
+  쓰기 트랜잭션에 포함된 감사 기록, 서버 프로세스 불필요
 - **백테스팅** — 수수료/증권거래세 반영, look-ahead 접근 차단, 라이브와 동일한
   전략 인터페이스
 - **MLP 파이프라인** — 시계열 leakage 방어(인과 feature, embargo, 분할
@@ -44,15 +44,6 @@ pip install -e ".[dev]"              # MLP까지: pip install -e ".[dev,ml]"
 pytest                               # 전체 테스트 (자격증명/DB 불필요)
 ```
 
-저장소 통합 테스트(PostgreSQL)는 DB가 없으면 자동으로 건너뜁니다. 로컬
-PostgreSQL이 필요하면(Docker 불필요):
-
-```bash
-scripts/dev_postgres.sh start        # conda 기반 프로젝트 로컬 PG 16 기동
-pytest                               # integration 테스트 포함 실행
-scripts/dev_postgres.sh stop
-```
-
 린트/포맷: `ruff check . && ruff format --check .`
 
 ## 설정
@@ -71,7 +62,7 @@ cp .env.example .env
 | `PAPER_BACKEND` | `memory` | `memory`(네트워크 없음) \| `kis`(모의 도메인) |
 | `KIS_APP_KEY` / `KIS_APP_SECRET` | — | KIS 자격증명(**저장소에 커밋 금지**) |
 | `KIS_ACCOUNT_NUMBER` | — | 계좌번호(8-2 형식) |
-| `DATABASE_URL` | localhost | PostgreSQL 접속 |
+| `DATABASE_PATH` | `data/lossfunction.db` | SQLite 파일 경로(WAL) |
 | `ALERT_WEBHOOK_URL` | — | 알림 웹훅(옵트인) |
 
 **자격증명은 절대 커밋하지 않습니다.** `.env`/`.env.*`는 gitignored,
@@ -103,7 +94,7 @@ src/lossfunction/
 ├── execution/    # 상태머신, 주문 게이트웨이, reconciliation
 ├── risk/         # 사전 검증 + kill switch
 ├── strategy/     # 결정론적 전략 인터페이스 + 결정 녹화
-├── storage/      # PostgreSQL 마이그레이션/저장소/감사
+├── storage/      # SQLite 마이그레이션/저장소/감사
 ├── backtest/     # 이벤트 시뮬레이션 (비용, look-ahead 차단)
 ├── ml/           # MLP 파이프라인 ([ml] extra)
 ├── analysis/     # GLM 통합 (스키마 검증 + 폴백)

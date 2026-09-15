@@ -1,7 +1,7 @@
 # 배포 및 운영 절차 (OCI, 24/7)
 
-구성 요소: `Dockerfile`(런타임 이미지), `docker-compose.yml`(runtime +
-PostgreSQL 16). 재시작 정책은 `restart: unless-stopped` — 크래시 시 컨테이너
+구성 요소: `Dockerfile`(런타임 이미지), `docker-compose.yml`(단일
+runtime 서비스, SQLite 데이터 볼륨). 재시작 정책은 `restart: unless-stopped` — 크래시 시 컨테이너
 런타임이 자동으로 재기동하고, 런타임의 `recover()` 절차(docs/recovery.md)가
 미결제 주문과 포트폴리오를 복구한다.
 
@@ -46,7 +46,8 @@ curl http://127.0.0.1:8080/healthz
   docs/recovery.md.
 - 로그: `docker compose logs -f runtime`.
 - 업그레이드: `git pull && docker compose up -d --build`.
-- 백업: PostgreSQL 볼륨(`pgdata`) — 주문/체결/감사 이력의 원본.
+- 백업: SQLite 볼륨(`lossfunction-data`) 안의 단일 파일 — 주문/체결/감사
+  이력의 원본. `docker cp lossfunction:/data/lossfunction.db backup.db`.
 
 ## 5. 로컬 검증
 

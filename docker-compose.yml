@@ -1,35 +1,25 @@
 services:
-  postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_USER: lossfunction
-      POSTGRES_PASSWORD: lossfunction
-      POSTGRES_DB: lossfunction
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U lossfunction -d lossfunction"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
   runtime:
     build: .
-    depends_on:
-      postgres:
-        condition: service_healthy
+    container_name: lossfunction
     environment:
-      DATABASE_URL: postgresql://lossfunction:lossfunction@postgres:5432/lossfunction
+      # SQLite file inside the mounted volume survives redeploys/restarts.
+      DATABASE_PATH: /data/lossfunction.db
       TRADING_MODE: ${TRADING_MODE:-paper}
       # Secrets (KIS_*, GLM_*) come from the host env or an env-file — never
       # baked into the image or the repository.
     env_file:
       - path: .env
         required: false
+    volumes:
+      - lossfunction-data:/data
     ports:
-      - "8080:8080"
+      # Health endpoint bound to the host loopback only; check via SSH:
+      #   ssh vault 'curl -s http://127.0.0.1:18080/healthz'
+      - "127.0.0.1:18080:8080"
+    mem_limit: 150m
+    memswap_limit: 350m
     restart: unless-stopped
 
 volumes:
-  pgdata:
+  lossfunction-data:

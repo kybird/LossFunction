@@ -1,73 +1,80 @@
-"""Numbered, idempotent schema migrations.
+"""Numbered, idempotent schema migrations for SQLite.
+
+Conventions (enforced at the repository boundary):
+- Money: INTEGER in units of 1e-4 KRW (KIS's own price precision); Decimal
+  round-trips exactly through scaleb(4).
+- Timestamps: TEXT ISO 8601 (UTC) supplied by the application — no DB-side
+  clock defaults, so ordering is lexicographic and deterministic.
+- JSON: TEXT payloads encoded/decoded by the repository.
 
 Each entry is applied at most once, tracked in `schema_migrations`.
 Re-running `migrate()` on an up-to-date database is a no-op.
 """
 
-import asyncpg
+import aiosqlite
 
 MIGRATIONS: list[tuple[int, str]] = [
     (
         1,
         """
         CREATE TABLE quotes (
-            id          bigserial PRIMARY KEY,
-            symbol      varchar(6) NOT NULL,
-            price       numeric(18, 4) NOT NULL,
-            quoted_at   timestamptz NOT NULL,
-            received_at timestamptz NOT NULL DEFAULT now()
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            symbol      TEXT NOT NULL,
+            price       INTEGER NOT NULL,
+            quoted_at   TEXT NOT NULL,
+            received_at TEXT NOT NULL
         );
         CREATE INDEX quotes_symbol_time_idx ON quotes (symbol, quoted_at DESC);
 
         CREATE TABLE candles (
-            symbol    varchar(6) NOT NULL,
-            timeframe varchar(3) NOT NULL,
-            ts        timestamptz NOT NULL,
-            open      numeric(18, 4) NOT NULL,
-            high      numeric(18, 4) NOT NULL,
-            low       numeric(18, 4) NOT NULL,
-            close     numeric(18, 4) NOT NULL,
-            volume    bigint NOT NULL,
+            symbol    TEXT NOT NULL,
+            timeframe TEXT NOT NULL,
+            ts        TEXT NOT NULL,
+            open      INTEGER NOT NULL,
+            high      INTEGER NOT NULL,
+            low       INTEGER NOT NULL,
+            close     INTEGER NOT NULL,
+            volume    INTEGER NOT NULL,
             PRIMARY KEY (symbol, timeframe, ts)
         );
 
         CREATE TABLE orders (
-            client_order_id text PRIMARY KEY,
-            broker_order_id text UNIQUE,
-            symbol        varchar(6) NOT NULL,
-            side          varchar(4) NOT NULL,
-            order_type    varchar(6) NOT NULL,
-            quantity      bigint NOT NULL,
-            limit_price   numeric(18, 4),
-            status        varchar(16) NOT NULL,
-            mode          varchar(5) NOT NULL DEFAULT 'paper',
-            created_at    timestamptz NOT NULL DEFAULT now(),
-            updated_at    timestamptz NOT NULL DEFAULT now()
+            client_order_id TEXT PRIMARY KEY,
+            broker_order_id TEXT UNIQUE,
+            symbol        TEXT NOT NULL,
+            side          TEXT NOT NULL,
+            order_type    TEXT NOT NULL,
+            quantity      INTEGER NOT NULL,
+            limit_price   INTEGER,
+            status        TEXT NOT NULL,
+            mode          TEXT NOT NULL DEFAULT 'paper',
+            created_at    TEXT NOT NULL,
+            updated_at    TEXT NOT NULL
         );
         CREATE INDEX orders_status_idx ON orders (status);
 
         CREATE TABLE fills (
-            id              bigserial PRIMARY KEY,
-            client_order_id text NOT NULL REFERENCES orders (client_order_id),
-            quantity        bigint NOT NULL,
-            price           numeric(18, 4) NOT NULL,
-            executed_at     timestamptz NOT NULL,
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_order_id TEXT NOT NULL REFERENCES orders (client_order_id),
+            quantity        INTEGER NOT NULL,
+            price           INTEGER NOT NULL,
+            executed_at     TEXT NOT NULL,
             UNIQUE (client_order_id, executed_at, quantity, price)
         );
 
         CREATE TABLE positions (
-            symbol        varchar(6) PRIMARY KEY,
-            quantity      bigint NOT NULL,
-            average_price numeric(18, 4) NOT NULL,
-            as_of         timestamptz NOT NULL DEFAULT now()
+            symbol        TEXT PRIMARY KEY,
+            quantity      INTEGER NOT NULL,
+            average_price INTEGER NOT NULL,
+            as_of         TEXT NOT NULL
         );
 
         CREATE TABLE audit_log (
-            id          bigserial PRIMARY KEY,
-            event_type  varchar(64) NOT NULL,
-            subject     varchar(128),
-            payload     jsonb NOT NULL,
-            occurred_at timestamptz NOT NULL DEFAULT now()
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_type  TEXT NOT NULL,
+            subject     TEXT,
+            payload     TEXT NOT NULL,
+            occurred_at TEXT NOT NULL
         );
         CREATE INDEX audit_subject_idx ON audit_log (subject, occurred_at DESC);
         """,
@@ -75,23 +82,32 @@ MIGRATIONS: list[tuple[int, str]] = [
 ]
 
 
-async def migrate(pool: asyncpg.Pool) -> list[int]:
+async def migrate(db: aiosqlite.Connection) -> list[int]:
     """Apply pending migrations; return the versions applied this run."""
-    async with pool.acquire() as connection:
-        await connection.execute(
-            "CREATE TABLE IF NOT EXISTS schema_migrations ("
-            " version integer PRIMARY KEY,"
-            " applied_at timestamptz NOT NULL DEFAULT now())"
-        )
-        rows = await connection.fetch("SELECT version FROM schema_migrations")
-        applied = {row["version"] for row in rows}
+    await db.execute(
+        "CREATE TABLE IF NOT EXISTS schema_migrations ("
+        " version INTEGER PRIMARY KEY,"
+        " applied_at TEXT NOT NULL)"
+    )
+    await db.commit()
+
+    cursor = await db.execute("SELECT version FROM schema_migrations")
+    applied = {row[0] for row in await cursor.fetchall()}
 
     newly_applied: list[int] = []
     for version, sql in MIGRATIONS:
         if version in applied:
             continue
-        async with pool.acquire() as connection, connection.transaction():
-            await connection.execute(sql)
-            await connection.execute("INSERT INTO schema_migrations (version) VALUES ($1)", version)
+        await db.execute("BEGIN IMMEDIATE")
+        try:
+            await db.executescript(sql)
+            await db.execute(
+                "INSERT INTO schema_migrations (version, applied_at) VALUES (?, datetime('now'))",
+                (version,),
+            )
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
         newly_applied.append(version)
     return newly_applied
