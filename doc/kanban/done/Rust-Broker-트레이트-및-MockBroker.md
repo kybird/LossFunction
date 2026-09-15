@@ -1,11 +1,9 @@
 ---
 title: Rust Broker 트레이트 및 MockBroker
-status: doing
+status: done
 ordinal: 12000
 created: 2026-09-15
 depends_on: ["Rust 도메인 모델 (Order/Portfolio)"]
-claimed_by: zcode-main
-claimed_at: 2026-09-15T00:33-07:00
 ---
 
 ## Goal
@@ -15,7 +13,7 @@ claimed_at: 2026-09-15T00:33-07:00
 
 ## Acceptance Criteria
 <!-- kanban:ac:begin -->
-- [ ] #1 트레이트 구현 강제(컴파일)와 mock의 멱등 제출·평단가 블렌딩 테스트가 통과한다
+- [x] #1 트레이트 구현 강제(컴파일)와 mock의 멱등 제출·평단가 블렌딩 테스트가 통과한다
 <!-- kanban:ac:end -->
 
 ## Plan
@@ -25,3 +23,4 @@ claimed_at: 2026-09-15T00:33-07:00
 ## Handoff
 
 ## Result
+- 2026-09-15T00:35-07:00 — async_trait Broker(주문/취소/체결보고/잔고/시세)+불변 레코드+BrokerError, MockBroker(Mutex 내부 가변성, 멱등 제출, 지정가 크로스 체결=공유 규칙 함수, 도메인 blended_average 재사용). 검증: cargo test 34 passed, clippy/fmt 클린
