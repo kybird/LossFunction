@@ -168,3 +168,6 @@
 {"ts":"2026-09-15T19:16:06.379Z","action":"claimed","title":"Python 참조 구현 아카이브 전환","actor":"zcode-main"}
 {"ts":"2026-09-15T19:16:56.735Z","action":"done","title":"Python 참조 구현 아카이브 전환"}
 {"ts":"2026-09-15T19:17:14.004Z","action":"claimed","title":"문서 Rust 중심 갱신","actor":"zcode-main"}
+{"ts":"2026-09-15T19:22:50.576Z","action":"done","title":"문서 Rust 중심 갱신"}
+{"ts":"2026-09-15T19:23:08.120Z","action":"claimed","title":"최종 QA (보안/안전장치/위키 정합성)","actor":"zcode-main"}
+{"ts":"2026-09-15T19:28:21.257Z","action":"done","title":"최종 QA (보안/안전장치/위키 정합성)"}

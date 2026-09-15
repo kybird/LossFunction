@@ -3,6 +3,925 @@
   "kind": "board-timeline",
   "repo": "LossFunction",
   "wip": 2,
-  "generatedAt": "2026-09-14T23:37:58.753Z",
-  "events": []
+  "generatedAt": "2026-09-15T19:27:58.720Z",
+  "events": [
+    {
+      "ts": "2026-09-14T23:55:45.705Z",
+      "action": "created",
+      "title": "Project scaffold 및 Python 패키지 기반 구축"
+    },
+    {
+      "ts": "2026-09-14T23:56:11.565Z",
+      "action": "created",
+      "title": "시스템 아키텍처 설계 문서화"
+    },
+    {
+      "ts": "2026-09-14T23:56:11.848Z",
+      "action": "created",
+      "title": "Configuration 및 secrets 환경 분리 구현"
+    },
+    {
+      "ts": "2026-09-14T23:56:12.116Z",
+      "action": "created",
+      "title": "Broker abstraction 인터페이스 정의"
+    },
+    {
+      "ts": "2026-09-14T23:56:26.416Z",
+      "action": "created",
+      "title": "KIS API 인증 클라이언트 구현"
+    },
+    {
+      "ts": "2026-09-14T23:56:26.715Z",
+      "action": "created",
+      "title": "KIS REST 클라이언트 구현"
+    },
+    {
+      "ts": "2026-09-14T23:56:26.990Z",
+      "action": "created",
+      "title": "KIS WebSocket 실시간 클라이언트 구현"
+    },
+    {
+      "ts": "2026-09-14T23:56:40.282Z",
+      "action": "created",
+      "title": "PostgreSQL 스키마 및 저장 계층 구현"
+    },
+    {
+      "ts": "2026-09-14T23:56:40.522Z",
+      "action": "created",
+      "title": "Portfolio 및 Order 도메인 모델 구현"
+    },
+    {
+      "ts": "2026-09-14T23:56:40.760Z",
+      "action": "created",
+      "title": "Paper/live 트레이딩 환경 분리 구현"
+    },
+    {
+      "ts": "2026-09-14T23:56:52.934Z",
+      "action": "created",
+      "title": "Order state machine 구현"
+    },
+    {
+      "ts": "2026-09-14T23:56:53.177Z",
+      "action": "created",
+      "title": "Order reconciliation 및 duplicate order 방지 구현"
+    },
+    {
+      "ts": "2026-09-14T23:56:53.446Z",
+      "action": "created",
+      "title": "Risk management 계층 구현"
+    },
+    {
+      "ts": "2026-09-14T23:56:53.704Z",
+      "action": "created",
+      "title": "Strategy 인터페이스 및 deterministic decision layer 구현"
+    },
+    {
+      "ts": "2026-09-14T23:57:09.656Z",
+      "action": "created",
+      "title": "트레이딩 런타임 오케스트레이터 및 restart recovery 구현"
+    },
+    {
+      "ts": "2026-09-14T23:57:09.901Z",
+      "action": "created",
+      "title": "Backtesting 엔진 구현"
+    },
+    {
+      "ts": "2026-09-14T23:57:10.152Z",
+      "action": "created",
+      "title": "MLP 학습 및 추론 파이프라인 구현"
+    },
+    {
+      "ts": "2026-09-14T23:57:10.391Z",
+      "action": "created",
+      "title": "GLM 시장 분석 통합 구현"
+    },
+    {
+      "ts": "2026-09-14T23:57:23.847Z",
+      "action": "created",
+      "title": "OCI 배포 및 24/7 운영 구성"
+    },
+    {
+      "ts": "2026-09-14T23:57:24.115Z",
+      "action": "created",
+      "title": "모니터링 및 알림 구현"
+    },
+    {
+      "ts": "2026-09-14T23:57:24.361Z",
+      "action": "created",
+      "title": "README 및 공개 문서 작성"
+    },
+    {
+      "ts": "2026-09-14T23:57:51.433Z",
+      "action": "claimed",
+      "title": "Project scaffold 및 Python 패키지 기반 구축",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T00:00:40.567Z",
+      "action": "done",
+      "title": "Project scaffold 및 Python 패키지 기반 구축"
+    },
+    {
+      "ts": "2026-09-15T00:00:50.192Z",
+      "action": "claimed",
+      "title": "시스템 아키텍처 설계 문서화",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T00:02:03.720Z",
+      "action": "done",
+      "title": "시스템 아키텍처 설계 문서화"
+    },
+    {
+      "ts": "2026-09-15T00:02:03.973Z",
+      "action": "claimed",
+      "title": "Configuration 및 secrets 환경 분리 구현",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T00:03:53.642Z",
+      "action": "done",
+      "title": "Configuration 및 secrets 환경 분리 구현"
+    },
+    {
+      "ts": "2026-09-15T00:03:53.874Z",
+      "action": "claimed",
+      "title": "Broker abstraction 인터페이스 정의",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T00:06:43.462Z",
+      "action": "done",
+      "title": "Broker abstraction 인터페이스 정의"
+    },
+    {
+      "ts": "2026-09-15T00:06:43.713Z",
+      "action": "claimed",
+      "title": "KIS API 인증 클라이언트 구현",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T00:10:50.983Z",
+      "action": "done",
+      "title": "KIS API 인증 클라이언트 구현"
+    },
+    {
+      "ts": "2026-09-15T00:10:51.219Z",
+      "action": "claimed",
+      "title": "KIS REST 클라이언트 구현",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T00:15:53.869Z",
+      "action": "done",
+      "title": "KIS REST 클라이언트 구현"
+    },
+    {
+      "ts": "2026-09-15T00:15:54.119Z",
+      "action": "claimed",
+      "title": "KIS WebSocket 실시간 클라이언트 구현",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T00:33:35.228Z",
+      "action": "done",
+      "title": "KIS WebSocket 실시간 클라이언트 구현"
+    },
+    {
+      "ts": "2026-09-15T00:33:35.503Z",
+      "action": "claimed",
+      "title": "PostgreSQL 스키마 및 저장 계층 구현",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T00:55:50.179Z",
+      "action": "done",
+      "title": "PostgreSQL 스키마 및 저장 계층 구현"
+    },
+    {
+      "ts": "2026-09-15T00:55:50.426Z",
+      "action": "claimed",
+      "title": "Portfolio 및 Order 도메인 모델 구현",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T00:59:26.580Z",
+      "action": "done",
+      "title": "Portfolio 및 Order 도메인 모델 구현"
+    },
+    {
+      "ts": "2026-09-15T00:59:26.850Z",
+      "action": "claimed",
+      "title": "Paper/live 트레이딩 환경 분리 구현",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T01:05:02.991Z",
+      "action": "done",
+      "title": "Paper/live 트레이딩 환경 분리 구현"
+    },
+    {
+      "ts": "2026-09-15T01:05:23.438Z",
+      "action": "claimed",
+      "title": "Order state machine 구현",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T01:06:47.575Z",
+      "action": "done",
+      "title": "Order state machine 구현"
+    },
+    {
+      "ts": "2026-09-15T01:06:47.860Z",
+      "action": "claimed",
+      "title": "Order reconciliation 및 duplicate order 방지 구현",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T01:12:58.674Z",
+      "action": "done",
+      "title": "Order reconciliation 및 duplicate order 방지 구현"
+    },
+    {
+      "ts": "2026-09-15T01:12:59.001Z",
+      "action": "claimed",
+      "title": "Risk management 계층 구현",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T01:15:13.197Z",
+      "action": "done",
+      "title": "Risk management 계층 구현"
+    },
+    {
+      "ts": "2026-09-15T01:15:13.497Z",
+      "action": "claimed",
+      "title": "Strategy 인터페이스 및 deterministic decision layer 구현",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T01:16:35.902Z",
+      "action": "done",
+      "title": "Strategy 인터페이스 및 deterministic decision layer 구현"
+    },
+    {
+      "ts": "2026-09-15T01:16:59.235Z",
+      "action": "claimed",
+      "title": "트레이딩 런타임 오케스트레이터 및 restart recovery 구현",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T01:22:10.770Z",
+      "action": "done",
+      "title": "트레이딩 런타임 오케스트레이터 및 restart recovery 구현"
+    },
+    {
+      "ts": "2026-09-15T01:22:11.040Z",
+      "action": "claimed",
+      "title": "Backtesting 엔진 구현",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T01:24:53.271Z",
+      "action": "done",
+      "title": "Backtesting 엔진 구현"
+    },
+    {
+      "ts": "2026-09-15T01:24:53.567Z",
+      "action": "claimed",
+      "title": "MLP 학습 및 추론 파이프라인 구현",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T01:30:13.326Z",
+      "action": "done",
+      "title": "MLP 학습 및 추론 파이프라인 구현"
+    },
+    {
+      "ts": "2026-09-15T01:30:13.676Z",
+      "action": "claimed",
+      "title": "GLM 시장 분석 통합 구현",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T01:34:12.875Z",
+      "action": "done",
+      "title": "GLM 시장 분석 통합 구현"
+    },
+    {
+      "ts": "2026-09-15T01:34:13.210Z",
+      "action": "claimed",
+      "title": "OCI 배포 및 24/7 운영 구성",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T01:38:02.242Z",
+      "action": "done",
+      "title": "OCI 배포 및 24/7 운영 구성"
+    },
+    {
+      "ts": "2026-09-15T01:38:02.558Z",
+      "action": "claimed",
+      "title": "모니터링 및 알림 구현",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T01:40:28.076Z",
+      "action": "done",
+      "title": "모니터링 및 알림 구현"
+    },
+    {
+      "ts": "2026-09-15T01:40:28.392Z",
+      "action": "claimed",
+      "title": "README 및 공개 문서 작성",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T01:42:09.837Z",
+      "action": "created",
+      "title": "오픈소스 라이선스 선택"
+    },
+    {
+      "ts": "2026-09-15T01:42:10.120Z",
+      "action": "handoff",
+      "title": "오픈소스 라이선스 선택",
+      "detail": "라이선스를 무엇으로 할지 결정해 주세요. 금융 코드 특성상 Apache-2.0(특허 조항 포함)이 일반적이나 MIT이 더 단순합니다. 결정 주시면 LICENSE 파일+pyproject+README를 정리합니다."
+    },
+    {
+      "ts": "2026-09-15T01:42:34.907Z",
+      "action": "done",
+      "title": "README 및 공개 문서 작성"
+    },
+    {
+      "ts": "2026-09-15T02:58:40.613Z",
+      "action": "created",
+      "title": "저장 계층 SQLite 전환"
+    },
+    {
+      "ts": "2026-09-15T02:58:40.853Z",
+      "action": "created",
+      "title": "PowerShell 배포 스크립트 및 배포 구성"
+    },
+    {
+      "ts": "2026-09-15T02:58:41.081Z",
+      "action": "claimed",
+      "title": "저장 계층 SQLite 전환",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T03:06:27.623Z",
+      "action": "done",
+      "title": "저장 계층 SQLite 전환"
+    },
+    {
+      "ts": "2026-09-15T03:06:27.899Z",
+      "action": "claimed",
+      "title": "PowerShell 배포 스크립트 및 배포 구성",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T03:18:35.091Z",
+      "action": "done",
+      "title": "PowerShell 배포 스크립트 및 배포 구성"
+    },
+    {
+      "ts": "2026-09-15T04:36:13.692Z",
+      "action": "created",
+      "title": "경량 상태 페이지 (런타임 내장 대시보드)"
+    },
+    {
+      "ts": "2026-09-15T04:36:14.024Z",
+      "action": "claimed",
+      "title": "경량 상태 페이지 (런타임 내장 대시보드)",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T04:42:38.093Z",
+      "action": "done",
+      "title": "경량 상태 페이지 (런타임 내장 대시보드)"
+    },
+    {
+      "ts": "2026-09-15T04:53:00.509Z",
+      "action": "resumed",
+      "title": "오픈소스 라이선스 선택",
+      "detail": "결정: MIT 라이선스로 공개"
+    },
+    {
+      "ts": "2026-09-15T04:53:00.853Z",
+      "action": "claimed",
+      "title": "오픈소스 라이선스 선택",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T04:54:26.287Z",
+      "action": "done",
+      "title": "오픈소스 라이선스 선택"
+    },
+    {
+      "ts": "2026-09-15T05:34:12.319Z",
+      "action": "created",
+      "title": "자격증명 획득 가이드 문서화"
+    },
+    {
+      "ts": "2026-09-15T05:34:12.603Z",
+      "action": "created",
+      "title": "상태 페이지 최소 제어 기능"
+    },
+    {
+      "ts": "2026-09-15T05:34:12.883Z",
+      "action": "created",
+      "title": "Paper 데모 루프"
+    },
+    {
+      "ts": "2026-09-15T05:34:26.325Z",
+      "action": "claimed",
+      "title": "자격증명 획득 가이드 문서화",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T05:35:22.726Z",
+      "action": "done",
+      "title": "자격증명 획득 가이드 문서화"
+    },
+    {
+      "ts": "2026-09-15T05:35:23.009Z",
+      "action": "claimed",
+      "title": "상태 페이지 최소 제어 기능",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T05:54:14.359Z",
+      "action": "done",
+      "title": "상태 페이지 최소 제어 기능"
+    },
+    {
+      "ts": "2026-09-15T05:54:14.917Z",
+      "action": "done",
+      "title": "Paper 데모 루프"
+    },
+    {
+      "ts": "2026-09-15T06:57:34.032Z",
+      "action": "created",
+      "title": "Rust 워크스페이스 부트스트랩"
+    },
+    {
+      "ts": "2026-09-15T06:57:34.303Z",
+      "action": "created",
+      "title": "Rust 도메인 모델 (Order/Portfolio)"
+    },
+    {
+      "ts": "2026-09-15T06:57:34.573Z",
+      "action": "created",
+      "title": "Rust 저장 계층 (SQLite)"
+    },
+    {
+      "ts": "2026-09-15T06:57:34.879Z",
+      "action": "created",
+      "title": "Rust 실행 계층 (상태머신/게이트웨이/reconciliation)"
+    },
+    {
+      "ts": "2026-09-15T06:57:35.166Z",
+      "action": "created",
+      "title": "Rust 리스크 계층"
+    },
+    {
+      "ts": "2026-09-15T06:57:35.408Z",
+      "action": "created",
+      "title": "Rust KIS 클라이언트 (auth/REST/WS)"
+    },
+    {
+      "ts": "2026-09-15T06:57:35.654Z",
+      "action": "created",
+      "title": "Rust 런타임 (오케스트레이터/서버/상태 페이지)"
+    },
+    {
+      "ts": "2026-09-15T06:57:35.896Z",
+      "action": "created",
+      "title": "Rust 백테스팅 엔진"
+    },
+    {
+      "ts": "2026-09-15T06:57:36.141Z",
+      "action": "created",
+      "title": "Rust 배포 (Docker/스크립트)"
+    },
+    {
+      "ts": "2026-09-15T06:57:36.381Z",
+      "action": "created",
+      "title": "Rust MLP/GLM 전략 조사"
+    },
+    {
+      "ts": "2026-09-15T06:57:57.197Z",
+      "action": "claimed",
+      "title": "Rust 워크스페이스 부트스트랩",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T07:00:03.829Z",
+      "action": "done",
+      "title": "Rust 워크스페이스 부트스트랩"
+    },
+    {
+      "ts": "2026-09-15T07:06:07.050Z",
+      "action": "created",
+      "title": "Rust 전략 인터페이스 및 결정 레이어"
+    },
+    {
+      "ts": "2026-09-15T07:06:07.314Z",
+      "action": "created",
+      "title": "Rust Broker 트레이트 및 MockBroker"
+    },
+    {
+      "ts": "2026-09-15T07:06:07.599Z",
+      "action": "created",
+      "title": "Rust GLM 클라이언트"
+    },
+    {
+      "ts": "2026-09-15T07:06:07.890Z",
+      "action": "created",
+      "title": "Rust 주문 상태머신"
+    },
+    {
+      "ts": "2026-09-15T07:06:08.163Z",
+      "action": "created",
+      "title": "Rust 주문 게이트웨이 및 reconciler"
+    },
+    {
+      "ts": "2026-09-15T07:06:08.452Z",
+      "action": "created",
+      "title": "Rust KIS 인증 및 REST 클라이언트"
+    },
+    {
+      "ts": "2026-09-15T07:06:08.722Z",
+      "action": "created",
+      "title": "Rust KIS WebSocket 클라이언트"
+    },
+    {
+      "ts": "2026-09-15T07:06:09.026Z",
+      "action": "created",
+      "title": "Rust 오케스트레이터 및 데모 루프"
+    },
+    {
+      "ts": "2026-09-15T07:06:09.330Z",
+      "action": "created",
+      "title": "Rust axum 서버 (헬스/상태 페이지/제어)"
+    },
+    {
+      "ts": "2026-09-15T07:06:09.641Z",
+      "action": "created",
+      "title": "Python 참조 구현 패리티 리뷰"
+    },
+    {
+      "ts": "2026-09-15T07:06:09.937Z",
+      "action": "created",
+      "title": "Python 참조 구현 아카이브 전환"
+    },
+    {
+      "ts": "2026-09-15T07:06:10.266Z",
+      "action": "created",
+      "title": "문서 Rust 중심 갱신"
+    },
+    {
+      "ts": "2026-09-15T07:06:10.557Z",
+      "action": "created",
+      "title": "최종 QA (보안/안전장치/위키 정합성)"
+    },
+    {
+      "ts": "2026-09-15T07:06:25.688Z",
+      "action": "superseded",
+      "title": "Rust 실행 계층 (상태머신/게이트웨이/reconciliation)",
+      "detail": "by Rust 주문 상태머신, Rust 주문 게이트웨이 및 reconciler"
+    },
+    {
+      "ts": "2026-09-15T07:06:25.987Z",
+      "action": "superseded",
+      "title": "Rust KIS 클라이언트 (auth/REST/WS)",
+      "detail": "by Rust KIS 인증 및 REST 클라이언트, Rust KIS WebSocket 클라이언트"
+    },
+    {
+      "ts": "2026-09-15T07:06:26.291Z",
+      "action": "superseded",
+      "title": "Rust 런타임 (오케스트레이터/서버/상태 페이지)",
+      "detail": "by Rust 오케스트레이터 및 데모 루프, Rust axum 서버 (헬스/상태 페이지/제어)"
+    },
+    {
+      "ts": "2026-09-15T07:15:37.619Z",
+      "action": "created",
+      "title": "Rust 시세 이력 윈도우 (전략 입력 확장)"
+    },
+    {
+      "ts": "2026-09-15T07:15:37.909Z",
+      "action": "created",
+      "title": "Rust 기본 전략 3종 (골든크로스·RSI·돈키안)"
+    },
+    {
+      "ts": "2026-09-15T07:15:38.198Z",
+      "action": "created",
+      "title": "퀀트 자동매매 알고리즘 조사 및 전략 카드 발행"
+    },
+    {
+      "ts": "2026-09-15T07:19:32.657Z",
+      "action": "claimed",
+      "title": "Rust 도메인 모델 (Order/Portfolio)",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T07:23:09.084Z",
+      "action": "done",
+      "title": "Rust 도메인 모델 (Order/Portfolio)"
+    },
+    {
+      "ts": "2026-09-15T07:23:09.329Z",
+      "action": "claimed",
+      "title": "Rust 저장 계층 (SQLite)",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T07:29:13.617Z",
+      "action": "done",
+      "title": "Rust 저장 계층 (SQLite)"
+    },
+    {
+      "ts": "2026-09-15T07:29:13.877Z",
+      "action": "claimed",
+      "title": "Rust 리스크 계층",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T07:32:09.257Z",
+      "action": "done",
+      "title": "Rust 리스크 계층"
+    },
+    {
+      "ts": "2026-09-15T07:32:34.616Z",
+      "action": "claimed",
+      "title": "Rust MLP/GLM 전략 조사",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T07:33:07.548Z",
+      "action": "claimed",
+      "title": "Rust Broker 트레이트 및 MockBroker",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T07:35:03.680Z",
+      "action": "done",
+      "title": "Rust Broker 트레이트 및 MockBroker"
+    },
+    {
+      "ts": "2026-09-15T07:44:37.362Z",
+      "action": "claimed",
+      "title": "Rust 주문 상태머신",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T07:45:53.907Z",
+      "action": "done",
+      "title": "Rust 주문 상태머신"
+    },
+    {
+      "ts": "2026-09-15T07:46:30.137Z",
+      "action": "claimed",
+      "title": "Rust 전략 인터페이스 및 결정 레이어",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T08:01:18.038Z",
+      "action": "done",
+      "title": "Rust 전략 인터페이스 및 결정 레이어"
+    },
+    {
+      "ts": "2026-09-15T08:02:33.498Z",
+      "action": "claimed",
+      "title": "Rust 주문 게이트웨이 및 reconciler",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T08:04:04.461Z",
+      "action": "done",
+      "title": "Rust 주문 게이트웨이 및 reconciler"
+    },
+    {
+      "ts": "2026-09-15T08:04:36.643Z",
+      "action": "claimed",
+      "title": "Rust 오케스트레이터 및 데모 루프",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T08:08:46.781Z",
+      "action": "done",
+      "title": "Rust 오케스트레이터 및 데모 루프"
+    },
+    {
+      "ts": "2026-09-15T08:11:37.603Z",
+      "action": "claimed",
+      "title": "Rust axum 서버 (헬스/상태 페이지/제어)",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T08:18:36.002Z",
+      "action": "done",
+      "title": "Rust axum 서버 (헬스/상태 페이지/제어)"
+    },
+    {
+      "ts": "2026-09-15T08:19:10.067Z",
+      "action": "claimed",
+      "title": "Rust 시세 이력 윈도우 (전략 입력 확장)",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T08:20:59.651Z",
+      "action": "done",
+      "title": "Rust 시세 이력 윈도우 (전략 입력 확장)"
+    },
+    {
+      "ts": "2026-09-15T08:21:24.624Z",
+      "action": "claimed",
+      "title": "Rust 기본 전략 3종 (골든크로스·RSI·돈키안)",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T08:24:16.028Z",
+      "action": "done",
+      "title": "Rust 기본 전략 3종 (골든크로스·RSI·돈키안)"
+    },
+    {
+      "ts": "2026-09-15T08:26:00.798Z",
+      "action": "claimed",
+      "title": "Rust 백테스팅 엔진",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T08:29:58.116Z",
+      "action": "done",
+      "title": "Rust 백테스팅 엔진"
+    },
+    {
+      "ts": "2026-09-15T08:31:59.544Z",
+      "action": "claimed",
+      "title": "Rust KIS 인증 및 REST 클라이언트",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T09:11:51.552Z",
+      "action": "done",
+      "title": "Rust KIS 인증 및 REST 클라이언트"
+    },
+    {
+      "ts": "2026-09-15T09:12:25.716Z",
+      "action": "claimed",
+      "title": "Rust GLM 클라이언트",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T09:14:45.872Z",
+      "action": "done",
+      "title": "Rust GLM 클라이언트"
+    },
+    {
+      "ts": "2026-09-15T17:39:33.371Z",
+      "action": "claimed",
+      "title": "Rust KIS WebSocket 클라이언트",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T17:46:49.083Z",
+      "action": "done",
+      "title": "Rust KIS WebSocket 클라이언트"
+    },
+    {
+      "ts": "2026-09-15T17:47:19.276Z",
+      "action": "claimed",
+      "title": "Rust 배포 (Docker/스크립트)",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T18:54:52.012Z",
+      "action": "done",
+      "title": "Rust 배포 (Docker/스크립트)"
+    },
+    {
+      "ts": "2026-09-15T18:56:03.147Z",
+      "action": "claimed",
+      "title": "퀀트 자동매매 알고리즘 조사 및 전략 카드 발행",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T18:57:03.417Z",
+      "action": "created",
+      "title": "Rust 볼린저 밴드 역추세 전략"
+    },
+    {
+      "ts": "2026-09-15T18:57:03.655Z",
+      "action": "created",
+      "title": "Rust 12-1 모멘텀 로테이션 전략"
+    },
+    {
+      "ts": "2026-09-15T18:57:03.918Z",
+      "action": "created",
+      "title": "Rust MACD 교차 전략"
+    },
+    {
+      "ts": "2026-09-15T18:57:04.200Z",
+      "action": "created",
+      "title": "Rust VWAP 실행 알고리즘"
+    },
+    {
+      "ts": "2026-09-15T18:57:26.666Z",
+      "action": "done",
+      "title": "퀀트 자동매매 알고리즘 조사 및 전략 카드 발행"
+    },
+    {
+      "ts": "2026-09-15T18:57:27.366Z",
+      "action": "done",
+      "title": "Rust MLP/GLM 전략 조사"
+    },
+    {
+      "ts": "2026-09-15T18:58:14.417Z",
+      "action": "claimed",
+      "title": "Rust 볼린저 밴드 역추세 전략",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T19:08:43.683Z",
+      "action": "done",
+      "title": "Rust 볼린저 밴드 역추세 전략"
+    },
+    {
+      "ts": "2026-09-15T19:08:44.392Z",
+      "action": "done",
+      "title": "Rust 12-1 모멘텀 로테이션 전략"
+    },
+    {
+      "ts": "2026-09-15T19:08:44.873Z",
+      "action": "done",
+      "title": "Rust MACD 교차 전략"
+    },
+    {
+      "ts": "2026-09-15T19:09:01.854Z",
+      "action": "claimed",
+      "title": "Rust VWAP 실행 알고리즘",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T19:10:31.264Z",
+      "action": "done",
+      "title": "Rust VWAP 실행 알고리즘"
+    },
+    {
+      "ts": "2026-09-15T19:11:07.833Z",
+      "action": "claimed",
+      "title": "Python 참조 구현 패리티 리뷰",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T19:13:00.961Z",
+      "action": "created",
+      "title": "Rust 런타임 KIS 백엔드 조립"
+    },
+    {
+      "ts": "2026-09-15T19:13:01.745Z",
+      "action": "done",
+      "title": "Python 참조 구현 패리티 리뷰"
+    },
+    {
+      "ts": "2026-09-15T19:13:22.066Z",
+      "action": "claimed",
+      "title": "Rust 런타임 KIS 백엔드 조립",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T19:15:01.905Z",
+      "action": "done",
+      "title": "Rust 런타임 KIS 백엔드 조립"
+    },
+    {
+      "ts": "2026-09-15T19:16:06.379Z",
+      "action": "claimed",
+      "title": "Python 참조 구현 아카이브 전환",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T19:16:56.735Z",
+      "action": "done",
+      "title": "Python 참조 구현 아카이브 전환"
+    },
+    {
+      "ts": "2026-09-15T19:17:14.004Z",
+      "action": "claimed",
+      "title": "문서 Rust 중심 갱신",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-15T19:22:50.576Z",
+      "action": "done",
+      "title": "문서 Rust 중심 갱신"
+    },
+    {
+      "ts": "2026-09-15T19:23:08.120Z",
+      "action": "claimed",
+      "title": "최종 QA (보안/안전장치/위키 정합성)",
+      "actor": "zcode-main"
+    }
+  ]
 }

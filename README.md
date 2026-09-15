@@ -33,17 +33,22 @@ OCI에서 24/7 무인 운영.
 ## 빠른 시작 (개발)
 
 ```bash
-git clone https://github.com/<owner>/LossFunction.git
-cd LossFunction
+git clone https://github.com/kybird/LossFunction.git
+cd LossFunction/rust
 
-python -m venv .venv
-source .venv/bin/activate            # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"              # MLP까지: pip install -e ".[dev,ml]"
-
-pytest                               # 전체 테스트 (자격증명/DB 불필요)
+cargo test                           # 전체 테스트 108개 (자격증명/DB 불필요)
+cargo clippy --all-targets           # 경고 0
+cargo fmt --check
 ```
 
-린트/포맷: `ruff check . && ruff format --check .`
+로컬 실행:
+
+```bash
+cargo run --release                  # 헬스(8080) + 상태 페이지
+DEMO_LOOP=true cargo run --release   # 가상 시장으로 전 파이프라인 실연
+```
+
+Python 참조 구현은 `reference/`(아카이브, 181 테스트).
 
 ## 설정
 

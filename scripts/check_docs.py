@@ -38,11 +38,10 @@ def test_credentials_guide_covers_all_key_kinds() -> None:
 def test_readme_covers_setup_configuration_running_and_paper() -> None:
     for section_marker in (
         "빠른 시작",
-        "pip install -e",
+        "cargo run --release",
         ".env.example",
         "설정",
         "paper trading",
-        "lossfunction.runtime.cli",
     ):
         assert section_marker in README, f"README missing: {section_marker}"
 
@@ -57,10 +56,9 @@ def test_readme_links_core_documents() -> None:
 
 def test_readme_clone_to_test_commands() -> None:
     for command in (
-        "python -m venv .venv",
-        'pip install -e ".[dev]"',
-        "pytest",
-        "ruff check",
+        "cargo test",
+        "cargo clippy --all-targets",
+        "cargo fmt --check",
     ):
         assert command in README
 
@@ -81,8 +79,10 @@ def test_license_is_mit_and_declared_everywhere() -> None:
     assert license_text.startswith("MIT License")
     assert "Permission is hereby granted" in license_text
 
-    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    assert 'license = "MIT"' in pyproject
+    cargo = (ROOT / "rust" / "lossfunction" / "Cargo.toml").read_text(encoding="utf-8")
+    assert 'license.workspace = true' in cargo
+    workspace = (ROOT / "rust" / "Cargo.toml").read_text(encoding="utf-8")
+    assert 'license = "MIT"' in workspace
 
     assert "MIT" in README
     assert "미정" not in README
