@@ -36,7 +36,7 @@ if (Test-Path $tarball) { Remove-Item $tarball }
 # Absolute path: Git Bash's GNU tar would misread "C:\..." as host:path.
 $tarExe = "C:\Windows\System32\tar.exe"
 if (-not (Test-Path $tarExe)) { $tarExe = "tar.exe" }
-& $tarExe -czf $tarball -C $root Dockerfile docker-compose.yml pyproject.toml README.md src
+& $tarExe -czf $tarball -C $root docker-compose.yml rust
 if ($LASTEXITCODE -ne 0) { throw "packaging failed" }
 $size = "{0:N1} KB" -f ((Get-Item $tarball).Length / 1KB)
 Write-Host "   $tarball ($size)"

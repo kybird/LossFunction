@@ -17,6 +17,19 @@ use lossfunction::storage::Repository;
 
 #[tokio::main]
 async fn main() {
+    // Container HEALTHCHECK probe: exit 0 when the local endpoint answers.
+    if std::env::args().any(|arg| arg == "--healthcheck") {
+        let port: u16 = std::env::var("HEALTH_PORT")
+            .ok()
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(8080);
+        let url = format!("http://127.0.0.1:{port}/healthz");
+        match reqwest::get(url).await {
+            Ok(response) if response.status().is_success() => std::process::exit(0),
+            _ => std::process::exit(1),
+        }
+    }
+
     let settings = Settings::load().unwrap_or_else(|error| {
         eprintln!("settings refused to load: {error}");
         std::process::exit(2);

@@ -1,9 +1,11 @@
 ---
 title: Rust 배포 (Docker/스크립트)
-status: todo
+status: doing
 ordinal: 9000
 created: 2026-09-14
 depends_on: ["Rust axum 서버 (헬스/상태 페이지/제어)"]
+claimed_by: zcode-main
+claimed_at: 2026-09-15T10:47-07:00
 ---
 
 ## Goal

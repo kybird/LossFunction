@@ -1,6 +1,8 @@
 services:
   runtime:
-    build: .
+    build:
+      context: ./rust
+      dockerfile: Dockerfile
     container_name: lossfunction
     environment:
       # SQLite file inside the mounted volume survives redeploys/restarts.
@@ -19,8 +21,8 @@ services:
       # Health endpoint bound to the host loopback only; check via SSH:
       #   ssh vault 'curl -s http://127.0.0.1:18080/healthz'
       - "127.0.0.1:18080:8080"
-    mem_limit: 150m
-    memswap_limit: 350m
+    mem_limit: 80m
+    memswap_limit: 200m
     restart: unless-stopped
 
 volumes:
