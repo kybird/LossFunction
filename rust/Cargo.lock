@@ -1044,6 +1044,7 @@ dependencies = [
  "axum",
  "chrono",
  "dotenvy",
+ "futures-util",
  "reqwest",
  "rust_decimal",
  "serde",

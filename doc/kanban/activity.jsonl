@@ -143,3 +143,4 @@
 {"ts":"2026-09-15T09:11:51.552Z","action":"done","title":"Rust KIS 인증 및 REST 클라이언트"}
 {"ts":"2026-09-15T09:12:25.716Z","action":"claimed","title":"Rust GLM 클라이언트","actor":"zcode-main"}
 {"ts":"2026-09-15T09:14:45.872Z","action":"done","title":"Rust GLM 클라이언트"}
+{"ts":"2026-09-15T17:39:33.371Z","action":"claimed","title":"Rust KIS WebSocket 클라이언트","actor":"zcode-main"}

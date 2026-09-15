@@ -1,9 +1,11 @@
 ---
 title: Rust KIS WebSocket 클라이언트
-status: todo
+status: doing
 ordinal: 17000
 created: 2026-09-15
 depends_on: ["Rust Broker 트레이트 및 MockBroker"]
+claimed_by: zcode-main
+claimed_at: 2026-09-15T10:39-07:00
 ---
 
 ## Goal
