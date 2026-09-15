@@ -29,6 +29,8 @@ fn unknown_entry_allowed_from(status: OrderStatus) -> bool {
     matches!(status, OrderStatus::Pending | OrderStatus::Submitted)
 }
 
+pub type TransitionCallback = Box<dyn Fn(&TransitionEvent) + Send + Sync>;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct TransitionEvent {
     pub client_order_id: String,
@@ -63,7 +65,7 @@ pub enum TransitionError {
 pub struct StateMachine {
     statuses: HashMap<String, OrderStatus>,
     history: HashMap<String, Vec<TransitionEvent>>,
-    on_event: Option<Box<dyn Fn(&TransitionEvent) + Send + Sync>>,
+    on_event: Option<TransitionCallback>,
     now: Box<dyn Fn() -> DateTime<Utc> + Send + Sync>,
 }
 
