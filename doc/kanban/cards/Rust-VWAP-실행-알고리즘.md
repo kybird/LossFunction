@@ -1,9 +1,11 @@
 ---
 title: Rust VWAP 실행 알고리즘
-status: todo
+status: doing
 ordinal: 30000
 created: 2026-09-15
 depends_on: ["Rust 주문 게이트웨이 및 reconciler"]
+claimed_by: zcode-main
+claimed_at: 2026-09-15T12:09-07:00
 ---
 
 ## Goal

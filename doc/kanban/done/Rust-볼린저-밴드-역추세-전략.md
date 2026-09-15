@@ -1,11 +1,9 @@
 ---
 title: Rust 볼린저 밴드 역추세 전략
-status: doing
+status: done
 ordinal: 27000
 created: 2026-09-15
 depends_on: ["Rust 시세 이력 윈도우 (전략 입력 확장)"]
-claimed_by: zcode-main
-claimed_at: 2026-09-15T11:58-07:00
 ---
 
 ## Goal
@@ -15,7 +13,7 @@ claimed_at: 2026-09-15T11:58-07:00
 
 ## Acceptance Criteria
 <!-- kanban:ac:begin -->
-- [ ] #1 밴드 하단 매수/상단 매도 시그널과 결정론·백테스트 실행이 테스트로 검증된다
+- [x] #1 밴드 하단 매수/상단 매도 시그널과 결정론·백테스트 실행이 테스트로 검증된다
 <!-- kanban:ac:end -->
 
 ## Plan
@@ -25,3 +23,4 @@ claimed_at: 2026-09-15T11:58-07:00
 ## Handoff
 
 ## Result
+- 2026-09-15T12:08-07:00 — 20SMA±2σ 밴드(경계 f64 sqrt, 나머지 Decimal 정확) 하단 매수/상단 매도(보유 시), 밴드 피처 기록, 결정론 단정. 검증: cargo test 99 passed, clippy/fmt 클린

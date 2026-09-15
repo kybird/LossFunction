@@ -2,5 +2,6 @@
 
 pub mod gateway;
 pub mod state_machine;
+pub mod vwap;
 
 pub use state_machine::{transitions, StateMachine, TransitionError, TransitionEvent};
