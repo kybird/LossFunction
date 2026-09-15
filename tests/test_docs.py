@@ -11,7 +11,25 @@ DOCUMENTED_FILES = [
     ROOT / "docs" / "architecture.md",
     ROOT / "docs" / "recovery.md",
     ROOT / "docs" / "deployment.md",
+    ROOT / "docs" / "credentials.md",
 ]
+
+
+def test_credentials_guide_covers_all_key_kinds() -> None:
+    guide = (ROOT / "docs" / "credentials.md").read_text(encoding="utf-8")
+    for marker in (
+        "apiportal.koreainvestment.com",
+        "KIS_APP_KEY",
+        "KIS_APP_SECRET",
+        "KIS_ACCOUNT_NUMBER",
+        "LIVE_TRADING_CONFIRMED",
+        "모의투자",          # mock credentials are separate from real ones
+        "PAPER_BACKEND=kis",
+        "open.bigmodel.cn",
+        "DEMO_LOOP=true",
+    ):
+        assert marker in guide, f"credentials guide missing: {marker}"
+    assert "credentials.md" in README
 
 
 # ── AC1: install / configure / run / paper guides present ──────────

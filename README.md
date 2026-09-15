@@ -67,7 +67,8 @@ cp .env.example .env
 | `ALERT_WEBHOOK_URL` | — | 알림 웹훅(옵트인) |
 
 **자격증명은 절대 커밋하지 않습니다.** `.env`/`.env.*`는 gitignored,
-`.env.example`만 추적됩니다(누출 방지가 테스트로 검증됨).
+`.env.example`만 추적됩니다(누출 방지가 테스트로 검증됨). **발급 절차와
+설정 예시는 [docs/credentials.md](docs/credentials.md)에 정리돼 있습니다.**
 
 ### paper trading
 
