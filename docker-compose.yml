@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: lossfunction
+      POSTGRES_PASSWORD: lossfunction
+      POSTGRES_DB: lossfunction
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lossfunction -d lossfunction"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  runtime:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://lossfunction:lossfunction@postgres:5432/lossfunction
+      TRADING_MODE: ${TRADING_MODE:-paper}
+      # Secrets (KIS_*, GLM_*) come from the host env or an env-file — never
+      # baked into the image or the repository.
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
