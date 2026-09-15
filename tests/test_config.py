@@ -39,7 +39,23 @@ def test_live_mode_requires_confirmation(monkeypatch: pytest.MonkeyPatch) -> Non
 def test_confirmed_live_mode_is_allowed(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("TRADING_MODE", "live")
     monkeypatch.setenv("LIVE_TRADING_CONFIRMED", "true")
+    monkeypatch.setenv("KIS_ENVIRONMENT", "real")
     assert load_settings().trading_mode is TradingMode.LIVE
+
+
+def test_kis_environment_defaults_to_mock(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("KIS_ENVIRONMENT", raising=False)
+    assert load_settings().kis_environment == "mock"
+
+
+def test_live_mode_requires_real_kis_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TRADING_MODE", "live")
+    monkeypatch.setenv("LIVE_TRADING_CONFIRMED", "true")
+    monkeypatch.setenv("KIS_ENVIRONMENT", "mock")
+    with pytest.raises(ValidationError, match="kis_environment=real"):
+        load_settings()
 
 
 def test_dotenv_settings_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -7,6 +7,7 @@ Rules (docs/architecture.md §5):
 """
 
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -30,6 +31,9 @@ class Settings(BaseSettings):
     trading_mode: TradingMode = TradingMode.PAPER
     live_trading_confirmed: bool = False
 
+    # KIS API domain: "mock" (모의투자, safe default) or "real".
+    kis_environment: Literal["real", "mock"] = "mock"
+
     # KIS credentials — environment only, never committed.
     kis_app_key: SecretStr = SecretStr("")
     kis_app_secret: SecretStr = SecretStr("")
@@ -38,12 +42,15 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://localhost:5432/lossfunction"
 
     @model_validator(mode="after")
-    def _live_requires_confirmation(self) -> "Settings":
+    def _validate_mode_consistency(self) -> "Settings":
         if self.trading_mode is TradingMode.LIVE and not self.live_trading_confirmed:
             msg = (
                 "trading_mode=live requires live_trading_confirmed=true; "
                 "unconfirmed live trading is refused at settings load"
             )
+            raise ValueError(msg)
+        if self.trading_mode is TradingMode.LIVE and self.kis_environment != "real":
+            msg = "trading_mode=live requires kis_environment=real"
             raise ValueError(msg)
         return self
 
