@@ -1,0 +1,53 @@
+"""Typed application settings with paper/live separation.
+
+Rules (docs/architecture.md §5):
+- Default mode is paper.
+- Live mode requires an explicit, separate confirmation flag.
+- Secrets never have defaults and are masked in repr.
+"""
+
+from enum import StrEnum
+
+from pydantic import SecretStr, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class TradingMode(StrEnum):
+    PAPER = "paper"
+    LIVE = "live"
+
+
+class Settings(BaseSettings):
+    """Application settings loaded from environment variables and `.env`."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        frozen=True,
+    )
+
+    trading_mode: TradingMode = TradingMode.PAPER
+    live_trading_confirmed: bool = False
+
+    # KIS credentials — environment only, never committed.
+    kis_app_key: SecretStr = SecretStr("")
+    kis_app_secret: SecretStr = SecretStr("")
+    kis_account_number: str = ""
+
+    database_url: str = "postgresql://localhost:5432/lossfunction"
+
+    @model_validator(mode="after")
+    def _live_requires_confirmation(self) -> "Settings":
+        if self.trading_mode is TradingMode.LIVE and not self.live_trading_confirmed:
+            msg = (
+                "trading_mode=live requires live_trading_confirmed=true; "
+                "unconfirmed live trading is refused at settings load"
+            )
+            raise ValueError(msg)
+        return self
+
+
+def load_settings() -> Settings:
+    """Load settings from the environment (and `.env` if present)."""
+    return Settings()

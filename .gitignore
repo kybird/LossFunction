@@ -12,6 +12,7 @@ venv/
 # Environments & secrets — never commit real credentials
 .env
 .env.*
+!.env.example
 
 # Tooling caches
 .pytest_cache/
