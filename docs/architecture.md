@@ -9,7 +9,7 @@ LossFunction은 한국투자증권(KIS) Open API 위에서 동작하는 오픈�
 
 - **대상 시장**: 국내 주식 우선
 - **운영 형태**: OCI에서 24/7 무인 운영, Docker 컨테이너
-- **언어/플랫폼**: Python 3.11+, REST + WebSocket
+- **언어/플랫폼**: Rust(단일 바이너리, tokio 비동기 런타임) — REST(reqwest) + WebSocket
 - **핵심 원칙**: deterministic strategy/risk/order, 전 상태 auditability, restart/recovery
 
 ## 2. 컴포넌트 다이어그램
@@ -27,8 +27,8 @@ graph TB
 
     subgraph Decision["의사결정"]
         STRAT[Strategy 계층<br/>deterministic decision layer]
-        MLP_SVC[MLP 추론 서비스]
-        GLM_SVC[GLM 분석 서비스]
+        MLP_SVC[MLP 추론<br/>계획: sklearn→ONNX→ort, 미구현]
+        GLM_SVC[GLM 분석 서비스<br/>analysis.rs — 스키마 검증+명시적 폴백]
     end
 
     subgraph Guard["사전 검증"]
@@ -49,7 +49,7 @@ graph TB
 
     subgraph Research["연구/검증"]
         BACKTEST[Backtesting 엔진]
-        MLP_TRAIN[MLP 학습 파이프라인]
+        MLP_TRAIN[MLP 학습 파이프라인<br/>reference/ (Python, sklearn)]
     end
 
     KIS_WS --> ORCH
@@ -61,11 +61,11 @@ graph TB
     BROKER_IFace --> MOCK_BROKER
     KIS_BROKER --> RECON
     RECON --> OSM
-    ORCH --> PG
+    ORCH --> DB
     MLP_SVC --> STRAT
     GLM_SVC --> STRAT
     BACKTEST --> BROKER_IFace
-    MLP_TRAIN --> PG
+    MLP_TRAIN -.-> MLP_SVC
 ```
 
 ## 3. 데이터 흐름 (정상 경로)
@@ -106,22 +106,24 @@ sequenceDiagram
 
 ## 4. 모듈 경계와 인터페이스 책임
 
-패키지 루트: `src/lossfunction/` — 의존 방향은 항상 아래 방향(하위 모듈은 상위 모듈을
+크레이트 루트: `rust/lossfunction/src/` — 의존 방향은 항상 아래 방향(하위 모듈은 상위 모듈을
 import하지 않는다).
 
 | 모듈 | 책임 | 하지 않는 것 |
 |---|---|---|
+| `types.rs`, `history.rs` | 공통 커널 타입(Decimal 가격·정수 주식수·6자리 종목코드), 확정 종가 창(look-ahead 원천 차단) | 네트워크 I/O, DB |
 | `domain/` | Order, Position, Portfolio, Fill 순수 모델 + 불변식 | 네트워크 I/O, DB, 외부 라이브러리 의존 |
-| `broker/` | `Broker` 추상 인터페이스, KIS live/paper 구현, mock 구현 | 전략 판단, 리스크 판단 |
-| `marketdata/` | 시세 수신(WS), 시세 조회(REST), 도메인 이벤트 변환 | 주문 결정 |
-| `strategy/` | `Strategy` 인터페이스, deterministic decision layer, 신호 기록 | 직접 주문 제출 |
-| `risk/` | 주문 사전 검증: 포지션/집중도/손실 한도, drawdown, stale data, kill switch | 전략 신호 변경 |
-| `execution/` | order state machine, reconciliation, duplicate 방지 | 한도 결정 |
-| `storage/` | SQLite 스키마(WAL), 저장 계층, audit 로그 | 비즈니스 규칙 |
-| `runtime/` | 이벤트 루프, 컴포넌트 조립, restart/recovery 절차 | 도메인 규칙 |
-| `backtest/` | 이벤트 시뮬레이션, 수수료/세금/슬리피지, look-ahead 차단 | 실계좌 접근 |
-| `ml/` | MLP feature/학습/추론/버전관리, GLM 분석 스키마 검증 | 실시간 주문 경로 직접 제어 |
-| `config/` | 설정 로드/검증, 환경(paper/live) 정의 | 기본값 하드코딩 |
+| `strategy.rs` + `strategies*.rs` | `Strategy` 인터페이스, deterministic decision layer, 신호 기록, 전략 6종(SMA 교차·RSI·돈키안·볼린저·모멘텀 회전·MACD) | 직접 주문 제출 |
+| `risk.rs` | 주문 사전 검증: 주문 한도/포지션 상한/총 노출/일일 손실 한도/시세 신선도 검사 + kill switch | 전략 신호 변경 |
+| `execution/` | order state machine(`state_machine.rs`), 주문 게이트웨이(`gateway.rs`, 중복 차단), VWAP 실행(`vwap.rs`), reconciliation | 한도 결정 |
+| `kis/` | KIS API 클라이언트: auth(tokenP)·REST(tr_cont 페이지네이션)·WebSocket(재연결 시 구독 replay) | 전략 판단, 리스크 판단 |
+| `broker/` | `Broker` 트레이트 + Mock 구현. KIS 라이브 구현은 `runtime/assembly.rs`의 `KisBroker`가 담당 | 전략 판단, 리스크 판단 |
+| `storage/` | SQLite 스키마/마이그레이션(WAL), 1e-4원 정수 화폐(`money.rs`), 쓰기 트랜잭션 내 audit 로그 | 비즈니스 규칙 |
+| `runtime/` | 이벤트 루프, 컴포넌트 조립(`assembly.rs`), axum 서버(`server.rs`/`web.rs` — 헬스·상태 페이지·kill switch 제어), 데모 루프, restart/recovery 절차 | 도메인 규칙 |
+| `backtest.rs` | 이벤트 시뮬레이션, 수수료/증권거래세, look-ahead 차단 | 실계좌 접근 |
+| `analysis.rs` | GLM 분석 통합: 엄격한 스키마 검증, 장애 시 명시적 폴백(거래 지속) | 실시간 주문 경로 직접 제어 |
+| `config.rs` | 설정 로드/검증, 환경(paper/live) 정의, live 이중 확인 가드 | 기본값 하드코딩 |
+| `reference/` (저장소 루트) | MLP 학습 파이프라인(Python sklearn — 학습→ONNX 내보내기→Rust `ort` 추론은 계획) | 활성 개발 대상 아님 |
 
 핵심 인터페이스 (구현 카드에서 세부 확정):
 
