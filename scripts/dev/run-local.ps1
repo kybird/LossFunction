@@ -1,0 +1,123 @@
+<#
+.SYNOPSIS
+    개발 머신에서 LossFunction을 Vaultwarden 시크릿 주입과 함께 실행한다.
+
+.DESCRIPTION
+    bw(Bitwarden CLI) 상태 확인 -> 잠겨 있으면 마스터 비밀번호를 입력받아(마스킹)
+    unlock -> 금고에서 KIS 자격증명을 조회해 이 프로세스 트리에만 환경변수로 주입 ->
+    rust/에서 cargo run --release.
+
+    - 마스터 비밀번호는 명령줄이 아닌 임시 환경변수(--passwordenv)로 전달하고
+      사용 즉시 지운다(프로세스 목록 노출 방지).
+    - 시크릿 값은 절대 화면 출력/저장소 기록하지 않는다. 주입 결과는 변수명만 표시.
+    - unlock 세션은 ~/.bw_session에 갱신한다(에이전트 세션과 공유, bw lock 시 만료).
+    - 금고에서 찾지 못한 자격증명은 경고 후 계속한다(paper+memory는 불필요).
+
+    최초 1회는 이 머신에서 (대화형):
+        bw config server https://vault.kybird.dynu.net
+        bw login
+
+.EXAMPLE
+    powershell -ExecutionPolicy Bypass -File scripts\dev\run-local.ps1
+    powershell -ExecutionPolicy Bypass -File scripts\dev\run-local.ps1 -Backend kis
+    powershell -ExecutionPolicy Bypass -File scripts\dev\run-local.ps1 -TradingMode paper -Backend memory -CargoArgs -- --bin lossfunction
+#>
+param(
+    [ValidateSet("paper", "live")]
+    [string]$TradingMode = "paper",
+
+    # Paper 브로커: memory(기본 가상) | kis(모의투자 도메인 — 금고 자격증명 필요)
+    [ValidateSet("memory", "kis")]
+    [string]$Backend = "memory",
+
+    [bool]$DemoLoop = $true,
+
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$CargoArgs
+)
+
+$ErrorActionPreference = "Stop"
+
+# ── 금고 항목 매핑 — 실제 Vaultwarden 항목 구조에 맞으면 이곳만 수정 ──────
+# KIS 자격증명을 하나의 로그인 항목으로 가정: username=AppKey, password=AppSecret,
+# notes=계좌번호. 항목을 분리해 두었다면 아래 3개의 bw get 호출을 각자 맞춰 고칠 것.
+# (GLM_API_KEY는 런타임이 아직 읽지 않음 — GLM 자동 호출 카드에서 추가 예정)
+$kisItem = "KIS 모의투자"
+
+function Get-BwStatus {
+    try { (bw status | ConvertFrom-Json).status } catch { "unknown" }
+}
+
+function Unlock-Vault {
+    $sec = Read-Host -Prompt "Vaultwarden 마스터 비밀번호" -AsSecureString
+    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec)
+    $env:BW_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+    try {
+        $session = bw unlock --passwordenv BW_PASSWORD --raw
+    } finally {
+        Remove-Item Env:BW_PASSWORD -ErrorAction SilentlyContinue
+    }
+    if (-not $session) { Write-Error "unlock 실패 — 비밀번호를 확인하세요." }
+    # 세션 공유: 에이전트(vaultwarden-secrets 스킬)와 같은 파일을 쓴다.
+    Set-Content -Path "$HOME\.bw_session" -Value $session -NoNewline
+    $env:BW_SESSION = $session
+}
+
+# ── 1. 세션 확보 ─────────────────────────────────────────────────────────
+if (Test-Path "$HOME\.bw_session") {
+    $env:BW_SESSION = (Get-Content "$HOME\.bw_session" -Raw)
+}
+
+$status = Get-BwStatus
+if ($status -eq "unauthenticated") {
+    Write-Host "bw가 이 서버에 로그인되어 있지 않다. 최초 1회 대화형 세팅:" -ForegroundColor Yellow
+    Write-Host "  bw config server https://vault.kybird.dynu.net"
+    Write-Host "  bw login"
+    exit 1
+}
+if ($status -ne "unlocked") {
+    # stdin이 리다이렉트된(에이전트/CI) 실행은 프롬프트에 걸려 멈춘다 — 즉시 실패.
+    if ([Console]::IsInputRedirected) {
+        Write-Error "잠긴 금고 + 비대화형 실행 — 비밀번호 입력 불가. 사용자 터미널에서 실행하거나 ~/.bw_session을 먼저 준비하세요."
+    }
+    Unlock-Vault
+    if ((Get-BwStatus) -ne "unlocked") { Write-Error "unlock 후에도 잠겨 있음 — 세션 확인 필요." }
+}
+bw sync | Out-Null
+
+# ── 2. 금고 → 환경변수 (이 프로세스 트리에만 존재) ────────────────────────
+function Set-SecretFromVault {
+    param([string]$VarName, [string]$Getter, [string]$Item)
+    $val = switch ($Getter) {
+        "username" { bw get username $Item 2>$null }
+        "password" { bw get password $Item 2>$null }
+        "notes"    { bw get notes $Item 2>$null }
+    }
+    if ($val) {
+        Set-Item -Path ("Env:" + $VarName) -Value $val
+        Write-Host "  $VarName : 주입 완료"
+    } else {
+        Write-Host "  $VarName : 금고 항목 '$Item'($Getter)에서 찾지 못함 — 미주입" -ForegroundColor Yellow
+    }
+}
+
+Write-Host "[vault] KIS 자격증명 조회 (항목: $kisItem)"
+Set-SecretFromVault VarName "KIS_APP_KEY"      Getter "username" Item $kisItem
+Set-SecretFromVault VarName "KIS_APP_SECRET"   Getter "password" Item $kisItem
+Set-SecretFromVault VarName "KIS_ACCOUNT_NUMBER" Getter "notes"  Item $kisItem
+
+# ── 3. 실행 ───────────────────────────────────────────────────────────────
+$env:TRADING_MODE = $TradingMode
+$env:PAPER_BACKEND = $Backend
+$env:DEMO_LOOP = if ($DemoLoop) { "true" } else { "false" }
+Write-Host "[run] TRADING_MODE=$TradingMode PAPER_BACKEND=$Backend DEMO_LOOP=$($env:DEMO_LOOP)"
+
+$root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+Push-Location (Join-Path $root "rust")
+try {
+    if ($CargoArgs) { cargo run --release @CargoArgs }
+    else { cargo run --release }
+} finally {
+    Pop-Location
+}
