@@ -49,7 +49,7 @@ graph TB
 
     subgraph Research["연구/검증"]
         BACKTEST[Backtesting 엔진]
-        MLP_TRAIN[MLP 학습 파이프라인<br/>reference/ (Python, sklearn)]
+        MLP_TRAIN["MLP 학습 파이프라인<br/>reference/ (Python, sklearn)"]
     end
 
     KIS_WS --> ORCH
