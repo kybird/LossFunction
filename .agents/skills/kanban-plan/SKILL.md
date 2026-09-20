@@ -1,7 +1,7 @@
 ---
 name: kanban-plan
-description: Planning loop — turn a plan into board cards the work-loop can consume. Cards are written only via the CLI; decompose with divergence guards, gate what isn't ready.
-skill-version: 2
+description: Planning loop — turn a plan into board cards the work-loop can consume. Cards are written only via the CLI; decompose with divergence guards, gate what isn't ready, group multi-card plans under a milestone.
+skill-version: 4
 ---
 # When to use
 
@@ -15,7 +15,7 @@ skill-version: 2
 - 기획(this skill) = **분해**: a plan becomes cards.
 - 개발(`work-loop`) = **해소**: pick → done.
 - QA = **수렴 강제**: fake dones get reverted; `board report` shows the ratio.
-- The person watches progress through `llm-wiki board` / `board report` / `board --html`.
+- The person watches progress through `llm-wiki board` / `board report` / `llm-wiki monitor`.
   Plan so that this one screen is enough — 리뷰가 카드 수에 비례하면 무인의 의미가 없다.
 
 # Before creating cards
@@ -26,6 +26,23 @@ skill-version: 2
    it (`supersede`); never spawn a near-duplicate. Titles are identifiers (plan.md 3.5):
    no numbers, no versions in titles.
 
+# Milestones — 계획 단위 소속 (plan.md 3.8)
+
+A plan that decomposes into **2+ cards gets one milestone card** — the board's purpose
+axis. One-card work needs no milestone (과잉이다).
+
+1. `card new "<계획 제목>" --kind milestone --goal "<대의 한 문장>"` — the Goal is why
+   the plan exists; the morning human reads it above the terminal stream.
+2. Every member card carries `--milestone "<계획 제목>"` (or `card edit --milestone`
+   later — active cards only; terminal membership is history).
+3. The milestone is never picked and never closed by hand: `done`/`supersede`/`abandon`
+   of the last member auto-completes it (review-parked milestones only report).
+   Milestone progress is **derived**, never stored — don't manage its state.
+
+Rules: milestones stay **flat** (a milestone never belongs to another milestone — CLI
+rejects it). Gates don't propagate — each member carries its own `--not-before`.
+Abandoning a milestone requires its members to be terminal first (CLI enforces, lists them).
+
 # Decomposition rules (divergence guards, plan.md 2.3)
 
 - One card = one context = one commit. If you cannot say what the commit would be, it is
@@ -33,7 +50,7 @@ skill-version: 2
 - Children must be **strictly smaller** than the parent. When children replace a parent,
   `supersede` it — the parent dissolves, it is not marked done.
 - Depth ≤ 3 (plan → subtask → task). Deeper than that means you are writing the work,
-  not planning it.
+  not planning it. (The milestone sits **above** this ladder as grouping, not depth.)
 - Do not board what is not ready to start:
   - Time condition → `card new "<t>" --not-before 2026-09-05`. `pick` skips it until then.
   - Observational condition → create it, then `handoff <t> --question "조건: …"`. It waits

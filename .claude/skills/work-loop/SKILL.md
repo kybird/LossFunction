@@ -1,7 +1,7 @@
 ---
 name: work-loop
 description: Unattended kanban loop — pick a card, resolve it with objective evidence, park judgment calls and move on. Board is the only task list; converge, don't diverge.
-skill-version: 5
+skill-version: 8
 ---
 # When to use
 
@@ -17,6 +17,16 @@ skill-version: 5
 2. Secondary: a host-level scheduler (e.g. ZCode 예약) starts the session at midnight.
 3. Never build or assume a process supervisor. The loop lives in the session; the board
    lives in files.
+
+# Loop start — bring the monitor up (사람의 실시간 관측)
+
+루프를 시작할 때 `llm-wiki monitor`를 백그라운드로 띄운다 — 밤중에 사람이 들어와도
+클레임·진행·마일스톤이 살아 있는 보드를 본다. **멱등이다**: 이 루프의 보드(같은
+프로젝트) 모니터가 이미 떠 있으면 exit 0으로 같은 URL을 되뇐다. 다른 프로젝트의
+모니터가 기본 포트를 쓰고 있으면 **다음 포트에 자기 보드를 띄운다** — 멀티
+프로젝트 밤에도 각자의 보드가 각자의 URL에 뜬다. 백그라운드 실행이 안 되는
+환경이면 건너뛴다 — 모니터는 관측이지 의존성이 아니다. 정지 규칙에서도 모니터는
+끄지 않는다(아침의 사람이 본다) — 읽기 전용이라 남겨두는 비용이 없다.
 
 # Loop graph
 
@@ -61,6 +71,10 @@ pick → work → 판정 ─ done / handoff / abandon / supersede
    (보고서와 함께 세션 타임랩스 영상을 남긴다 — 아침의 사람이 40초로 밤을 본다),
    leave the questions in one place, and STOP. Do not invent new cards to look
    productive. 밤새 카드가 300장이 되는 것이 이 시스템이 죽는 방식이다 (plan.md 2.3).
+   Milestone cards are **never pickable** (they are grouping, not work — plan.md 3.8):
+   if the No-pickable detail lists them, that is normal — don't `done` or `abandon` a
+   milestone by hand; it auto-completes when its last member terminates (a `done` that
+   prints `◉ milestone 완료` closed it for you).
 
 5. **Search before work.** `llm-wiki search "<keywords>"` before starting a card. If the
    wall you are about to hit already has an abandoned card or an anti-pattern page, skip
