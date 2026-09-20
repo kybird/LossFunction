@@ -310,6 +310,51 @@ pub fn bar_fills_limit(side: OrderSide, market: Decimal, limit: Decimal) -> bool
     limit_crosses(side, market, limit)
 }
 
+/// Loading the engine's input from stored candles fails loud: a symbol with
+/// thin history aborts the whole run naming the symbol — never a silent skip
+/// that would quietly narrow the tested universe.
+#[derive(Debug, thiserror::Error)]
+pub enum BacktestDataError {
+    #[error("symbol {symbol} has {bars} stored bars — at least {min_bars} required")]
+    InsufficientHistory {
+        symbol: String,
+        bars: usize,
+        min_bars: usize,
+    },
+    #[error("storage error: {0}")]
+    Storage(#[from] crate::storage::StorageError),
+}
+
+/// Build the chronological multi-symbol bar stream from the `candles` table
+/// (the same store the backfill writes to). Closes cross the boundary as
+/// Decimal, exactly as stored (1e-4 KRW integers).
+pub async fn load_bars_from_candles(
+    repository: &crate::storage::Repository,
+    symbols: &[Symbol],
+    min_bars: usize,
+) -> Result<Vec<Bar>, BacktestDataError> {
+    let mut bars = Vec::new();
+    for symbol in symbols {
+        let stored = repository
+            .daily_candles(symbol, crate::marketdata::Timeframe::Day)
+            .await?;
+        if stored.len() < min_bars {
+            return Err(BacktestDataError::InsufficientHistory {
+                symbol: symbol.as_str().to_string(),
+                bars: stored.len(),
+                min_bars,
+            });
+        }
+        bars.extend(stored.into_iter().map(|bar| Bar {
+            symbol: bar.symbol,
+            timestamp: bar.timestamp,
+            close: bar.close,
+        }));
+    }
+    bars.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
+    Ok(bars)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -493,5 +538,104 @@ mod tests {
         let first = run().await;
         let second = run().await;
         assert_eq!(first, second);
+    }
+
+    /// AC: seeded candles -> loader -> engine -> report, end to end.
+    #[tokio::test]
+    async fn candles_loader_feeds_engine_end_to_end() {
+        let dir = tempfile::tempdir().unwrap();
+        let repository =
+            crate::storage::Repository::open(dir.path().join("bt.db").to_str().unwrap())
+                .await
+                .unwrap();
+        repository.migrate().await.unwrap();
+
+        let samsung = Symbol::parse("005930").unwrap();
+        let naver = Symbol::parse("035420").unwrap();
+        // Seed interleaved daily bars for both symbols.
+        let mut seeded = Vec::new();
+        for (i, close) in [80_000i64, 81_000, 82_000, 83_000, 84_000, 85_000]
+            .into_iter()
+            .enumerate()
+        {
+            let day = chrono::NaiveDate::from_ymd_opt(2026, 1, 5 + i as u32).unwrap();
+            let ts = chrono::Utc.from_utc_datetime(&day.and_hms_opt(6, 30, 0).unwrap());
+            let price = Decimal::from(close);
+            seeded.push(crate::marketdata::bar(
+                &samsung, ts, price, price, price, price, 1_000,
+            ));
+            let naver_price = Decimal::from(400 + i as i64);
+            seeded.push(crate::marketdata::bar(
+                &naver,
+                ts,
+                naver_price,
+                naver_price,
+                naver_price,
+                naver_price,
+                500,
+            ));
+        }
+        assert_eq!(repository.upsert_candles(&seeded).await.unwrap(), 12);
+
+        let symbols = [samsung.clone(), naver];
+        let bars = load_bars_from_candles(&repository, &symbols, 5)
+            .await
+            .unwrap();
+        assert_eq!(bars.len(), 12); // both symbols, chronological
+        assert!(bars
+            .windows(2)
+            .all(|pair| pair[0].timestamp <= pair[1].timestamp));
+
+        // The same engine path as the in-memory tests runs over loaded bars.
+        let strategy = Box::new(BuyOnceSellOnce {
+            calls: std::sync::atomic::AtomicUsize::new(0),
+        });
+        let engine = BacktestEngine::new(strategy, BacktestConfig::default());
+        let priced_broker = std::sync::Arc::new(MockBroker::new());
+        let hook_broker = std::sync::Arc::clone(&priced_broker);
+        let engine = engine.with_bar_hook(std::sync::Arc::new(move |bar: &Bar| {
+            hook_broker.set_price(&bar.symbol, bar.close);
+        }));
+        let result = engine.run(bars, priced_broker.as_ref()).await;
+
+        assert_eq!(result.equity_curve.len(), 12); // one point per loaded bar
+        assert!(!result.fills.is_empty()); // buy and sell executed
+        assert!(result.total_commission > Decimal::ZERO);
+    }
+
+    /// AC: thin history aborts naming the symbol — no silent skips.
+    #[tokio::test]
+    async fn insufficient_history_fails_loud_naming_symbol() {
+        let dir = tempfile::tempdir().unwrap();
+        let repository =
+            crate::storage::Repository::open(dir.path().join("thin.db").to_str().unwrap())
+                .await
+                .unwrap();
+        repository.migrate().await.unwrap();
+
+        let samsung = Symbol::parse("005930").unwrap();
+        let goose = Symbol::parse("035420").unwrap();
+        let day = chrono::NaiveDate::from_ymd_opt(2026, 1, 5).unwrap();
+        let ts = chrono::Utc.from_utc_datetime(&day.and_hms_opt(6, 30, 0).unwrap());
+        let price = Decimal::from(80_000);
+        repository
+            .upsert_candles(&[crate::marketdata::bar(
+                &samsung, ts, price, price, price, price, 1_000,
+            )])
+            .await
+            .unwrap();
+
+        let error = load_bars_from_candles(&repository, &[samsung, goose], 5)
+            .await
+            .unwrap_err();
+        let message = error.to_string();
+        assert!(
+            message.contains("005930"),
+            "names the thin symbol: {message}"
+        );
+        assert!(
+            message.contains("1 stored bars"),
+            "states the counts: {message}"
+        );
     }
 }
