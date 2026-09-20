@@ -1,100 +1,17 @@
 //! Runtime broker assembly — the Rust port of build_broker (wiki:
 //! deployment-operations). paper+memory stays the safe default (in-process
 //! mock, zero network); the KIS backend composes KisAuth + KisRestClient
-//! behind a Broker adapter; live refuses without the double confirmation
-//! (already enforced at settings load — assembly re-checks as defense).
+//! behind a Broker adapter (kis::broker::KisBroker — venue code lives in the
+//! kis layer; assembly only selects); live refuses without the double
+//! confirmation (already enforced at settings load — assembly re-checks as
+//! defense).
 
 use std::sync::Arc;
 
-use crate::broker::{Broker, BrokerError, ExecutionReport, OrderAck, OrderRequest, Position};
 use crate::config::{KisEnvironment, PaperBackend, Settings, TradingMode};
 use crate::kis::auth::{kis_base_url, KisAuth};
+use crate::kis::broker::KisBroker;
 use crate::kis::rest::KisRestClient;
-use crate::types::Quote;
-
-/// Broker adapter over the KIS REST client.
-pub struct KisBroker {
-    rest: KisRestClient,
-    /// In-session cancel context: broker_order_id -> (orgno, ord_dvsn).
-    /// Cross-restart context belongs to the reconciliation layer.
-    order_context: tokio::sync::Mutex<std::collections::HashMap<String, (String, String)>>,
-}
-
-impl KisBroker {
-    pub fn new(rest: KisRestClient) -> Self {
-        Self {
-            rest,
-            order_context: tokio::sync::Mutex::new(std::collections::HashMap::new()),
-        }
-    }
-}
-
-const ORD_DVSN_LIMIT: &str = "00";
-const ORD_DVSN_MARKET: &str = "01";
-
-#[async_trait::async_trait]
-impl Broker for KisBroker {
-    async fn submit_order(&self, request: &OrderRequest) -> Result<OrderAck, BrokerError> {
-        let (ack, output) = self.rest.submit_cash_order(request).await?;
-        let orgno = output["KRX_FWDG_ORD_ORGNO"]
-            .as_str()
-            .unwrap_or_default()
-            .to_string();
-        let dvsn = match request.order_type {
-            crate::types::OrderType::Limit => ORD_DVSN_LIMIT,
-            crate::types::OrderType::Market => ORD_DVSN_MARKET,
-        };
-        self.order_context
-            .lock()
-            .await
-            .insert(ack.broker_order_id.clone(), (orgno, dvsn.to_string()));
-        Ok(ack)
-    }
-
-    async fn cancel_order(&self, broker_order_id: &str) -> Result<(), BrokerError> {
-        let context = self
-            .order_context
-            .lock()
-            .await
-            .get(broker_order_id)
-            .cloned();
-        let Some((orgno, dvsn)) = context else {
-            return Err(BrokerError::Internal(format!(
-                "no in-session context for order {broker_order_id}; \
-                 restart recovery must reconcile before cancelling"
-            )));
-        };
-        self.rest
-            .cancel_cash_order(broker_order_id, &orgno, &dvsn)
-            .await
-            .map_err(BrokerError::from)
-    }
-
-    async fn execution_report(
-        &self,
-        broker_order_id: &str,
-    ) -> Result<ExecutionReport, BrokerError> {
-        let row = self
-            .rest
-            .fetch_order_row(broker_order_id)
-            .await
-            .map_err(BrokerError::from)?;
-        self.rest
-            .execution_report_from_row(broker_order_id, "", &row)
-            .map_err(BrokerError::from)
-    }
-
-    async fn positions(&self) -> Result<Vec<Position>, BrokerError> {
-        self.rest.fetch_positions().await.map_err(BrokerError::from)
-    }
-
-    async fn quote(&self, symbol: &crate::types::Symbol) -> Result<Quote, BrokerError> {
-        self.rest
-            .fetch_quote(symbol)
-            .await
-            .map_err(BrokerError::from)
-    }
-}
 
 /// What the runtime assembled, for health reporting.
 #[derive(Debug, Clone, PartialEq, Eq)]

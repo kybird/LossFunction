@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod broker;
 pub mod chart;
 #[cfg(test)]
 mod chart_tests;
