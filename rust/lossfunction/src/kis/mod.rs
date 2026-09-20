@@ -1,4 +1,7 @@
 pub mod auth;
+pub mod chart;
+#[cfg(test)]
+mod chart_tests;
 pub mod rest;
 #[cfg(test)]
 mod rest_tests;

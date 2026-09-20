@@ -36,6 +36,7 @@ confidence: 4
 | 잔고 | GET `.../inquire-balance` | TTTC8434R / VTTC8434R | 페이지네이션: 응답 헤더 tr_cont M/F인 한 ctx_area_fk100/nk100 반송. 보유수량 0 행 존재 |
 | 당일체결 | GET `.../inquire-daily-ccld` | TTTC0081R / VTTC0081R | ODNO 필터. 필드: odno/ord_qty/tot_ccld_qty/tot_ccld_amt/cncl_yn/sll_buy_dvsn_cd(02=매수)/pdno — 커뮤니티 문서 기반, 모의 도메인 실증 pending |
 | 현재가 | GET `.../quotations/inquire-price` | FHKST01010100(공통) | FID_COND_MRKT_DIV_CODE=J, 현재가 필드 `stck_prpr` |
+| 기간별시세(일/주/월/년) | GET `.../quotations/inquire-daily-itemchartprice` | FHKST03010100(공통, 실전=모의) | FID_COND_MRKT_DIV_CODE=J, FID_INPUT_ISCD, FID_INPUT_DATE_1/2(YYYYMMDD), FID_PERIOD_DIV_CODE=D/W/M/Y, FID_ORG_ADJ_PRC(0=수정주가 1=원주가). **호출당 최대 100건, tr_cont 연속 없음** → 장기 백필은 날짜창 분할(구현: 낱개 100달력일 창 + 만페이지 재분할). output2 행 필드(전부 문자열): `stck_bsop_date`(YYYYMMDD), `stck_oprc`/`stck_hgpr`/`stck_lwpr`/`stck_clpr`, `acml_vol`. 누락 필드는 fail-loud |
 
 공통 헤더: authorization Bearer, appkey, appsecret, tr_id, custtype "P",
 tr_cont. 계좌는 8-2 자리("12345678-01").
@@ -67,3 +68,4 @@ tr_cont. 계좌는 8-2 자리("12345678-01").
 - doc/raw/2026-09-14.md Case 5 (REST 스펙, `hash:061eb5a`)
 - doc/raw/2026-09-14.md Case 6 (WS 스펙, `hash:ff1e528`)
 - doc/raw/2026-09-14.md Case 9 (정정취소 스펙, `hash:8c36798`)
+- doc/raw/2026-09-20.md Case 2 (기간별시세 스펙 — 공식 샘플 examples_llm/inquire_daily_itemchartprice + 공개 구현 교차검증, `hash:5d65ab6`)

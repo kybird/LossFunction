@@ -90,7 +90,7 @@ impl KisRestClient {
         })
     }
 
-    async fn request(
+    pub(crate) async fn request(
         &self,
         method: reqwest::Method,
         path: &str,
