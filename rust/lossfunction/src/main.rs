@@ -81,6 +81,7 @@ async fn main() {
             Arc::clone(&risk),
             demo_repository(&settings).await,
             7,
+            settings.watchlist.clone(),
         );
         tasks.push(tokio::spawn(demo_run(demo)));
         println!("demo loop enabled (synthetic paper market)");

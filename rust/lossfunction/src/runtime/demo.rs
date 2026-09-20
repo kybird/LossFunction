@@ -48,15 +48,26 @@ impl DemoRng {
     }
 }
 
-const SYMBOLS: [(&str, i64); 3] = [("005930", 80_000), ("035420", 41_000), ("069500", 100_000)];
+/// Approximate price levels for the demo's synthetic market. The historical
+/// defaults keep their anchors; user watchlist symbols fall back to a generic
+/// level — the demo needs plausible prices, not real ones.
+fn demo_base_price(code: &str) -> i64 {
+    match code {
+        "005930" => 80_000,
+        "035420" => 41_000,
+        "069500" => 100_000,
+        _ => 50_000,
+    }
+}
 
-fn entry_prices() -> std::collections::BTreeMap<Symbol, Decimal> {
-    SYMBOLS
+fn entry_prices(watchlist: &[Symbol]) -> std::collections::BTreeMap<Symbol, Decimal> {
+    watchlist
         .iter()
-        .map(|(code, price)| {
+        .map(|symbol| {
             (
-                Symbol::parse(*code).unwrap(),
-                Decimal::from(*price) * Decimal::from(995) / Decimal::from(1000), // -0.5%
+                symbol.clone(),
+                Decimal::from(demo_base_price(symbol.as_str())) * Decimal::from(995)
+                    / Decimal::from(1000), // -0.5%
             )
         })
         .collect()
@@ -80,8 +91,9 @@ impl DemoLoop {
         risk: Arc<RiskManager>,
         repository: Repository,
         seed: u64,
+        watchlist: Vec<Symbol>,
     ) -> Self {
-        let strategy = EntryPriceStrategy::new(entry_prices(), 5);
+        let strategy = EntryPriceStrategy::new(entry_prices(&watchlist), 5);
         let runtime = TradingRuntime::new(
             Arc::clone(&broker) as Arc<dyn crate::broker::Broker>,
             Box::new(strategy) as Box<dyn Strategy>,
@@ -95,9 +107,9 @@ impl DemoLoop {
             repository,
             interval: Duration::from_secs(3),
             rng: DemoRng::new(seed),
-            prices: SYMBOLS
+            prices: watchlist
                 .iter()
-                .map(|(code, price)| (Symbol::parse(*code).unwrap(), *price))
+                .map(|symbol| (symbol.clone(), demo_base_price(symbol.as_str())))
                 .collect(),
             persisted_status: HashMap::new(),
             persisted_fills: Vec::new(),
@@ -226,9 +238,22 @@ mod tests {
         ))
     }
 
+    fn watch() -> Vec<Symbol> {
+        ["005930", "035420", "069500"]
+            .iter()
+            .map(|code| Symbol::parse(*code).unwrap())
+            .collect()
+    }
+
     async fn demo(path: &std::path::Path, seed: u64) -> DemoLoop {
         let repository = Repository::open(path.to_str().unwrap()).await.unwrap();
-        DemoLoop::new(Arc::new(MockBroker::new()), risk(), repository, seed)
+        DemoLoop::new(
+            Arc::new(MockBroker::new()),
+            risk(),
+            repository,
+            seed,
+            watch(),
+        )
     }
 
     #[tokio::test]
@@ -258,7 +283,7 @@ mod tests {
         let repository = Repository::open(dir.path().join("c.db").to_str().unwrap())
             .await
             .unwrap();
-        let mut halted = DemoLoop::new(Arc::new(MockBroker::new()), risk, repository, 7);
+        let mut halted = DemoLoop::new(Arc::new(MockBroker::new()), risk, repository, 7, watch());
         for _ in 0..5 {
             halted.tick().await.unwrap();
         }
@@ -268,6 +293,31 @@ mod tests {
             .await
             .unwrap()
             .is_empty());
+    }
+
+    /// A custom watchlist drives the demo universe end to end — snapshot
+    /// quotes cover exactly the configured symbols.
+    #[tokio::test]
+    async fn custom_watchlist_drives_demo_universe() {
+        let dir = tempfile::tempdir().unwrap();
+        let repository = Repository::open(dir.path().join("w.db").to_str().unwrap())
+            .await
+            .unwrap();
+        let watch = vec![
+            Symbol::parse("005930").unwrap(),
+            Symbol::parse("000660").unwrap(),
+        ];
+        let mut demo = DemoLoop::new(Arc::new(MockBroker::new()), risk(), repository, 7, watch);
+        demo.tick().await.unwrap();
+
+        let snapshot = demo.runtime().snapshot();
+        let mut quoted: Vec<String> = snapshot
+            .quotes
+            .keys()
+            .map(|symbol| symbol.as_str().to_string())
+            .collect();
+        quoted.sort();
+        assert_eq!(quoted, vec!["000660".to_string(), "005930".to_string()]);
     }
 
     #[tokio::test]

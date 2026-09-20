@@ -8,6 +8,8 @@
 use std::env;
 use std::fmt;
 
+use crate::types::Symbol;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TradingMode {
     Paper,
@@ -86,6 +88,9 @@ pub struct Settings {
     pub risk: RiskSettings,
     /// Bounded past-closes window handed to indicator strategies.
     pub history_window_bars: usize,
+    /// Symbol universe the runtime trades/watches. WATCHLIST env overrides
+    /// (comma-separated 6-digit codes); invalid codes refuse to boot.
+    pub watchlist: Vec<Symbol>,
 }
 
 impl Default for Settings {
@@ -101,8 +106,39 @@ impl Default for Settings {
             database_path: "data/lossfunction.db".to_string(),
             risk: RiskSettings::default(),
             history_window_bars: 120,
+            watchlist: default_watchlist(),
         }
     }
+}
+
+fn default_watchlist() -> Vec<Symbol> {
+    ["005930", "035420", "069500"]
+        .iter()
+        .map(|code| Symbol::parse(*code).expect("default watchlist codes are valid"))
+        .collect()
+}
+
+fn parse_watchlist(raw: &str) -> Result<Vec<Symbol>, ConfigError> {
+    let codes: Vec<&str> = raw
+        .split(',')
+        .map(str::trim)
+        .filter(|code| !code.is_empty())
+        .collect();
+    if codes.is_empty() {
+        return Err(ConfigError::Invalid {
+            field: "WATCHLIST",
+            message: "empty watchlist".to_string(),
+        });
+    }
+    codes
+        .into_iter()
+        .map(|code| {
+            Symbol::parse(code).map_err(|error| ConfigError::Invalid {
+                field: "WATCHLIST",
+                message: format!("{code:?}: {error}"),
+            })
+        })
+        .collect()
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -163,6 +199,9 @@ impl Settings {
         settings.kis_app_key = Secret(read_optional("KIS_APP_KEY")?.unwrap_or_default());
         settings.kis_app_secret = Secret(read_optional("KIS_APP_SECRET")?.unwrap_or_default());
         settings.kis_account_number = read_optional("KIS_ACCOUNT_NUMBER")?.unwrap_or_default();
+        if let Some(raw) = read_optional("WATCHLIST")? {
+            settings.watchlist = parse_watchlist(&raw)?;
+        }
         if let Some(path) = read_optional("DATABASE_PATH")? {
             settings.database_path = path;
         }
@@ -251,9 +290,48 @@ mod tests {
             "KIS_ENVIRONMENT",
             "PAPER_BACKEND",
             "DATABASE_PATH",
+            "WATCHLIST",
         ] {
             env::remove_var(key);
         }
+    }
+
+    #[test]
+    fn watchlist_env_overrides_and_rejects_bad_codes() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        clear_vars();
+
+        // Unset -> historical default trio (back-compat).
+        let settings = Settings::load().unwrap();
+        assert_eq!(settings.watchlist, default_watchlist());
+
+        // Comma-separated override parses to symbols.
+        env::set_var("WATCHLIST", " 005930, 000660 ");
+        let settings = Settings::load().unwrap();
+        assert_eq!(settings.watchlist.len(), 2);
+        assert_eq!(settings.watchlist[0].as_str(), "005930");
+        assert_eq!(settings.watchlist[1].as_str(), "000660");
+
+        // Invalid code refuses to boot.
+        env::set_var("WATCHLIST", "005930,GOOSE");
+        assert!(matches!(
+            Settings::load().unwrap_err(),
+            ConfigError::Invalid {
+                field: "WATCHLIST",
+                ..
+            }
+        ));
+
+        // Empty list refuses too.
+        env::set_var("WATCHLIST", " , ");
+        assert!(matches!(
+            Settings::load().unwrap_err(),
+            ConfigError::Invalid {
+                field: "WATCHLIST",
+                ..
+            }
+        ));
+        env::remove_var("WATCHLIST");
     }
 
     #[test]
