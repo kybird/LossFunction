@@ -11,6 +11,10 @@
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 
+pub mod aggregator;
+
+pub use aggregator::BarAggregator;
+
 use crate::types::{Price, Symbol};
 
 /// Bar resolution. Extensible; the string form is what the `candles` table

@@ -32,6 +32,8 @@ pub struct TradingRuntime {
     machine: StateMachine,
     gateway: OrderGateway,
     history: crate::history::HistoryWindow,
+    /// Live ticks close into daily bars here; completed bars feed `history`.
+    aggregator: crate::marketdata::BarAggregator,
     quotes: HashMap<Symbol, Quote>,
     portfolio: Portfolio,
     order_prefix: String,
@@ -56,6 +58,7 @@ impl TradingRuntime {
             risk,
             machine: StateMachine::new(),
             history: crate::history::HistoryWindow::new(history_capacity),
+            aggregator: crate::marketdata::BarAggregator::new(),
             quotes: HashMap::new(),
             portfolio: Portfolio::new(),
             order_prefix: order_prefix.into(),
@@ -81,8 +84,13 @@ impl TradingRuntime {
         &self.open_local
     }
 
-    /// Record a quote; returns the snapshot it produced.
+    /// Record a quote; returns the snapshot it produced. A tick from a new
+    /// trading date first closes the previous day's bar into `history` —
+    /// snapshots only ever see completed bars.
     pub fn on_quote(&mut self, quote: Quote) -> MarketSnapshot {
+        if let Some(bar) = self.aggregator.push(&quote) {
+            self.history.push(&bar.symbol, bar.close);
+        }
         self.quotes.insert(quote.symbol.clone(), quote);
         self.snapshot()
     }
