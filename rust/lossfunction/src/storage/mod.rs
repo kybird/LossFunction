@@ -117,6 +117,86 @@ impl Repository {
             .collect()
     }
 
+    // ── market data candles ────────────────────────────────────────
+
+    /// Upsert completed OHLCV bars; idempotent on (symbol, timeframe, ts) —
+    /// a backfill re-run corrects rows in place instead of duplicating them.
+    /// Prices cross the money boundary (1e-4 KRW integers) like every other
+    /// write. Returns the number of rows written (inserts + updates).
+    pub async fn upsert_candles(
+        &self,
+        bars: &[crate::marketdata::Bar],
+    ) -> Result<u64, StorageError> {
+        let mut tx = self.pool.begin().await?;
+        let mut written = 0u64;
+        for bar in bars {
+            let result = sqlx::query(
+                "INSERT INTO candles (symbol, timeframe, ts, open, high, low, close, volume) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8) \
+                 ON CONFLICT (symbol, timeframe, ts) DO UPDATE SET \
+                     open = excluded.open, high = excluded.high, \
+                     low = excluded.low, close = excluded.close, \
+                     volume = excluded.volume",
+            )
+            .bind(bar.symbol.as_str())
+            .bind(bar.timeframe.as_str())
+            .bind(
+                bar.timestamp
+                    .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+            )
+            .bind(money_to_int(bar.open))
+            .bind(money_to_int(bar.high))
+            .bind(money_to_int(bar.low))
+            .bind(money_to_int(bar.close))
+            .bind(bar.volume)
+            .execute(&mut *tx)
+            .await?;
+            written += result.rows_affected();
+        }
+        tx.commit().await?;
+        Ok(written)
+    }
+
+    /// Total stored candle rows — backfill sanity check.
+    pub async fn candle_count(&self) -> Result<i64, StorageError> {
+        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM candles")
+            .fetch_one(&self.pool)
+            .await?;
+        Ok(count)
+    }
+
+    /// Stored bars for one symbol/timeframe, oldest first.
+    pub async fn daily_candles(
+        &self,
+        symbol: &Symbol,
+        timeframe: crate::marketdata::Timeframe,
+    ) -> Result<Vec<crate::marketdata::Bar>, StorageError> {
+        let rows = sqlx::query(
+            "SELECT symbol, ts, open, high, low, close, volume FROM candles \
+             WHERE symbol = ?1 AND timeframe = ?2 ORDER BY ts ASC",
+        )
+        .bind(symbol.as_str())
+        .bind(timeframe.as_str())
+        .fetch_all(&self.pool)
+        .await?;
+        rows.iter()
+            .map(|row| {
+                let raw: &str = row.try_get("symbol")?;
+                Ok(crate::marketdata::Bar {
+                    symbol: Symbol::parse(raw)
+                        .map_err(|_| StorageError::BadSymbol(raw.to_string()))?,
+                    timeframe,
+                    timestamp: parse_ts(row.try_get("ts")?),
+                    open: int_to_money(row.try_get::<i64, _>("open")?),
+                    high: int_to_money(row.try_get::<i64, _>("high")?),
+                    low: int_to_money(row.try_get::<i64, _>("low")?),
+                    close: int_to_money(row.try_get::<i64, _>("close")?),
+                    volume: row.try_get("volume")?,
+                })
+            })
+            .collect()
+    }
+
     // ── orders ─────────────────────────────────────────────────────
 
     pub async fn create_order(&self, order: &Order, mode: &str) -> Result<(), StorageError> {

@@ -13,6 +13,7 @@ pub mod domain;
 pub mod execution;
 pub mod history;
 pub mod kis;
+pub mod marketdata;
 pub mod risk;
 pub mod runtime;
 pub mod storage;
