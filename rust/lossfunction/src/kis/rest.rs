@@ -111,7 +111,8 @@ impl KisRestClient {
                 .http
                 .request(method.clone(), &url)
                 .header("authorization", format!("Bearer {token}"))
-                .header("appkey", "")
+                .header("appkey", self.auth.app_key())
+                .header("appsecret", self.auth.app_secret())
                 .header("tr_id", tr_id)
                 .header("custtype", "P")
                 .header("tr_cont", tr_cont.unwrap_or(""));

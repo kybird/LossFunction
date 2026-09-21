@@ -52,6 +52,8 @@ pub struct Bar {
 pub enum MarketDataError {
     #[error("source failure: {0}")]
     Source(String),
+    #[error("storage failure: {0}")]
+    Storage(#[from] crate::storage::StorageError),
 }
 
 /// Source-agnostic historical bars. Implementations must return bars
@@ -88,6 +90,31 @@ pub fn bar(
         close,
         volume,
     }
+}
+
+/// Backfill stored daily candles for every watchlist symbol from a source.
+/// Read-only on the venue (quotation endpoints only); a failing symbol is
+/// reported in the result and does not abort the rest — the caller decides
+/// whether the run was acceptable from the per-symbol outcomes.
+pub async fn backfill_daily(
+    source: &dyn MarketDataSource,
+    repository: &crate::storage::Repository,
+    symbols: &[Symbol],
+    from: DateTime<Utc>,
+    to: DateTime<Utc>,
+) -> Vec<(Symbol, Result<u64, MarketDataError>)> {
+    let mut outcomes = Vec::with_capacity(symbols.len());
+    for symbol in symbols {
+        let outcome = match source.daily_bars(symbol, from, to).await {
+            Ok(bars) => repository
+                .upsert_candles(&bars)
+                .await
+                .map_err(MarketDataError::Storage),
+            Err(error) => Err(error),
+        };
+        outcomes.push((symbol.clone(), outcome));
+    }
+    outcomes
 }
 
 #[cfg(test)]
@@ -252,5 +279,79 @@ mod tests {
         assert!(stored[0].timestamp < stored[1].timestamp); // oldest first
 
         repository.close().await;
+    }
+
+    /// Backfill orchestration: success counts rows upserted per symbol; a
+    /// failing symbol is isolated, not fatal to the batch.
+    #[tokio::test]
+    async fn backfill_reports_per_symbol_and_isolates_failures() {
+        use crate::storage::Repository;
+
+        let dir = tempfile::tempdir().unwrap();
+        let db = dir.path().join("backfill.db");
+        let repository = Repository::open(db.to_str().unwrap()).await.unwrap();
+        repository.migrate().await.unwrap();
+
+        let samsung = symbol("005930");
+        let naver = symbol("035420");
+        struct HalfBroken {
+            bars: Vec<Bar>,
+        }
+        #[async_trait::async_trait]
+        impl MarketDataSource for HalfBroken {
+            async fn daily_bars(
+                &self,
+                symbol: &Symbol,
+                from: DateTime<Utc>,
+                to: DateTime<Utc>,
+            ) -> Result<Vec<Bar>, MarketDataError> {
+                if symbol.as_str() == "035420" {
+                    return Err(MarketDataError::Source("venue rejected".into()));
+                }
+                Ok(self
+                    .bars
+                    .iter()
+                    .filter(|b| &b.symbol == symbol && b.timestamp >= from && b.timestamp <= to)
+                    .cloned()
+                    .collect())
+            }
+        }
+        let source = HalfBroken {
+            bars: vec![
+                bar(
+                    &samsung,
+                    instant("2026-01-05"),
+                    dec("100"),
+                    dec("100"),
+                    dec("100"),
+                    dec("100"),
+                    10,
+                ),
+                bar(
+                    &samsung,
+                    instant("2026-01-06"),
+                    dec("101"),
+                    dec("101"),
+                    dec("101"),
+                    dec("101"),
+                    11,
+                ),
+            ],
+        };
+
+        let outcomes = backfill_daily(
+            &source,
+            &repository,
+            &[samsung.clone(), naver],
+            instant("2026-01-01"),
+            instant("2026-01-31"),
+        )
+        .await;
+
+        assert_eq!(outcomes.len(), 2);
+        assert_eq!(outcomes[0].0, samsung);
+        assert_eq!(outcomes[0].1.as_ref().unwrap(), &2u64); // rows upserted
+        assert!(outcomes[1].1.is_err()); // isolated failure, batch survived
+        assert_eq!(repository.candle_count().await.unwrap(), 2);
     }
 }

@@ -86,6 +86,16 @@ pub struct KisAuth {
 }
 
 impl KisAuth {
+    /// Credentials for request headers — every REST call carries
+    /// appkey/appsecret alongside the bearer token (official spec).
+    pub fn app_key(&self) -> &str {
+        &self.app_key
+    }
+
+    pub fn app_secret(&self) -> &str {
+        &self.app_secret
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         base_url: String,

@@ -15,6 +15,76 @@ use lossfunction::runtime::demo::DemoLoop;
 use lossfunction::runtime::server::{AppState, SharedState};
 use lossfunction::storage::Repository;
 
+async fn backfill_daily_bars(settings: &Settings, years: i64) {
+    use lossfunction::kis::auth::{kis_base_url, KisAuth};
+    use lossfunction::kis::chart::KisChartSource;
+    use lossfunction::kis::rest::KisRestClient;
+    use lossfunction::marketdata::backfill_daily;
+
+    if settings.kis_app_key.expose().is_empty() || settings.kis_app_secret.expose().is_empty() {
+        eprintln!("backfill needs KIS_APP_KEY / KIS_APP_SECRET in the environment");
+        std::process::exit(2);
+    }
+    let environment = match settings.kis_environment {
+        lossfunction::config::KisEnvironment::Real => "real",
+        lossfunction::config::KisEnvironment::Mock => "mock",
+    };
+    let base_url = kis_base_url(environment).to_string();
+    let http = reqwest::Client::new();
+    let auth = KisAuth::new(
+        base_url.clone(),
+        settings.kis_app_key.expose().to_string(),
+        settings.kis_app_secret.expose().to_string(),
+        http.clone(),
+    );
+    let rest = KisRestClient::new(
+        auth,
+        &settings.kis_account_number,
+        environment,
+        base_url,
+        http,
+        "backfill",
+    )
+    .expect("valid account number for the chart client");
+    let source = KisChartSource::new(rest);
+    let repository = Repository::open(&settings.database_path)
+        .await
+        .expect("open sqlite database");
+    repository.migrate().await.expect("run migrations");
+
+    let to = chrono::Utc::now();
+    let from = to - chrono::Duration::days(365 * years);
+    println!(
+        "backfill: {} symbols x {}y -> {} (domain: {})",
+        settings.watchlist.len(),
+        years,
+        settings.database_path,
+        environment
+    );
+    let outcomes = backfill_daily(&source, &repository, &settings.watchlist, from, to).await;
+    let mut failures = 0usize;
+    for (symbol, outcome) in &outcomes {
+        match outcome {
+            Ok(count) => println!("  {symbol}: {count} bars stored"),
+            Err(error) => {
+                failures += 1;
+                println!("  {symbol}: FAILED — {error}");
+            }
+        }
+    }
+    let total: u64 = outcomes
+        .iter()
+        .filter_map(|(_, o)| o.as_ref().ok().copied())
+        .sum();
+    println!(
+        "done: {total} bars, {failures}/{} symbols failed",
+        outcomes.len()
+    );
+    if failures > 0 {
+        std::process::exit(1);
+    }
+}
+
 #[tokio::main]
 async fn main() {
     // Container HEALTHCHECK probe: exit 0 when the local endpoint answers.
@@ -34,6 +104,18 @@ async fn main() {
         eprintln!("settings refused to load: {error}");
         std::process::exit(2);
     });
+
+    // Read-only daily-bar backfill from the KIS chart API into candles.
+    // Quotation endpoints only — no order can leave through this path.
+    // `--backfill-daily [years]` (default 5).
+    if let Some(position) = std::env::args().position(|arg| arg == "--backfill-daily") {
+        let years: i64 = std::env::args()
+            .nth(position + 1)
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(5);
+        backfill_daily_bars(&settings, years).await;
+        return;
+    }
     let port: u16 = std::env::var("HEALTH_PORT")
         .ok()
         .and_then(|value| value.parse().ok())

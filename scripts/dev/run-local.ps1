@@ -111,6 +111,9 @@ Set-SecretFromVault VarName "KIS_ACCOUNT_NUMBER" Getter "notes"  Item $kisItem
 $env:TRADING_MODE = $TradingMode
 $env:PAPER_BACKEND = $Backend
 $env:DEMO_LOOP = if ($DemoLoop) { "true" } else { "false" }
+# cargo는 rust/에서 실행되므로 DB 경로를 저장소 루트 기준으로 고정한다.
+$env:DATABASE_PATH = Join-Path $root "data\lossfunction.db"
+
 Write-Host "[run] TRADING_MODE=$TradingMode PAPER_BACKEND=$Backend DEMO_LOOP=$($env:DEMO_LOOP)"
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path

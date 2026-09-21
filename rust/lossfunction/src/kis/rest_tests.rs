@@ -76,6 +76,8 @@ async fn submit_order_builds_official_request_shape() {
     });
     Mock::given(method("POST"))
         .and(path("/uapi/domestic-stock/v1/trading/order-cash"))
+        .and(header("appkey", "appkey-1"))
+        .and(header("appsecret", "appsecret-1"))
         .and(body_json(&expected_body))
         .and(header("tr_id", "VTTC0012U"))
         .and(header("custtype", "P"))
@@ -102,6 +104,8 @@ async fn business_rejection_is_classified_and_never_retried() {
         .await;
     Mock::given(method("POST"))
         .and(path("/uapi/domestic-stock/v1/trading/order-cash"))
+        .and(header("appkey", "appkey-1"))
+        .and(header("appsecret", "appsecret-1"))
         .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
             "rt_cd": "1", "msg_cd": "40150", "msg1": "주문수량 오류",
         })))
