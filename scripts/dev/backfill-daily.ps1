@@ -41,11 +41,8 @@ $ErrorActionPreference = "Stop"
 # bw is an npm wrapper that resolves `node` from PATH — conda-activated or
 # stale sessions can shadow it. Pin the standard install location if missing.
 if (-not (Get-Command node -ErrorAction SilentlyContinue) -and
-    (Test-Path "C:\Program Files
-odejs
-ode.exe")) {
-    $env:Path = "C:\Program Files
-odejs;$env:Path"
+    (Test-Path "C:\Program Files\nodejs\node.exe")) {
+    $env:Path = "C:\Program Files\nodejs;" + $env:Path
 }
 
 
@@ -90,12 +87,18 @@ bw sync | Out-Null
 
 # ── 2. 금고 → 환경변수 (이 프로세스 트리에만) ─────────────────────────────
 function Get-BwValue([string]$Getter, [string]$Item) {
+    # bw get matches item IDs, not display names — resolve name -> id first.
+    $raw = (bw list items 2>$null | Out-String)
+    $id = ($raw | ConvertFrom-Json) |
+        Where-Object { $_.name -eq $Item } |
+        Select-Object -First 1 -ExpandProperty id
+    if (-not $id) { Write-Error "금고에서 항목 '$Item'을(를) 찾지 못함 — 이름을 확인하세요." }
     $val = switch ($Getter) {
-        "username" { bw get username $Item 2>$null }
-        "password" { bw get password $Item 2>$null }
-        "notes"    { bw get notes $Item 2>$null }
+        "username" { bw get username $id 2>$null }
+        "password" { bw get password $id 2>$null }
+        "notes"    { bw get notes $id 2>$null }
     }
-    if (-not $val) { Write-Error "금고 항목 '$Item'($Getter)에서 값을 찾지 못함 — 항목 구조를 확인하세요." }
+    if (-not $val) { Write-Error "항목 '$Item'($Getter)에서 값을 찾지 못함 — 항목 구조를 확인하세요." }
     $val
 }
 

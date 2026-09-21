@@ -45,11 +45,8 @@ $ErrorActionPreference = "Stop"
 # bw is an npm wrapper that resolves `node` from PATH — conda-activated or
 # stale sessions can shadow it. Pin the standard install location if missing.
 if (-not (Get-Command node -ErrorAction SilentlyContinue) -and
-    (Test-Path "C:\Program Files
-odejs
-ode.exe")) {
-    $env:Path = "C:\Program Files
-odejs;$env:Path"
+    (Test-Path "C:\Program Files\nodejs\node.exe")) {
+    $env:Path = "C:\Program Files\nodejs;" + $env:Path
 }
 
 
@@ -104,10 +101,16 @@ bw sync | Out-Null
 # ── 2. 금고 → 환경변수 (이 프로세스 트리에만 존재) ────────────────────────
 function Set-SecretFromVault {
     param([string]$VarName, [string]$Getter, [string]$Item)
+    # bw get matches item IDs, not display names — resolve name -> id first.
+    $raw = (bw list items 2>$null | Out-String)
+    $id = ($raw | ConvertFrom-Json) |
+        Where-Object { $_.name -eq $Item } |
+        Select-Object -First 1 -ExpandProperty id
+    if (-not $id) { Write-Host "  $VarName : 금고 항목 '$Item' 없음 — 미주입" -ForegroundColor Yellow; return }
     $val = switch ($Getter) {
-        "username" { bw get username $Item 2>$null }
-        "password" { bw get password $Item 2>$null }
-        "notes"    { bw get notes $Item 2>$null }
+        "username" { bw get username $id 2>$null }
+        "password" { bw get password $id 2>$null }
+        "notes"    { bw get notes $id 2>$null }
     }
     if ($val) {
         Set-Item -Path ("Env:" + $VarName) -Value $val
