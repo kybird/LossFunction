@@ -36,6 +36,13 @@ param(
 
     [bool]$DemoLoop = $true,
 
+    # 실데이터 리플레이 시뮬레이션: 저장된 실제 일봉으로 매매 시뮬레이션(주문 없음).
+    # 별도 시뮬 DB를 사용해 랜덤 데모 데이터와 분리한다.
+    [switch]$Simulate,
+
+    # 시뮬레이션에 쓸 전략 키 (기본 sma-cross — 전체 목록은 /lab 참고)
+    [string]$SimStrategy = "sma-cross",
+
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$CargoArgs
 )
@@ -128,9 +135,17 @@ Set-SecretFromVault VarName "KIS_ACCOUNT_NUMBER" Getter "notes"  Item $KisItem
 # ── 3. 실행 ───────────────────────────────────────────────────────────────
 $env:TRADING_MODE = $TradingMode
 $env:PAPER_BACKEND = $Backend
-$env:DEMO_LOOP = if ($DemoLoop) { "true" } else { "false" }
+if ($Simulate) {
+    $env:SIMULATION = "true"
+    $env:SIM_STRATEGY = $SimStrategy
+    $env:DEMO_LOOP = "false"
+    $env:DATABASE_PATH = Join-Path $root "data\sim.db"
+    Write-Host "[sim] 실데이터 리플레이 시뮬레이션 (전략 $SimStrategy, DB data/sim.db)"
+} else {
+    $env:SIMULATION = "false"
+    $env:DEMO_LOOP = if ($DemoLoop) { "true" } else { "false" }
+}
 # cargo는 rust/에서 실행되므로 DB 경로를 저장소 루트 기준으로 고정한다.
-$env:DATABASE_PATH = Join-Path $root "data\lossfunction.db"
 
 Write-Host "[run] TRADING_MODE=$TradingMode PAPER_BACKEND=$Backend DEMO_LOOP=$($env:DEMO_LOOP)"
 

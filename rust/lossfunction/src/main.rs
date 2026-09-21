@@ -13,6 +13,7 @@ use lossfunction::config::{PaperBackend, Settings};
 use lossfunction::risk::{RiskLimits, RiskManager};
 use lossfunction::runtime::demo::DemoLoop;
 use lossfunction::runtime::server::{AppState, SharedState};
+use lossfunction::runtime::sim::SimLoop;
 use lossfunction::storage::Repository;
 
 async fn backfill_daily_bars(settings: &Settings, years: i64) {
@@ -164,9 +165,34 @@ async fn main() {
             base_url_override: None,
         })
     };
-    // Demo loop first: the status page reports the strategy it runs.
+    // Simulation replay: real stored candles through the live pipeline with
+    // the mock broker only — paper trading on real data, no venue contact.
+    let simulation = std::env::var("SIMULATION")
+        .map(|value| value == "true")
+        .unwrap_or(false);
+    let sim_strategy = std::env::var("SIM_STRATEGY").unwrap_or_else(|_| "sma-cross".to_string());
+
     let mut tasks = Vec::new();
-    let strategy_label = if demo_enabled() {
+    let strategy_label = if simulation {
+        let sim = SimLoop::new(
+            Arc::clone(&broker),
+            Arc::clone(&risk),
+            demo_repository(&settings).await,
+            settings.watchlist.clone(),
+            &sim_strategy,
+            std::time::Duration::from_millis(300),
+        )
+        .await;
+        let label = sim.strategy_label();
+        println!(
+            "simulation replay enabled: {} bars x {} (strategy {}, mock fills only)",
+            0,
+            settings.watchlist.len(),
+            sim_strategy
+        );
+        tasks.push(tokio::spawn(sim_run(sim)));
+        label
+    } else if demo_enabled() {
         let demo = DemoLoop::new(
             Arc::clone(&broker),
             Arc::clone(&risk),
@@ -225,6 +251,19 @@ async fn demo_repository(settings: &Settings) -> Repository {
     Repository::open(&settings.database_path)
         .await
         .expect("open demo sqlite database")
+}
+
+async fn sim_run(mut sim: SimLoop) {
+    loop {
+        if let Err(error) = sim.tick().await {
+            eprintln!("sim replay tick failed: {error}");
+        }
+        if sim.replayed() >= sim.total_bars() {
+            println!("sim replay finished ({} bars)", sim.total_bars());
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    }
 }
 
 async fn demo_run(mut demo: DemoLoop) {
