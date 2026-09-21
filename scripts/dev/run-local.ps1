@@ -140,6 +140,7 @@ if ($Simulate) {
     $env:SIM_STRATEGY = $SimStrategy
     $env:DEMO_LOOP = "false"
     $env:DATABASE_PATH = Join-Path $root "data\sim.db"
+    $env:SIM_SOURCE = Join-Path $root "data\lossfunction.db"
     Write-Host "[sim] 실데이터 리플레이 시뮬레이션 (전략 $SimStrategy, DB data/sim.db)"
 } else {
     $env:SIMULATION = "false"

@@ -174,10 +174,17 @@ async fn main() {
 
     let mut tasks = Vec::new();
     let strategy_label = if simulation {
+        let source_path =
+            std::env::var("SIM_SOURCE").unwrap_or_else(|_| settings.database_path.clone());
+        let source = Repository::open(&source_path)
+            .await
+            .expect("open simulation source database");
+        source.migrate().await.expect("migrate simulation source");
         let sim = SimLoop::new(
             Arc::clone(&broker),
             Arc::clone(&risk),
             demo_repository(&settings).await,
+            source,
             settings.watchlist.clone(),
             &sim_strategy,
             std::time::Duration::from_millis(300),

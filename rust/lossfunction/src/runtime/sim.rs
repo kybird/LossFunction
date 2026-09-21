@@ -49,13 +49,16 @@ impl SimLoop {
         broker: Arc<MockBroker>,
         risk: Arc<RiskManager>,
         repository: Repository,
+        source: Repository,
         symbols: Vec<Symbol>,
         strategy_key: &str,
         interval: Duration,
     ) -> Self {
+        // Candles come from the SOURCE db (the backfilled real data); the
+        // sim writes its own orders/quotes/positions into `repository`.
         let mut bars = Vec::new();
         for symbol in &symbols {
-            let stored = repository
+            let stored = source
                 .daily_candles(symbol, crate::marketdata::Timeframe::Day)
                 .await
                 .unwrap_or_default();
@@ -240,6 +243,7 @@ mod tests {
         SimLoop::new(
             Arc::new(MockBroker::new()),
             risk(),
+            repository.clone(),
             repository,
             vec![symbol],
             "sma-cross",
