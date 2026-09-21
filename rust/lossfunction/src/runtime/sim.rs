@@ -261,11 +261,8 @@ mod tests {
             sim.tick().await.unwrap();
         }
         assert_eq!(sim.replayed(), 120);
-        assert!(
-            sim.tick().await.unwrap(); // exhausted replay is a no-op
-            assert_eq!(sim.replayed(), 120, "cursor must not advance past the end");
-            "exhausted replay is a no-op"
-        );
+        sim.tick().await.unwrap(); // exhausted replay is a no-op
+        assert_eq!(sim.replayed(), 120, "cursor must not advance past the end");
 
         // Positions/orders visible through the repository (status page source).
         let orders = sim.repository.recent_orders(200).await.unwrap();
