@@ -42,6 +42,18 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# bw is an npm wrapper that resolves `node` from PATH — conda-activated or
+# stale sessions can shadow it. Pin the standard install location if missing.
+if (-not (Get-Command node -ErrorAction SilentlyContinue) -and
+    (Test-Path "C:\Program Files
+odejs
+ode.exe")) {
+    $env:Path = "C:\Program Files
+odejs;$env:Path"
+}
+
+
+
 # ── 금고 항목 매핑 — 실제 Vaultwarden 항목 구조에 맞으면 이곳만 수정 ──────
 # KIS 자격증명을 하나의 로그인 항목으로 가정: username=AppKey, password=AppSecret,
 # notes=계좌번호. 항목을 분리해 두었다면 아래 3개의 bw get 호출을 각자 맞춰 고칠 것.

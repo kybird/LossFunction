@@ -38,6 +38,18 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# bw is an npm wrapper that resolves `node` from PATH — conda-activated or
+# stale sessions can shadow it. Pin the standard install location if missing.
+if (-not (Get-Command node -ErrorAction SilentlyContinue) -and
+    (Test-Path "C:\Program Files
+odejs
+ode.exe")) {
+    $env:Path = "C:\Program Files
+odejs;$env:Path"
+}
+
+
+
 function Get-BwStatus {
     try { (bw status | ConvertFrom-Json).status } catch { "unknown" }
 }
