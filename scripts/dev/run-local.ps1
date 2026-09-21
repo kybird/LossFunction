@@ -144,7 +144,7 @@ Set-SecretFromVault VarName "KIS_ACCOUNT_NUMBER" Getter "notes"  Item $KisItem
 # ── 3. 실행 ───────────────────────────────────────────────────────────────
 $env:TRADING_MODE = $TradingMode
 $env:PAPER_BACKEND = $Backend
-if ($Mode -eq "sim") {
+if ($Mode -eq "sim" -or $Simulate) {
     $env:SIMULATION = "true"
     if (-not $SimStrategy) {
         Write-Host "  Strategies: sma-cross | rsi-reversion | donchian-breakout | bollinger-reversion | momentum-rotation | macd-cross"
