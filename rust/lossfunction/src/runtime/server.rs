@@ -736,7 +736,7 @@ mod tests {
             let day =
                 chrono::NaiveDate::from_ymd_opt(2026, 1, 1).unwrap() + chrono::Duration::days(i);
             let ts = chrono::Utc.from_utc_datetime(&day.and_hms_opt(6, 30, 0).unwrap());
-            let price = rust_decimal::Decimal::from(80_000 + i * 100);
+            let price = crate::storage::int_to_money((80_000 + i * 100) * 10_000);
             seeded.push(crate::marketdata::bar(
                 &symbol, ts, price, price, price, price, 1,
             ));
