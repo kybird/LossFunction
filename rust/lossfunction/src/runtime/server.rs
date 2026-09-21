@@ -37,6 +37,8 @@ pub struct AppState {
     pub watchlist: Vec<Symbol>,
     /// "name vN" — what is deciding right now.
     pub strategy_label: String,
+    /// Live backtest-run state shown on the status page.
+    pub backtest: Arc<std::sync::Mutex<BackfillStatus>>,
 }
 
 pub type SharedState = Arc<AppState>;
@@ -48,6 +50,7 @@ pub fn router(state: SharedState) -> Router {
         .route("/control/kill-switch", post(control_kill_switch))
         .route("/control/backfill", post(control_backfill))
         .route("/strategies", get(strategies))
+        .route("/control/backtest", post(control_backtest))
         .with_state(state)
 }
 
@@ -119,6 +122,7 @@ async fn status_page(State(state): State<SharedState>) -> Html<String> {
                 )
             })
             .collect(),
+        backtest: state.backtest.lock().expect("backtest status lock").clone(),
         backfill: state.backfill.lock().expect("backfill status lock").clone(),
     };
     Html(render_status_page(&data))
@@ -136,6 +140,58 @@ async fn strategies() -> Json<serde_json::Value> {
             }))
             .collect::<Vec<_>>(),
     }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BacktestCommand {
+    pub strategy: String,
+    pub symbols: Option<Vec<String>>,
+    pub years: Option<i64>,
+}
+
+/// Kick off a background backtest over stored candles. Offline by
+/// construction (mock broker + candles) — the only hazard is concurrent
+/// runs, refused with 409 like the backfill control.
+async fn control_backtest(
+    State(state): State<SharedState>,
+    Json(command): Json<BacktestCommand>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let years = command.years.filter(|y| (1..=30).contains(y)).unwrap_or(5);
+    if crate::strategy_registry::find(&command.strategy).is_none() {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    let symbols: Vec<Symbol> = match command.symbols {
+        Some(list) if !list.is_empty() => list
+            .into_iter()
+            .map(Symbol::parse)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|_| StatusCode::BAD_REQUEST)?,
+        _ => state.watchlist.clone(),
+    };
+    {
+        let status = state.backtest.lock().expect("backtest status lock");
+        if matches!(&*status, BackfillStatus::Running) {
+            return Err(StatusCode::CONFLICT);
+        }
+    }
+    state
+        .repository
+        .record_event(
+            "control.backtest",
+            "operator",
+            &json!({ "action": "start", "strategy": command.strategy, "symbols": symbols.iter().map(|s| s.as_str()).collect::<Vec<_>>(), "years": years, "source": "web" }),
+        )
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    crate::runtime::backtest_runner::spawn_backtest(
+        state.repository.clone(),
+        command.strategy,
+        symbols,
+        years,
+        crate::backtest::BacktestConfig::default(),
+        Arc::clone(&state.backtest),
+    );
+    Ok(Json(json!({ "ok": true, "status": "running" })))
 }
 
 #[derive(Debug, Deserialize)]
@@ -236,6 +292,7 @@ mod tests {
     use super::*;
     use axum::body::Body;
     use axum::http::Request;
+    use chrono::TimeZone;
     use tower::ServiceExt;
 
     async fn state(tmp: &std::path::Path) -> AppState {
@@ -259,6 +316,7 @@ mod tests {
             backfill_creds: None,
             watchlist: vec![Symbol::parse("005930").unwrap()],
             strategy_label: "EntryPriceStrategy v1".into(),
+            backtest: Arc::new(std::sync::Mutex::new(BackfillStatus::Idle)),
         }
     }
 
@@ -457,5 +515,88 @@ mod tests {
         let page = body_text(response.into_body()).await;
         assert!(page.contains("전략 목록"));
         assert!(page.contains("MACD 교차"));
+    }
+
+    /// Backtest control: seeded candles -> background run settles Done with
+    /// the metrics summary; bad keys/symbols are refused.
+    #[tokio::test]
+    async fn backtest_control_runs_over_seeded_candles() {
+        let tmp = tempfile::tempdir().unwrap();
+        let shared: SharedState = Arc::new(state(tmp.path()).await);
+        // Seed 80 rising bars — enough history (min 60) for sma-cross.
+        let mut seeded = Vec::new();
+        for i in 0..80i64 {
+            let day =
+                chrono::NaiveDate::from_ymd_opt(2025, 1, 1).unwrap() + chrono::Duration::days(i);
+            let ts = chrono::Utc.from_utc_datetime(&day.and_hms_opt(6, 30, 0).unwrap());
+            let price = rust_decimal::Decimal::from(80_000 + i * 50);
+            seeded.push(crate::marketdata::bar(
+                &Symbol::parse("005930").unwrap(),
+                ts,
+                price,
+                price,
+                price,
+                price,
+                1_000,
+            ));
+        }
+        let repository = shared.repository.clone();
+        repository.migrate().await.unwrap();
+        repository.upsert_candles(&seeded).await.unwrap();
+
+        let app = router(Arc::clone(&shared));
+        let post = |body: String| {
+            let app = app.clone();
+            async move {
+                app.oneshot(
+                    Request::post("/control/backtest")
+                        .header("content-type", "application/json")
+                        .body(Body::from(body))
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+            }
+        };
+
+        // Unknown strategy -> 404; bad symbol -> 400.
+        let response = post(serde_json::json!({"strategy": "ghost"}).to_string()).await;
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        let response =
+            post(serde_json::json!({"strategy": "sma-cross", "symbols": ["nope"]}).to_string())
+                .await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        // Valid run accepted.
+        let response =
+            post(serde_json::json!({"strategy": "sma-cross", "years": 1}).to_string()).await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        loop {
+            let settled = !matches!(
+                *shared.backtest.lock().unwrap(),
+                BackfillStatus::Running | BackfillStatus::Idle
+            );
+            if settled {
+                break;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "backtest never settled"
+            );
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+        match &*shared.backtest.lock().unwrap() {
+            BackfillStatus::Done { summary, .. } => {
+                assert!(summary.contains("수익률"), "got: {summary}");
+                assert!(summary.contains("MDD"), "got: {summary}");
+            }
+            other => panic!("expected Done, got {other:?}"),
+        }
+        let events = shared.repository.recent_audit(10).await.unwrap();
+        assert!(events
+            .iter()
+            .any(|event| event.event_type == "control.backtest"));
     }
 }

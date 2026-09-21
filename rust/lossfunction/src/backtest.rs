@@ -310,6 +310,101 @@ pub fn bar_fills_limit(side: OrderSide, market: Decimal, limit: Decimal) -> bool
     limit_crosses(side, market, limit)
 }
 
+/// Performance summary of one backtest run — the numbers the operator
+/// actually asks for.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Metrics {
+    pub final_equity: Decimal,
+    pub return_pct: Decimal,
+    /// Max peak-to-trough drawdown of the equity curve, %.
+    pub mdd_pct: Decimal,
+    /// Closed round trips (FIFO-matched sell lots).
+    pub trades: usize,
+    pub wins: usize,
+    pub win_rate_pct: Decimal,
+    pub total_commission: Decimal,
+    pub total_tax: Decimal,
+}
+
+/// Summarize a result: return, MDD, and FIFO round-trip win rate.
+pub fn summarize(result: &BacktestResult, initial_cash: Decimal) -> Metrics {
+    let zero = Decimal::ZERO;
+    let hundred = Decimal::from(100);
+
+    let final_equity = result.equity;
+    let return_pct = if initial_cash.is_zero() {
+        zero
+    } else {
+        (final_equity - initial_cash) * hundred / initial_cash
+    };
+
+    let mut peak = initial_cash;
+    let mut mdd_pct = zero;
+    for (_, equity) in &result.equity_curve {
+        if *equity > peak {
+            peak = *equity;
+        }
+        if !peak.is_zero() {
+            let drawdown = (peak - *equity) * hundred / peak;
+            if drawdown > mdd_pct {
+                mdd_pct = drawdown;
+            }
+        }
+    }
+
+    // FIFO round trips per symbol, chronological.
+    use std::collections::HashMap;
+    let mut lots: HashMap<Symbol, std::collections::VecDeque<(i64, Decimal)>> = HashMap::new();
+    let (mut trades, mut wins) = (0usize, 0usize);
+    let mut chronological = result.fills.clone();
+    chronological.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
+    for fill in &chronological {
+        let queue = lots.entry(fill.symbol.clone()).or_default();
+        match fill.side {
+            OrderSide::Buy => queue.push_back((fill.quantity, fill.price)),
+            OrderSide::Sell => {
+                let mut remaining = fill.quantity;
+                let mut pnl = zero;
+                while remaining > 0 {
+                    match queue.front_mut() {
+                        Some((qty, price)) if *qty <= remaining => {
+                            pnl += (fill.price - *price) * Decimal::from(*qty);
+                            remaining -= *qty;
+                            queue.pop_front();
+                        }
+                        Some((qty, price)) => {
+                            pnl += (fill.price - *price) * Decimal::from(remaining);
+                            *qty -= remaining;
+                            remaining = 0;
+                        }
+                        None => break, // selling short/unknown basis — skip
+                    }
+                }
+                trades += 1;
+                if pnl > zero {
+                    wins += 1;
+                }
+            }
+        }
+    }
+    let win_rate_pct = if trades == 0 {
+        zero
+    } else {
+        Decimal::from(wins) * hundred / Decimal::from(trades)
+    };
+
+    Metrics {
+        final_equity,
+        return_pct,
+        mdd_pct,
+        trades,
+        wins,
+        win_rate_pct,
+        total_commission: result.total_commission,
+        total_tax: result.total_tax,
+    }
+}
+
 /// Loading the engine's input from stored candles fails loud: a symbol with
 /// thin history aborts the whole run naming the symbol — never a silent skip
 /// that would quietly narrow the tested universe.
@@ -637,5 +732,78 @@ mod tests {
             message.contains("1 stored bars"),
             "states the counts: {message}"
         );
+    }
+
+    /// Metrics math: return, MDD from the equity curve, FIFO win rate.
+    #[test]
+    fn summarize_computes_return_mdd_and_fifo_win_rate() {
+        let config = BacktestConfig {
+            initial_cash: Decimal::from(1_000_000),
+            ..BacktestConfig::default()
+        };
+        let base = Utc::now();
+        let result = BacktestResult {
+            cash: Decimal::ZERO,
+            total_commission: Decimal::from(100),
+            total_tax: Decimal::from(50),
+            equity: Decimal::from(1_100_000),
+            equity_curve: vec![
+                (base, Decimal::from(1_000_000)),
+                (base + chrono::Duration::days(1), Decimal::from(1_200_000)), // peak
+                (base + chrono::Duration::days(2), Decimal::from(900_000)),   // -25% dd
+                (base + chrono::Duration::days(3), Decimal::from(1_100_000)),
+            ],
+            fills: vec![
+                FillRecord {
+                    client_order_id: "a".into(),
+                    symbol: symbol(),
+                    side: OrderSide::Buy,
+                    quantity: 10,
+                    price: Decimal::from(100),
+                    commission: Decimal::ZERO,
+                    tax: Decimal::ZERO,
+                    timestamp: base,
+                },
+                FillRecord {
+                    client_order_id: "b".into(),
+                    symbol: symbol(),
+                    side: OrderSide::Sell,
+                    quantity: 10,
+                    price: Decimal::from(120), // win
+                    commission: Decimal::ZERO,
+                    tax: Decimal::ZERO,
+                    timestamp: base + chrono::Duration::days(1),
+                },
+                FillRecord {
+                    client_order_id: "c".into(),
+                    symbol: symbol(),
+                    side: OrderSide::Buy,
+                    quantity: 10,
+                    price: Decimal::from(130),
+                    commission: Decimal::ZERO,
+                    tax: Decimal::ZERO,
+                    timestamp: base + chrono::Duration::days(2),
+                },
+                FillRecord {
+                    client_order_id: "d".into(),
+                    symbol: symbol(),
+                    side: OrderSide::Sell,
+                    quantity: 10,
+                    price: Decimal::from(110), // loss
+                    commission: Decimal::ZERO,
+                    tax: Decimal::ZERO,
+                    timestamp: base + chrono::Duration::days(3),
+                },
+            ],
+        };
+
+        let metrics = summarize(&result, config.initial_cash);
+        assert_eq!(metrics.return_pct, Decimal::from(10)); // +10%
+        assert_eq!(metrics.mdd_pct, Decimal::from(25)); // 1.2M -> 0.9M
+        assert_eq!(metrics.trades, 2);
+        assert_eq!(metrics.wins, 1);
+        assert_eq!(metrics.win_rate_pct, Decimal::from(50));
+        assert_eq!(metrics.total_commission, Decimal::from(100));
+        assert_eq!(metrics.total_tax, Decimal::from(50));
     }
 }

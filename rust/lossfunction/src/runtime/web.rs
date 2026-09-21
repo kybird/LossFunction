@@ -28,6 +28,10 @@ fn money(value: &Option<rust_decimal::Decimal>) -> String {
 }
 
 /// Thousands-grouped integer KRW ("12,345,678").
+pub(crate) fn fmt_krw(value: &rust_decimal::Decimal) -> String {
+    krw_int(value)
+}
+
 fn krw_int(value: &rust_decimal::Decimal) -> String {
     let rounded = value.round_dp(0);
     let text = rounded.abs().to_string();
@@ -210,6 +214,7 @@ pub struct StatusPageData {
     pub uptime_seconds: u64,
     /// (key, name, description, params) from the registry.
     pub strategies: Vec<(String, String, String, String)>,
+    pub backtest: BackfillStatus,
 }
 
 fn table(headers: &[&str], rows: Vec<Vec<String>>) -> String {
@@ -472,6 +477,14 @@ pub fn render_status_page(data: &StatusPageData) -> String {
 <h2>전략 목록</h2>
 {strategies}
 
+<h2>백테스트</h2>
+<p class="meta">상태: {backtest_line}</p>
+<p class="meta">
+<select id="bt-strategy">{strategy_options}</select>
+<input id="bt-symbols" placeholder="종목코드 (쉼표 구분, 비우면 watchlist)" size="34">
+<input id="bt-years" type="number" value="5" min="1" max="30" size="3">년
+<button onclick="runBacktest()">실행</button></p>
+
 <h2>데이터 (일봉)</h2>
 {candles}
 <p class="meta">일봉 백필: {backfill_line}
@@ -493,6 +506,19 @@ function toggleKill(on) {{
     body: JSON.stringify({{activate: on, reason: 'manual (web)'}})
   }}).then(function () {{ location.reload(); }});
 }}
+function runBacktest() {{
+  var symbols = document.getElementById('bt-symbols').value.trim();
+  var body = {{
+    strategy: document.getElementById('bt-strategy').value,
+    years: parseInt(document.getElementById('bt-years').value, 10) || 5
+  }};
+  if (symbols) body.symbols = symbols.split(',').map(function (s) {{ return s.trim(); }});
+  fetch('/control/backtest', {{
+    method: 'POST',
+    headers: {{'Content-Type': 'application/json'}},
+    body: JSON.stringify(body)
+  }}).then(function () {{ location.reload(); }});
+}}
 function runBackfill() {{
   if (!confirm('일봉 백필을 시작합니다 (읽기 전용·수십 초).')) return;
   fetch('/control/backfill', {{
@@ -504,6 +530,20 @@ function runBackfill() {{
 </script>
 </body></html>"#,
         strategies = table(&["키", "이름", "설명", "기본 파라미터"], strategy_rows),
+        strategy_options = data
+            .strategies
+            .iter()
+            .map(|(key, name, _description, _params)| {
+                format!(r#"<option value="{}">{}</option>"#, esc(key), esc(name))
+            })
+            .collect::<Vec<_>>()
+            .join(""),
+        backtest_line = esc(&match &data.backtest {
+            BackfillStatus::Idle => "대기".to_string(),
+            BackfillStatus::Running => "실행 중…".to_string(),
+            BackfillStatus::Done { at, summary } => format!("완료 {at} — {summary}"),
+            BackfillStatus::Failed { at, reason } => format!("실패 {at} — {reason}"),
+        }),
         candles = table(&["종목", "마지막 봉"], candle_rows),
         backfill_line = esc(&backfill_line),
         backfill_disabled = backfill_disabled,

@@ -195,6 +195,9 @@ async fn main() {
         backfill_creds,
         watchlist: settings.watchlist.clone(),
         strategy_label,
+        backtest: std::sync::Arc::new(std::sync::Mutex::new(
+            lossfunction::runtime::backfill::BackfillStatus::Idle,
+        )),
     });
 
     let app = lossfunction::runtime::server::router(Arc::clone(&state));

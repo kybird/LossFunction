@@ -22,6 +22,7 @@ use crate::execution::state_machine::StateMachine;
 use crate::risk::RiskManager;
 use crate::strategy::{DecisionLayer, MarketSnapshot, OrderIntent, Strategy};
 pub mod backfill;
+pub mod backtest_runner;
 
 use crate::types::{OrderSide, Quote, Symbol};
 
