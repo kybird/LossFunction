@@ -50,6 +50,7 @@ pub fn router(state: SharedState) -> Router {
         .route("/control/kill-switch", post(control_kill_switch))
         .route("/control/backfill", post(control_backfill))
         .route("/strategies", get(strategies))
+        .route("/symbol/{code}", get(symbol_page))
         .route("/control/backtest", post(control_backtest))
         .with_state(state)
 }
@@ -126,6 +127,32 @@ async fn status_page(State(state): State<SharedState>) -> Html<String> {
         backfill: state.backfill.lock().expect("backfill status lock").clone(),
     };
     Html(render_status_page(&data))
+}
+
+/// Per-symbol view: name, latest price, a daily-close chart from candles,
+/// and recent bars. Unknown (unparseable) codes 404; known-but-unfilled
+/// codes render an empty state.
+async fn symbol_page(
+    State(state): State<SharedState>,
+    axum::extract::Path(code): axum::extract::Path<String>,
+) -> Result<Html<String>, StatusCode> {
+    let symbol = Symbol::parse(code).map_err(|_| StatusCode::NOT_FOUND)?;
+    let candles = state
+        .repository
+        .daily_candles(&symbol, crate::marketdata::Timeframe::Day)
+        .await
+        .unwrap_or_default();
+    let latest = state
+        .repository
+        .latest_quotes()
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .find(|(quote_symbol, _)| quote_symbol == &symbol)
+        .map(|(_, price)| price);
+    Ok(Html(crate::runtime::web::render_symbol_page(
+        &symbol, &candles, latest,
+    )))
 }
 
 async fn strategies() -> Json<serde_json::Value> {
@@ -695,5 +722,43 @@ mod tests {
             .is_err(),
             "negative cash must be refused"
         );
+    }
+
+    #[tokio::test]
+    async fn symbol_page_renders_and_404s() {
+        let tmp = tempfile::tempdir().unwrap();
+        let shared: SharedState = Arc::new(state(tmp.path()).await);
+        let repository = shared.repository.clone();
+        repository.migrate().await.unwrap();
+        let symbol = Symbol::parse("005930").unwrap();
+        let mut seeded = Vec::new();
+        for i in 0..30i64 {
+            let day =
+                chrono::NaiveDate::from_ymd_opt(2026, 1, 1).unwrap() + chrono::Duration::days(i);
+            let ts = chrono::Utc.from_utc_datetime(&day.and_hms_opt(6, 30, 0).unwrap());
+            let price = rust_decimal::Decimal::from(80_000 + i * 100);
+            seeded.push(crate::marketdata::bar(
+                &symbol, ts, price, price, price, price, 1,
+            ));
+        }
+        repository.upsert_candles(&seeded).await.unwrap();
+
+        let app = router(shared);
+        let response = app
+            .clone()
+            .oneshot(Request::get("/symbol/005930").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = body_text(response.into_body()).await;
+        assert!(body.contains("삼성전자"), "symbol name shown");
+        assert!(body.contains("<svg"), "chart rendered");
+        assert!(body.contains("80,000"));
+
+        let response = app
+            .oneshot(Request::get("/symbol/nope").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
     }
 }

@@ -583,6 +583,124 @@ function runBackfill() {{
     )
 }
 
+/// Per-symbol page: identity, latest price, a closes chart (inline SVG),
+/// and the newest bars. Pure function of pre-fetched data.
+pub fn render_symbol_page(
+    symbol: &crate::types::Symbol,
+    candles: &[crate::marketdata::Bar],
+    latest: Option<rust_decimal::Decimal>,
+) -> String {
+    use crate::marketdata::Timeframe;
+    let _ = Timeframe::Day;
+    let name = SYMBOL_NAMES
+        .iter()
+        .find(|(known, _)| *known == symbol.as_str())
+        .map(|(_, name)| *name)
+        .unwrap_or("");
+    let closes: Vec<i64> = candles
+        .iter()
+        .map(|bar| bar.close.mantissa() as i64)
+        .collect();
+    let chart = chart_svg(&closes, 640, 160);
+    let stats = if candles.is_empty() {
+        r#"<p class="empty">저장된 일봉이 없습니다 — 백필을 실행하세요.</p>"#.to_string()
+    } else {
+        let first = &candles[0];
+        let last = candles.last().unwrap();
+        let min = candles
+            .iter()
+            .map(|b| b.close)
+            .fold(first.close, rust_decimal::Decimal::min);
+        let max = candles
+            .iter()
+            .map(|b| b.close)
+            .fold(first.close, rust_decimal::Decimal::max);
+        format!(
+            r#"<table><thead><tr><th>기간</th><th>시작가</th><th>최고</th><th>최저</th><th>마지막 종가</th><th>봉 수</th></tr></thead>
+<tbody><tr><td>{} ~ {}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr></tbody></table>"#,
+            first.timestamp.format("%Y-%m-%d"),
+            last.timestamp.format("%Y-%m-%d"),
+            money(&Some(first.close)),
+            money(&Some(max)),
+            money(&Some(min)),
+            money(&Some(last.close)),
+            candles.len(),
+        )
+    };
+    let bars: String = candles
+        .iter()
+        .rev()
+        .take(10)
+        .map(|bar| {
+            format!(
+                "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
+                bar.timestamp.format("%Y-%m-%d"),
+                money(&Some(bar.open)),
+                money(&Some(bar.high)),
+                money(&Some(bar.low)),
+                money(&Some(bar.close)),
+                bar.volume
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("");
+    let price_line = match latest {
+        Some(price) => format!("현재가 {}원", money(&Some(price))),
+        None => "현재가 —".to_string(),
+    };
+    format!(
+        r#"<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{code} · {name}</title>
+<style>{STYLE}</style></head>
+<body>
+<h1>{name} <small>{code}</small></h1>
+<p class="meta">{price_line} · <a href="/">← 전체 상태로</a></p>
+{chart}
+<h2>통계</h2>
+{stats}
+<h2>최근 봉</h2>
+<table><thead><tr><th>날짜</th><th>시가</th><th>고가</th><th>저가</th><th>종가</th><th>거래량</th></tr></thead><tbody>{bars}</tbody></table>
+</body></html>"#,
+        code = esc(symbol.as_str()),
+        name = esc(name),
+        price_line = esc(&price_line),
+        chart = chart,
+        stats = stats,
+        bars = bars,
+    )
+}
+
+/// Larger line chart (min/max labeled) from 1e-4 ints.
+fn chart_svg(points: &[i64], w: u32, h: u32) -> String {
+    if points.len() < 2 {
+        return r#"<p class="empty">(차트를 그릴 데이터가 없습니다)</p>"#.to_string();
+    }
+    let (min, max) = (*points.iter().min().unwrap(), *points.iter().max().unwrap());
+    let span = (max - min).max(1) as f64;
+    let pad = 8.0;
+    let step = (w as f64 - 2.0 * pad) / (points.len() - 1) as f64;
+    let coords = points
+        .iter()
+        .enumerate()
+        .map(|(i, value)| {
+            let x = pad + i as f64 * step;
+            let y = (h as f64 - pad) - ((value - min) as f64 / span) * (h as f64 - 2.0 * pad);
+            format!("{x:.1},{y:.1}")
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+    let min_money = crate::storage::int_to_money(min);
+    let max_money = crate::storage::int_to_money(max);
+    format!(
+        r##"<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}"><polyline points="{coords}" fill="none" stroke="#6ea8ff" stroke-width="1.5"/><text x="4" y="12" fill="#7b8494" font-size="11">{}</text><text x="4" y="{}" fill="#7b8494" font-size="11">{}</text></svg>"##,
+        money(&Some(max_money)),
+        h - 4,
+        money(&Some(min_money))
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
