@@ -164,43 +164,75 @@ fn status_pill(status: &str) -> String {
 }
 
 const STYLE: &str = r#"
-body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
-       background: #0f1115; color: #d7dce3; margin: 0; padding: 24px;
-       max-width: 1080px; }
-h1 { font-size: 22px; margin: 0 0 4px; }
-h1 .mode { font-size: 13px; padding: 2px 8px; border-radius: 4px;
-           background: #234; color: #9fc3ff; vertical-align: middle; }
-h1 .mode.live { background: #5a1f1f; color: #ff9c9c; }
-.meta { color: #7b8494; font-size: 13px; margin-bottom: 20px; }
-h2 { font-size: 14px; color: #9fb0c3; text-transform: uppercase;
-     letter-spacing: .06em; margin: 24px 0 8px; }
-table { border-collapse: collapse; width: 100%; font-size: 13px; }
-th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #232833; }
-th { color: #7b8494; font-weight: 500; }
-td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-.empty { color: #566070; font-style: italic; padding: 8px 2px; }
-.pill { padding: 1px 7px; border-radius: 9px; font-size: 12px; background: #2a2f3a; }
-.pill.filled { color: #8fd694; } .pill.cancelled { color: #c9a86a; }
-.pill.rejected { color: #ff9c9c; } .pill.unknown { color: #e2b93b; }
-.kill { font-size: 12px; padding: 2px 8px; border-radius: 4px;
-        background: #5a1f1f; color: #ff9c9c; }
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-         gap: 10px; margin: 14px 0 4px; }
-.card { background: #161a22; border: 1px solid #232833; border-radius: 8px;
-        padding: 10px 14px; }
-.card .k { color: #7b8494; font-size: 11px; text-transform: uppercase;
-           letter-spacing: .05em; margin-bottom: 4px; }
-.card .v { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.card .v small { color: #7b8494; font-size: 12px; font-weight: 400; }
-.pnl.up { color: #8fd694; } .pnl.down { color: #ff9c9c; }
-.side-buy { color: #8fd694; } .side-sell { color: #ff9c9c; }
-.fresh-pill { padding: 1px 7px; border-radius: 9px; font-size: 11px; }
-.fresh-pill.fresh { background: #1d3325; color: #8fd694; }
-.fresh-pill.stale { background: #3a311d; color: #e2b93b; }
-.fresh-pill.old { background: #3a1d1d; color: #ff9c9c; }
-.kill button { margin-left: 8px; font-size: 12px; padding: 2px 10px;
-               cursor: pointer; }
-footer { margin-top: 28px; color: #566070; font-size: 12px; }
+:root { --bg:#0d1017; --panel:#141924; --panel2:#181f2c; --line:#242c3b;
+        --text:#dbe2ec; --dim:#7b8494; --accent:#6ea8ff; --up:#8fd694;
+        --down:#ff9c9c; --warn:#e2b93b; }
+* { box-sizing: border-box; }
+body { font-family:-apple-system,'Segoe UI',Roboto,sans-serif; background:var(--bg);
+       color:var(--text); margin:0; padding:0 0 48px; font-size:14px;
+       -webkit-font-smoothing:antialiased; }
+a { color:var(--accent); text-decoration:none; } a:hover { text-decoration:underline; }
+.topbar { position:sticky; top:0; z-index:10; background:rgba(13,16,23,.92);
+          backdrop-filter:blur(6px); border-bottom:1px solid var(--line);
+          padding:0 28px; display:flex; align-items:center; gap:22px; height:52px; }
+.brand { font-weight:700; font-size:15px; letter-spacing:.02em; }
+.brand .mode { font-size:11px; padding:2px 8px; border-radius:4px; background:#234;
+               color:#9fc3ff; vertical-align:middle; margin-left:8px; }
+.brand .mode.live { background:#5a1f1f; color:#ff9c9c; }
+.nav { display:flex; gap:4px; }
+.nav a { color:var(--dim); padding:6px 12px; border-radius:6px; font-size:13px; }
+.nav a.active { color:var(--text); background:var(--panel2); }
+.nav a:hover { color:var(--text); text-decoration:none; }
+.topbar .kill { margin-left:auto; font-size:12px; }
+.kill button, .cardbtn { font-size:12px; padding:3px 12px; cursor:pointer;
+  border-radius:6px; border:1px solid var(--line); background:var(--panel2);
+  color:var(--text); }
+.kill { font-size:12px; padding:2px 8px; border-radius:4px;
+        background:#5a1f1f; color:#ff9c9c; }
+main { max-width:1120px; margin:0 auto; padding:26px 28px 0; }
+.meta { color:var(--dim); font-size:12.5px; margin:6px 0 0; }
+h2 { font-size:13px; color:var(--dim); text-transform:uppercase; letter-spacing:.07em;
+     margin:30px 0 10px; display:flex; align-items:center; gap:10px; }
+h2::after { content:""; flex:1; height:1px; background:var(--line); }
+.cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+         gap:12px; margin:20px 0 6px; }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:10px;
+        padding:14px 16px; transition:border-color .15s; }
+.card:hover { border-color:#32405a; }
+.card .k { color:var(--dim); font-size:11px; text-transform:uppercase;
+           letter-spacing:.06em; margin-bottom:6px; }
+.card .v { font-size:19px; font-weight:600; font-variant-numeric:tabular-nums; }
+.card .v small { color:var(--dim); font-size:12px; font-weight:400; }
+table { border-collapse:collapse; width:100%; font-size:13px; }
+th, td { text-align:left; padding:8px 12px; border-bottom:1px solid var(--line); }
+th { color:var(--dim); font-weight:500; font-size:12px; text-transform:uppercase;
+     letter-spacing:.04em; }
+tbody tr:hover { background:var(--panel2); }
+td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+.empty { color:#566070; font-style:italic; padding:8px 2px; }
+.pill { padding:1px 8px; border-radius:10px; font-size:12px; background:var(--panel2); }
+.pill.filled { color:var(--up); } .pill.cancelled { color:#c9a86a; }
+.pill.rejected { color:var(--down); } .pill.unknown { color:var(--warn); }
+.pnl.up { color:var(--up); } .pnl.down { color:var(--down); }
+.side-buy { color:var(--up); } .side-sell { color:var(--down); }
+.fresh-pill { padding:1px 8px; border-radius:10px; font-size:11px; }
+.fresh-pill.fresh { background:#1d3325; color:var(--up); }
+.fresh-pill.stale { background:#3a311d; color:var(--warn); }
+.fresh-pill.old { background:#3a1d1d; color:var(--down); }
+.controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+            background:var(--panel); border:1px solid var(--line); border-radius:10px;
+            padding:12px 14px; }
+.controls label { color:var(--dim); font-size:12px; }
+.controls input, .controls select { background:var(--bg); color:var(--text);
+  border:1px solid var(--line); border-radius:6px; padding:6px 10px; font-size:13px; }
+.controls input:focus, .controls select:focus { outline:1px solid var(--accent); }
+.controls button { background:var(--accent); color:#0d1017; border:none; font-weight:600;
+  border-radius:6px; padding:7px 18px; cursor:pointer; font-size:13px; }
+.controls button:disabled { opacity:.45; cursor:default; }
+.statusline { background:var(--panel); border:1px solid var(--line); border-radius:10px;
+              padding:12px 14px; margin-top:10px; font-size:13px; }
+footer { max-width:1120px; margin:34px auto 0; padding:0 28px; color:#566070;
+         font-size:12px; }
 "#;
 
 /// Everything the status page needs, pre-fetched by the handler.
@@ -262,147 +294,111 @@ fn table(headers: &[&str], rows: Vec<Vec<String>>) -> String {
     format!("<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>")
 }
 
-/// Render the full HTML status page from pre-fetched data.
-pub fn render_status_page(data: &StatusPageData) -> String {
+/// Shared chrome: top bar with nav, brand, kill control. `active` picks
+/// the highlighted tab.
+fn layout(title: &str, active: &str, kill_badge: &str, content: &str, meta: &str) -> String {
+    let tab = |key: &str, href: &str, label: &str| {
+        let class = if key == active {
+            " class=\"active\""
+        } else {
+            ""
+        };
+        format!(r#"<a href="{href}"{class}>{label}</a>"#)
+    };
+    format!(
+        r##"<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta http-equiv="refresh" content="5">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title} · LossFunction</title>
+<style>{STYLE}</style></head>
+<body>
+<header class="topbar">
+  <span class="brand">LossFunction<span class="mode{mode_class}">{mode}</span></span>
+  <nav class="nav">{nav_home}{nav_positions}{nav_lab}{nav_data}{nav_audit}</nav>
+  {kill_badge}
+</header>
+<main>
+{meta}
+{content}
+</main>
+<footer>JSON: <code>GET /healthz</code> · 제어: <code>POST /control/kill-switch</code> · <code>POST /control/backfill</code> · <code>POST /control/backtest</code> (loopback 전용)</footer>
+<script>{SCRIPT}</script>
+</body></html>"##,
+        title = esc(title),
+        mode = esc(&data_mode()),
+        mode_class = if data_mode() == "live" { " live" } else { "" },
+        nav_home = tab("overview", "/", "개요"),
+        nav_positions = tab("positions", "/positions", "포지션·내역"),
+        nav_lab = tab("lab", "/lab", "실험실"),
+        nav_data = tab("data", "/data", "데이터"),
+        nav_audit = tab("audit", "/audit", "로그"),
+        kill_badge = kill_badge,
+        meta = meta,
+        content = content,
+    )
+}
+
+thread_local! {
+    static PAGE_MODE: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) };
+}
+
+fn set_page_mode(mode: &str) {
+    PAGE_MODE.with(|cell| *cell.borrow_mut() = mode.to_string());
+}
+
+fn data_mode() -> String {
+    PAGE_MODE.with(|cell| cell.borrow().clone())
+}
+
+const SCRIPT: &str = r#"
+function toggleKill(on) {
+  var msg = on ? 'kill switch를 켭니다. 새 주문이 차단됩니다.'
+               : 'kill switch를 해제합니다.';
+  if (!confirm(msg)) return;
+  fetch('/control/kill-switch', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({activate: on, reason: 'manual (web)'})
+  }).then(function () { location.reload(); });
+}
+function runBacktest() {
+  var symbols = document.getElementById('bt-symbols').value.trim();
+  var body = {
+    strategy: document.getElementById('bt-strategy').value,
+    years: parseInt(document.getElementById('bt-years').value, 10) || 5,
+    config: {
+      initial_cash: parseInt(document.getElementById('bt-cash').value, 10) || 100000000,
+      commission_pct: parseFloat(document.getElementById('bt-commission').value),
+      tax_pct: parseFloat(document.getElementById('bt-tax').value)
+    }
+  };
+  if (symbols) body.symbols = symbols.split(',').map(function (s) { return s.trim(); });
+  post('/control/backtest', body);
+}
+function runBackfill() {
+  if (!confirm('일봉 백필을 시작합니다 (읽기 전용·수십 초).')) return;
+  post('/control/backfill', {years: 5});
+}
+function post(url, body) {
+  document.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+  fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  }).then(function () { setTimeout(function () { location.reload(); }, 400); });
+}
+"#;
+
+/// Overview screen: the story in one glance.
+pub fn render_overview(data: &StatusPageData) -> String {
+    set_page_mode(&data.trading_mode);
     let prices: std::collections::HashMap<&str, &rust_decimal::Decimal> = data
         .latest_prices
         .iter()
         .map(|(symbol, price)| (symbol.as_str(), price))
         .collect();
 
-    let spark_map: std::collections::HashMap<&str, &[i64]> = data
-        .sparklines
-        .iter()
-        .map(|(symbol, series)| (symbol.as_str(), series.as_slice()))
-        .collect();
-    let position_rows = data
-        .positions
-        .iter()
-        .map(|position| {
-            let last = prices.get(position.symbol.as_str());
-            let qty = rust_decimal::Decimal::from(position.quantity);
-            let cost = qty * position.average_price;
-            let (value, pnl) = match last {
-                Some(price) => {
-                    let value = qty * **price;
-                    (value.to_string(), value - cost)
-                }
-                None => (cost.to_string(), rust_decimal::Decimal::ZERO),
-            };
-            let series = spark_map
-                .get(position.symbol.as_str())
-                .copied()
-                .unwrap_or(&[]);
-            let rising = last
-                .map(|price| **price >= position.average_price)
-                .unwrap_or(false);
-            let pnl_pct = if cost.is_zero() {
-                "0".to_string()
-            } else {
-                (pnl * rust_decimal::Decimal::from(100) / cost)
-                    .round_dp(2)
-                    .to_string()
-            };
-            vec![
-                symbol_label(&position.symbol),
-                sparkline(series, rising),
-                position.quantity.to_string(),
-                money(&Some(position.average_price)),
-                last.map(|p| money(&Some(**p)))
-                    .unwrap_or_else(|| "—".to_string()),
-                value,
-                format!("{} <small>({pnl_pct}%)</small>", pnl_span(&pnl)),
-            ]
-        })
-        .collect();
-
-    let order_rows = data
-        .orders
-        .iter()
-        .map(|order| {
-            let (side_label, side_class) = if order.side == "sell" {
-                ("매도", "side-sell")
-            } else {
-                ("매수", "side-buy")
-            };
-            vec![
-                order.created_at.format("%m-%d %H:%M:%S").to_string(),
-                symbol_label(&order.symbol),
-                format!(r#"<span class="{side_class}">{side_label}</span>"#),
-                order.quantity.to_string(),
-                money(&order.limit_price),
-                status_pill(&order.status),
-            ]
-        })
-        .collect();
-
-    let fill_rows = data
-        .fills
-        .iter()
-        .map(|fill| {
-            let (side_label, side_class) = if fill.side == "sell" {
-                ("매도", "side-sell")
-            } else {
-                ("매수", "side-buy")
-            };
-            vec![
-                fill.executed_at.format("%m-%d %H:%M:%S").to_string(),
-                symbol_label(&fill.symbol),
-                format!(r#"<span class="{side_class}">{side_label}</span>"#),
-                fill.quantity.to_string(),
-                money(&Some(fill.price)),
-                krw_int(&(fill.price * rust_decimal::Decimal::from(fill.quantity))),
-            ]
-        })
-        .collect();
-
-    let audit_rows = data
-        .audit
-        .iter()
-        .map(|event| {
-            let payload = event.payload.to_string();
-            vec![
-                event.occurred_at.format("%m-%d %H:%M:%S").to_string(),
-                esc(&event.event_type),
-                esc(event.subject.as_deref().unwrap_or("")),
-                esc(&payload.chars().take(120).collect::<String>()),
-            ]
-        })
-        .collect();
-
-    let strategy_rows = data
-        .strategies
-        .iter()
-        .map(|(key, name, description, params)| {
-            vec![esc(key), esc(name), esc(description), esc(params)]
-        })
-        .collect();
-
-    let candle_rows = data
-        .candle_dates
-        .iter()
-        .map(|(symbol, ts)| {
-            let class = freshness_class(ts, &data.now_utc);
-            let label = match class {
-                "fresh" => "최신",
-                "stale" => "갱신 필요",
-                _ => "오래됨",
-            };
-            vec![
-                symbol_label(symbol),
-                format!(r#"{ts} <span class="fresh-pill {class}">{label}</span>"#),
-            ]
-        })
-        .collect();
-
-    let (backfill_line, backfill_disabled) = match &data.backfill {
-        BackfillStatus::Idle => ("대기 — 아직 갱신 없음".to_string(), ""),
-        BackfillStatus::Running => ("실행 중…".to_string(), " disabled"),
-        BackfillStatus::Done { at, summary } => (format!("완료 {at} — {summary}"), ""),
-        BackfillStatus::Failed { at, reason } => (format!("실패 {at} — {reason}"), ""),
-    };
-
-    // Summary: what is happening, in one row of cards.
     let (cost_total, value_total) = data.positions.iter().fold(
         (rust_decimal::Decimal::ZERO, rust_decimal::Decimal::ZERO),
         |(cost, value), position| {
@@ -450,127 +446,40 @@ pub fn render_status_page(data: &StatusPageData) -> String {
         uptime = esc(&uptime),
     );
 
-    let mode_class = if data.trading_mode == "live" {
-        " live"
-    } else {
-        ""
-    };
-    let kill_badge = if data.kill_switch {
-        let reason = data.kill_reason.as_deref().unwrap_or("");
-        format!(
-            r#"<span class="kill">KILL SWITCH ON · {} <button onclick="toggleKill(false)">해제</button></span>"#,
-            esc(reason)
-        )
-    } else {
-        r#"<span class="kill"><button onclick="toggleKill(true)">KILL</button></span>"#.to_string()
-    };
+    let position_rows = position_rows(data, &prices);
+    let recent_fills: Vec<crate::storage::RecentFill> =
+        data.fills.iter().take(5).cloned().collect();
+    let fill_rows_short = fill_rows(&recent_fills);
 
-    format!(
-        r#"<!doctype html>
-<html lang="ko"><head><meta charset="utf-8">
-<meta http-equiv="refresh" content="5">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LossFunction · {mode}</title>
-<style>{STYLE}</style></head>
-<body>
-<h1>LossFunction <span class="mode{mode_class}">{mode}</span> {kill_badge}</h1>
-<p class="meta">{db} · {now} · 새로고침 5초</p>
-{cards}
-
-<h2>보유 포지션</h2>
-{positions}
-
-<h2>주문 내역</h2>
-{orders}
-
-<h2>체결 내역</h2>
-{fills}
-
-<h2>전략 목록</h2>
-{strategies}
-
-<h2>백테스트</h2>
-<p class="meta">상태: {backtest_line}</p>
-<p class="meta">
-<select id="bt-strategy">{strategy_options}</select>
-<input id="bt-symbols" placeholder="종목코드 (쉼표 구분, 비우면 watchlist)" size="34">
-<input id="bt-years" type="number" value="5" min="1" max="30" size="3">년
-<input id="bt-cash" type="number" value="100000000" min="1000000" title="초기 자금(원)">원
-<input id="bt-commission" type="number" value="0.015" step="0.001" min="0" max="1" title="수수료(%)">%
-<input id="bt-tax" type="number" value="0.15" step="0.01" min="0" max="1" title="거래세(%)">%
-<button onclick="runBacktest()">실행</button></p>
-
-<h2>데이터 (일봉)</h2>
-{candles}
-<p class="meta">일봉 백필: {backfill_line}
-<button onclick="runBackfill()"{backfill_disabled}>일봉 갱신</button></p>
-
-<h2>감사 로그</h2>
-{audit}
-
-<footer>JSON: <code>GET /healthz</code> · 제어: <code>POST /control/kill-switch</code>
-· <code>POST /control/backfill</code> (loopback 전용)</footer>
-<script>
-function toggleKill(on) {{
-  var msg = on ? 'kill switch를 켭니다. 새 주문이 차단됩니다.'
-               : 'kill switch를 해제합니다.';
-  if (!confirm(msg)) return;
-  fetch('/control/kill-switch', {{
-    method: 'POST',
-    headers: {{'Content-Type': 'application/json'}},
-    body: JSON.stringify({{activate: on, reason: 'manual (web)'}})
-  }}).then(function () {{ location.reload(); }});
-}}
-function runBacktest() {{
-  var symbols = document.getElementById('bt-symbols').value.trim();
-  var body = {{
-    strategy: document.getElementById('bt-strategy').value,
-    years: parseInt(document.getElementById('bt-years').value, 10) || 5,
-    config: {{
-      initial_cash: parseInt(document.getElementById('bt-cash').value, 10) || 100000000,
-      commission_pct: parseFloat(document.getElementById('bt-commission').value),
-      tax_pct: parseFloat(document.getElementById('bt-tax').value)
-    }}
-  }};
-  if (symbols) body.symbols = symbols.split(',').map(function (s) {{ return s.trim(); }});
-  fetch('/control/backtest', {{
-    method: 'POST',
-    headers: {{'Content-Type': 'application/json'}},
-    body: JSON.stringify(body)
-  }}).then(function () {{ location.reload(); }});
-}}
-function runBackfill() {{
-  if (!confirm('일봉 백필을 시작합니다 (읽기 전용·수십 초).')) return;
-  fetch('/control/backfill', {{
-    method: 'POST',
-    headers: {{'Content-Type': 'application/json'}},
-    body: JSON.stringify({{years: 5}})
-  }}).then(function () {{ location.reload(); }});
-}}
-</script>
-</body></html>"#,
-        strategies = table(&["키", "이름", "설명", "기본 파라미터"], strategy_rows),
-        strategy_options = data
-            .strategies
-            .iter()
-            .map(|(key, name, _description, _params)| {
-                format!(r#"<option value="{}">{}</option>"#, esc(key), esc(name))
-            })
-            .collect::<Vec<_>>()
-            .join(""),
-        backtest_line = esc(&match &data.backtest {
-            BackfillStatus::Idle => "대기".to_string(),
-            BackfillStatus::Running => "실행 중…".to_string(),
-            BackfillStatus::Done { at, summary } => format!("완료 {at} — {summary}"),
-            BackfillStatus::Failed { at, reason } => format!("실패 {at} — {reason}"),
-        }),
-        candles = table(&["종목", "마지막 봉"], candle_rows),
-        backfill_line = esc(&backfill_line),
-        backfill_disabled = backfill_disabled,
-        mode = esc(&data.trading_mode),
-        db = esc(&data.database_path),
-        now = esc(&data.now_utc),
+    let content = format!(
+        "{cards}<h2>보유 포지션</h2>{positions}<h2>최근 체결 (<a href=\"/positions\">전체 내역</a>)</h2>{fills}",
         cards = cards,
+        positions = table(&["종목", "추이", "수량", "평단가", "현재가", "평가금액", "손익"], position_rows),
+        fills = table(&["시각", "종목", "구분", "수량", "가격", "체결금액"], fill_rows_short),
+    );
+    layout(
+        "개요",
+        "overview",
+        &kill_badge(data),
+        &content,
+        &format!(
+            r#"<p class="meta">{db} · {now} · 새로고침 5초</p>"#,
+            db = esc(&data.database_path),
+            now = esc(&data.now_utc)
+        ),
+    )
+}
+
+/// 포지션·내역 화면.
+pub fn render_positions_page(data: &StatusPageData) -> String {
+    set_page_mode(&data.trading_mode);
+    let prices: std::collections::HashMap<&str, &rust_decimal::Decimal> = data
+        .latest_prices
+        .iter()
+        .map(|(symbol, price)| (symbol.as_str(), price))
+        .collect();
+    let content = format!(
+        "<h2>보유 포지션</h2>{positions}<h2>주문 내역</h2>{orders}<h2>체결 내역</h2>{fills}",
         positions = table(
             &[
                 "종목",
@@ -581,18 +490,267 @@ function runBackfill() {{
                 "평가금액",
                 "손익"
             ],
-            position_rows
+            position_rows(data, &prices)
         ),
         orders = table(
             &["시각", "종목", "구분", "수량", "주문가", "상태"],
-            order_rows
+            order_rows(data)
         ),
         fills = table(
             &["시각", "종목", "구분", "수량", "가격", "체결금액"],
-            fill_rows
+            fill_rows(&data.fills)
         ),
-        audit = table(&["시각", "이벤트", "주체", "내용"], audit_rows),
+    );
+    layout(
+        "포지션·내역",
+        "positions",
+        &kill_badge(data),
+        &content,
+        &format!(r#"<p class="meta">{now}</p>"#, now = esc(&data.now_utc)),
     )
+}
+
+/// 실험실 화면: 백테스트와 전략 목록.
+pub fn render_lab_page(data: &StatusPageData) -> String {
+    set_page_mode(&data.trading_mode);
+    let strategy_rows = data
+        .strategies
+        .iter()
+        .map(|(key, name, description, params)| {
+            vec![esc(key), esc(name), esc(description), esc(params)]
+        })
+        .collect();
+    let strategy_options = data
+        .strategies
+        .iter()
+        .map(|(key, name, _description, _params)| {
+            format!(r#"<option value="{}">{}</option>"#, esc(key), esc(name))
+        })
+        .collect::<Vec<_>>()
+        .join("");
+    let bt_line = backtest_line(data);
+    let content = format!(
+        r#"<h2>백테스트</h2>
+<div class="controls">
+  <label>전략</label><select id="bt-strategy">{strategy_options}</select>
+  <label>종목</label><input id="bt-symbols" placeholder="쉼표 구분 · 비우면 watchlist" size="30">
+  <label>기간</label><input id="bt-years" type="number" value="5" min="1" max="30" size="3">년
+  <label>초기자금</label><input id="bt-cash" type="number" value="100000000" min="1000000" size="10">원
+  <label>수수료</label><input id="bt-commission" type="number" value="0.015" step="0.001" min="0" max="1" size="5">%
+  <label>거래세</label><input id="bt-tax" type="number" value="0.15" step="0.01" min="0" max="1" size="5">%
+  <button onclick="runBacktest()">실행</button>
+</div>
+<div class="statusline">{bt_line}</div>
+<h2>전략 목록</h2>
+{strategies}"#,
+        strategy_options = strategy_options,
+        bt_line = esc(&bt_line),
+        strategies = table(&["키", "이름", "설명", "기본 파라미터"], strategy_rows),
+    );
+    layout(
+        "실험실",
+        "lab",
+        &kill_badge(data),
+        &content,
+        &format!(r#"<p class="meta">{now}</p>"#, now = esc(&data.now_utc)),
+    )
+}
+
+/// 데이터 화면: 일봉 신선도와 백필.
+pub fn render_data_page(data: &StatusPageData) -> String {
+    set_page_mode(&data.trading_mode);
+    let backfill_disabled = if matches!(data.backfill, BackfillStatus::Running) {
+        " disabled"
+    } else {
+        ""
+    };
+    let content = format!(
+        r#"<h2>일봉 (candles)</h2>
+{candles}
+<div class="controls" style="margin-top:12px">
+  <button onclick="runBackfill()"{backfill_disabled}>일봉 갱신 (백필)</button>
+  <span class="meta">{bf_line}</span>
+</div>"#,
+        candles = table(&["종목", "마지막 봉"], candle_rows(data)),
+        backfill_disabled = backfill_disabled,
+        bf_line = esc(&backfill_line(data)),
+    );
+    layout(
+        "데이터",
+        "data",
+        &kill_badge(data),
+        &content,
+        &format!(
+            r#"<p class="meta">{db} · {now}</p>"#,
+            db = esc(&data.database_path),
+            now = esc(&data.now_utc)
+        ),
+    )
+}
+
+/// 감사 로그 화면.
+pub fn render_audit_page(data: &StatusPageData) -> String {
+    set_page_mode(&data.trading_mode);
+    let audit_rows = data
+        .audit
+        .iter()
+        .map(|event| {
+            let payload = event.payload.to_string();
+            vec![
+                event.occurred_at.format("%m-%d %H:%M:%S").to_string(),
+                esc(&event.event_type),
+                esc(event.subject.as_deref().unwrap_or("")),
+                esc(&payload.chars().take(160).collect::<String>()),
+            ]
+        })
+        .collect();
+    layout(
+        "로그",
+        "audit",
+        &kill_badge(data),
+        &table(&["시각", "이벤트", "주체", "내용"], audit_rows),
+        &format!(r#"<p class="meta">{now}</p>"#, now = esc(&data.now_utc)),
+    )
+}
+
+fn kill_badge(data: &StatusPageData) -> String {
+    if data.kill_switch {
+        let reason = data.kill_reason.as_deref().unwrap_or("");
+        format!(
+            r#"<span class="kill">KILL · {} <button onclick="toggleKill(false)">해제</button></span>"#,
+            esc(reason)
+        )
+    } else {
+        r#"<span class="kill"><button onclick="toggleKill(true)">KILL</button></span>"#.to_string()
+    }
+}
+
+fn backtest_line(data: &StatusPageData) -> String {
+    match &data.backtest {
+        BackfillStatus::Idle => "백테스트: 대기".to_string(),
+        BackfillStatus::Running => "백테스트: 실행 중…".to_string(),
+        BackfillStatus::Done { at, summary } => format!("백테스트 완료 {at} — {summary}"),
+        BackfillStatus::Failed { at, reason } => format!("백테스트 실패 {at} — {reason}"),
+    }
+}
+
+fn backfill_line(data: &StatusPageData) -> String {
+    match &data.backfill {
+        BackfillStatus::Idle => "백필: 대기".to_string(),
+        BackfillStatus::Running => "백필: 실행 중…".to_string(),
+        BackfillStatus::Done { at, summary } => format!("백필 완료 {at} — {summary}"),
+        BackfillStatus::Failed { at, reason } => format!("백필 실패 {at} — {reason}"),
+    }
+}
+
+fn position_rows(
+    data: &StatusPageData,
+    prices: &std::collections::HashMap<&str, &rust_decimal::Decimal>,
+) -> Vec<Vec<String>> {
+    let spark_map: std::collections::HashMap<&str, &[i64]> = data
+        .sparklines
+        .iter()
+        .map(|(symbol, series)| (symbol.as_str(), series.as_slice()))
+        .collect();
+    data.positions
+        .iter()
+        .map(|position| {
+            let last = prices.get(position.symbol.as_str());
+            let qty = rust_decimal::Decimal::from(position.quantity);
+            let cost = qty * position.average_price;
+            let (value, pnl) = match last {
+                Some(price) => {
+                    let value = qty * **price;
+                    (value.to_string(), value - cost)
+                }
+                None => (cost.to_string(), rust_decimal::Decimal::ZERO),
+            };
+            let series = spark_map
+                .get(position.symbol.as_str())
+                .copied()
+                .unwrap_or(&[]);
+            let rising = last
+                .map(|price| **price >= position.average_price)
+                .unwrap_or(false);
+            let pnl_pct = if cost.is_zero() {
+                "0".to_string()
+            } else {
+                (pnl * rust_decimal::Decimal::from(100) / cost)
+                    .round_dp(2)
+                    .to_string()
+            };
+            vec![
+                symbol_label(&position.symbol),
+                sparkline(series, rising),
+                position.quantity.to_string(),
+                money(&Some(position.average_price)),
+                last.map(|p| money(&Some(**p)))
+                    .unwrap_or_else(|| "—".to_string()),
+                value,
+                format!("{} <small>({pnl_pct}%)</small>", pnl_span(&pnl)),
+            ]
+        })
+        .collect()
+}
+
+fn order_rows(data: &StatusPageData) -> Vec<Vec<String>> {
+    data.orders
+        .iter()
+        .map(|order| {
+            let (side_label, side_class) = if order.side == "sell" {
+                ("매도", "side-sell")
+            } else {
+                ("매수", "side-buy")
+            };
+            vec![
+                order.created_at.format("%m-%d %H:%M:%S").to_string(),
+                symbol_label(&order.symbol),
+                format!(r#"<span class="{side_class}">{side_label}</span>"#),
+                order.quantity.to_string(),
+                money(&order.limit_price),
+                status_pill(&order.status),
+            ]
+        })
+        .collect()
+}
+
+fn fill_rows(fills: &[crate::storage::RecentFill]) -> Vec<Vec<String>> {
+    fills
+        .iter()
+        .map(|fill| {
+            let (side_label, side_class) = if fill.side == "sell" {
+                ("매도", "side-sell")
+            } else {
+                ("매수", "side-buy")
+            };
+            vec![
+                fill.executed_at.format("%m-%d %H:%M:%S").to_string(),
+                symbol_label(&fill.symbol),
+                format!(r#"<span class="{side_class}">{side_label}</span>"#),
+                fill.quantity.to_string(),
+                money(&Some(fill.price)),
+                krw_int(&(fill.price * rust_decimal::Decimal::from(fill.quantity))),
+            ]
+        })
+        .collect()
+}
+
+fn candle_rows(data: &StatusPageData) -> Vec<Vec<String>> {
+    data.candle_dates
+        .iter()
+        .map(|(symbol, ts)| {
+            let class = freshness_class(ts, &data.now_utc);
+            let label = match class {
+                "fresh" => "최신",
+                "stale" => "갱신 필요",
+                _ => "오래됨",
+            };
+            vec![
+                symbol_label(symbol),
+                format!(r#"{ts} <span class="fresh-pill {class}">{label}</span>"#),
+            ]
+        })
+        .collect()
 }
 
 /// Per-symbol page: identity, latest price, a closes chart (inline SVG),
@@ -731,7 +889,8 @@ mod tests {
 
     #[test]
     fn skeleton_and_sections() {
-        let page = render_status_page(&data());
+        set_page_mode("paper");
+        let page = render_overview(&data());
         for marker in [
             "<!doctype html>",
             "LossFunction",
@@ -739,13 +898,13 @@ mod tests {
             "/data/lossfunction.db",
             "미실현 손익",
             "보유 포지션",
-            "주문 내역",
-            "체결 내역",
-            "데이터 (일봉)",
-            "감사 로그",
-            "(no rows)",
+            "최근 체결",
+            "실험실",
+            "데이터",
+            "로그",
             "http-equiv=\"refresh\" content=\"5\"",
             "/healthz",
+            "class=\"nav\"",
         ] {
             assert!(page.contains(marker), "missing: {marker}");
         }
@@ -753,12 +912,16 @@ mod tests {
 
     #[test]
     fn db_values_are_escaped() {
-        let page = render_status_page(&StatusPageData {
+        set_page_mode("paper");
+        let page = render_overview(&StatusPageData {
             positions: vec![StoredPosition {
                 symbol: "<script>alert(1)</script>".into(),
                 quantity: 1,
                 average_price: Decimal::from(1),
             }],
+            ..data()
+        });
+        let audit_page = render_audit_page(&StatusPageData {
             audit: vec![AuditRow {
                 event_type: "<b>evil</b>".into(),
                 subject: Some("x&y".into()),
@@ -769,8 +932,8 @@ mod tests {
         });
         assert!(!page.contains("<script>alert(1)"));
         assert!(page.contains("&lt;script&gt;"));
-        assert!(!page.contains("<b>evil</b>"));
-        assert!(page.contains("x&amp;y"));
+        assert!(!audit_page.contains("<b>evil</b>"));
+        assert!(audit_page.contains("x&amp;y"));
     }
 
     #[test]
@@ -778,8 +941,9 @@ mod tests {
         let mut payload = data();
         payload.kill_switch = true;
         payload.kill_reason = Some("manual halt".into());
-        let page = render_status_page(&payload);
-        assert!(page.contains("KILL SWITCH ON"));
+        set_page_mode(&payload.trading_mode);
+        let page = render_overview(&payload);
+        assert!(page.contains("KILL ·"));
         assert!(page.contains("manual halt"));
     }
 
@@ -793,8 +957,9 @@ mod tests {
             },
             ..data()
         };
-        let page = render_status_page(&payload);
-        assert!(page.contains("데이터 (일봉)"));
+        set_page_mode(&payload.trading_mode);
+        let page = render_data_page(&payload);
+        assert!(page.contains("일봉 (candles)"));
         assert!(page.contains("005930"));
         assert!(page.contains("2026-09-19T06:30:00+00:00"));
         assert!(page.contains("3711 bars stored"));
@@ -812,7 +977,8 @@ mod tests {
             },
             ..data()
         };
-        let page = render_status_page(&payload);
+        set_page_mode(&payload.trading_mode);
+        let page = render_data_page(&payload);
         assert!(!page.contains("<script>x"), "unescaped reason leaked");
         assert!(page.contains("&lt;script&gt;"));
     }
@@ -837,7 +1003,8 @@ mod tests {
             )],
             ..data()
         };
-        let page = render_status_page(&payload);
+        set_page_mode(&payload.trading_mode);
+        let page = render_overview(&payload);
         assert!(page.contains("EntryPriceStrategy v1"), "strategy shown");
         assert!(page.contains("900,000원"), "total mark value 10x90,000");
         assert!(page.contains("+100,000원"), "unrealized pnl");
@@ -897,11 +1064,16 @@ mod tests {
             candle_dates: vec![("999999".into(), "2026-09-20T06:30:00+00:00".into())],
             ..data()
         };
-        let page = render_status_page(&payload);
+        set_page_mode(&payload.trading_mode);
+        let overview = render_overview(&payload);
         assert!(
-            page.contains("삼성전자 <small>005930</small>"),
-            "known name shown"
+            overview.contains(r#"<a href="/symbol/005930">삼성전자 <small>005930</small></a>"#),
+            "known name links to its page"
         );
-        assert!(page.contains(">999999<"), "unknown code falls back bare");
+        let data_page = render_data_page(&payload);
+        assert!(
+            data_page.contains(">999999<"),
+            "unknown code falls back bare"
+        );
     }
 }

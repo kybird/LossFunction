@@ -17,7 +17,6 @@ use serde_json::json;
 
 use crate::risk::RiskManager;
 use crate::runtime::backfill::{spawn_backfill, BackfillCredentials, BackfillStatus};
-use crate::runtime::web::{render_status_page, StatusPageData};
 use crate::storage::Repository;
 use crate::types::Symbol;
 
@@ -45,7 +44,11 @@ pub type SharedState = Arc<AppState>;
 
 pub fn router(state: SharedState) -> Router {
     Router::new()
-        .route("/", get(status_page))
+        .route("/", get(overview_page))
+        .route("/positions", get(positions_page))
+        .route("/lab", get(lab_page))
+        .route("/data", get(data_page))
+        .route("/audit", get(audit_page))
         .route("/healthz", get(health))
         .route("/control/kill-switch", post(control_kill_switch))
         .route("/control/backfill", post(control_backfill))
@@ -67,8 +70,8 @@ async fn health(State(state): State<SharedState>) -> Json<serde_json::Value> {
     }))
 }
 
-async fn status_page(State(state): State<SharedState>) -> Html<String> {
-    let data = StatusPageData {
+async fn page_data(state: &SharedState) -> crate::runtime::web::StatusPageData {
+    crate::runtime::web::StatusPageData {
         trading_mode: state.trading_mode.clone(),
         broker: state.broker.clone(),
         database_path: state.database_path.clone(),
@@ -86,7 +89,7 @@ async fn status_page(State(state): State<SharedState>) -> Html<String> {
             .collect(),
         orders: state.repository.recent_orders(50).await.unwrap_or_default(),
         fills: state.repository.recent_fills(50).await.unwrap_or_default(),
-        audit: state.repository.recent_audit(20).await.unwrap_or_default(),
+        audit: state.repository.recent_audit(50).await.unwrap_or_default(),
         candle_dates: state
             .repository
             .latest_candle_dates()
@@ -123,15 +126,27 @@ async fn status_page(State(state): State<SharedState>) -> Html<String> {
                 )
             })
             .collect(),
-        backtest: state.backtest.lock().expect("backtest status lock").clone(),
         backfill: state.backfill.lock().expect("backfill status lock").clone(),
-    };
-    Html(render_status_page(&data))
+        backtest: state.backtest.lock().expect("backtest status lock").clone(),
+    }
+}
+
+async fn strategies() -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "strategies": crate::strategy_registry::registry()
+            .into_iter()
+            .map(|spec| serde_json::json!({
+                "key": spec.key,
+                "name": spec.name,
+                "description": spec.description,
+                "params": spec.params,
+            }))
+            .collect::<Vec<_>>(),
+    }))
 }
 
 /// Per-symbol view: name, latest price, a daily-close chart from candles,
-/// and recent bars. Unknown (unparseable) codes 404; known-but-unfilled
-/// codes render an empty state.
+/// and recent bars. Unknown (unparseable) codes 404.
 async fn symbol_page(
     State(state): State<SharedState>,
     axum::extract::Path(code): axum::extract::Path<String>,
@@ -155,18 +170,29 @@ async fn symbol_page(
     )))
 }
 
-async fn strategies() -> Json<serde_json::Value> {
-    Json(serde_json::json!({
-        "strategies": crate::strategy_registry::registry()
-            .into_iter()
-            .map(|spec| serde_json::json!({
-                "key": spec.key,
-                "name": spec.name,
-                "description": spec.description,
-                "params": spec.params,
-            }))
-            .collect::<Vec<_>>(),
-    }))
+async fn overview_page(State(state): State<SharedState>) -> Html<String> {
+    let data = page_data(&state).await;
+    Html(crate::runtime::web::render_overview(&data))
+}
+
+async fn positions_page(State(state): State<SharedState>) -> Html<String> {
+    let data = page_data(&state).await;
+    Html(crate::runtime::web::render_positions_page(&data))
+}
+
+async fn lab_page(State(state): State<SharedState>) -> Html<String> {
+    let data = page_data(&state).await;
+    Html(crate::runtime::web::render_lab_page(&data))
+}
+
+async fn data_page(State(state): State<SharedState>) -> Html<String> {
+    let data = page_data(&state).await;
+    Html(crate::runtime::web::render_data_page(&data))
+}
+
+async fn audit_page(State(state): State<SharedState>) -> Html<String> {
+    let data = page_data(&state).await;
+    Html(crate::runtime::web::render_audit_page(&data))
 }
 
 #[derive(Debug, Deserialize)]
@@ -174,7 +200,7 @@ pub struct BacktestCommand {
     pub strategy: String,
     pub symbols: Option<Vec<String>>,
     pub years: Option<i64>,
-    /// Optional BacktestConfig overrides (card: 백테스트 설정 UI).
+    /// Optional BacktestConfig overrides (백테스트 설정 UI).
     pub config: Option<BacktestConfigOverrides>,
 }
 
@@ -224,8 +250,7 @@ impl BacktestConfigOverrides {
 }
 
 /// Kick off a background backtest over stored candles. Offline by
-/// construction (mock broker + candles) — the only hazard is concurrent
-/// runs, refused with 409 like the backfill control.
+/// construction (mock broker + candles); concurrent runs refused (409).
 async fn control_backtest(
     State(state): State<SharedState>,
     Json(command): Json<BacktestCommand>,
@@ -266,7 +291,7 @@ async fn control_backtest(
         .record_event(
             "control.backtest",
             "operator",
-            &json!({ "action": "start", "strategy": command.strategy, "symbols": symbols.iter().map(|s| s.as_str()).collect::<Vec<_>>(), "years": years, "source": "web" }),
+            &json!({ "action": "start", "strategy": command.strategy, "years": years, "source": "web" }),
         )
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -457,7 +482,7 @@ mod tests {
             .await
             .unwrap();
         let page = body_text(response.into_body()).await;
-        assert!(page.contains("KILL SWITCH ON"));
+        assert!(page.contains("KILL ·"));
         assert!(page.contains("integration test"));
 
         // The action is audited.
@@ -565,14 +590,14 @@ mod tests {
             BackfillStatus::Failed { .. }
         ));
 
-        // The status page shows the Data section and the failure.
+        // The data screen shows the backfill failure.
         let response = viewer
-            .oneshot(Request::get("/").body(Body::empty()).unwrap())
+            .oneshot(Request::get("/data").body(Body::empty()).unwrap())
             .await
             .unwrap();
         let page = body_text(response.into_body()).await;
-        assert!(page.contains("Data"), "data section missing");
-        assert!(page.contains("실패"), "failure state not visible");
+        assert!(page.contains("일봉"), "data screen missing: {page}");
+        assert!(page.contains("실패"), "failure state not visible: {page}");
 
         let events = shared.repository.recent_audit(10).await.unwrap();
         assert!(events
@@ -596,7 +621,7 @@ mod tests {
         assert!(body.contains("momentum-rotation"));
 
         let response = app
-            .oneshot(Request::get("/").body(Body::empty()).unwrap())
+            .oneshot(Request::get("/lab").body(Body::empty()).unwrap())
             .await
             .unwrap();
         let page = body_text(response.into_body()).await;
