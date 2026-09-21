@@ -21,6 +21,8 @@ use crate::execution::gateway::{target_status, OrderGateway, Reconciler, SubmitE
 use crate::execution::state_machine::StateMachine;
 use crate::risk::RiskManager;
 use crate::strategy::{DecisionLayer, MarketSnapshot, OrderIntent, Strategy};
+pub mod backfill;
+
 use crate::types::{OrderSide, Quote, Symbol};
 
 /// Coordinates strategy, risk, execution, and recovery.

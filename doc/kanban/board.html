@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>llm-wiki board</title>
+<style>
+  body { font-family: -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif; margin: 24px; background: #f6f7f9; color: #1c2733; }
+  header h1 { font-size: 20px; margin: 0 0 4px; }
+  header p { margin: 0 0 20px; color: #5b6a78; font-size: 13px; }
+  main { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  section { background: #fff; border: 1px solid #e2e6ea; border-radius: 10px; padding: 12px; }
+  h2 { font-size: 14px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .04em; color: #40505f; }
+  .count { color: #8a97a3; font-weight: 400; }
+  .card { background: #f2f4f7; border: 1px solid #dde2e8; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+  .card .t { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .q { font-size: 12px; color: #5b6a78; margin: 2px 0 4px; }
+  .badge { display: inline-block; font-size: 11px; background: #e3e8ee; color: #44525f; border-radius: 999px; padding: 2px 8px; margin: 2px 4px 0 0; }
+  .badge.warn { background: #fdeccf; color: #7a4d05; }
+  .badge.gate { background: #dbe7fd; color: #1c4d8f; }
+  .empty { color: #98a3ad; font-size: 13px; }
+  .tt { font-size: 13px; color: #1c2733; }
+  .t-done { background: #6ee7a0; }
+  .t-superseded { background: #c9a6ff; }
+  .t-abandoned { background: #ff8f8f; }
+  footer { margin-top: 18px; color: #5b6a78; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Kanban board</h1>
+  <p>생성: 2026-09-16T19:19:43.906Z · WIP doing 0/2 · 이 파일은 유도물 — 정본은 doc/kanban/ 카드 파일들</p>
+</header>
+<main style="grid-template-columns: repeat(4, 1fr)">
+
+    <section>
+      <h2>Doing <span class="count">0</span></h2>
+      <div class="empty">비어 있음</div>
+    </section>
+
+    <section>
+      <h2>Review (사람 판정 대기) <span class="count">0</span></h2>
+      <div class="empty">비어 있음</div>
+    </section>
+
+    <section>
+      <h2>Todo <span class="count">0</span></h2>
+      <div class="empty">비어 있음</div>
+    </section>
+
+    <section>
+      <h2>종결 적체 <span class="count">최근 8</span></h2>
+      <div class="card"><span class="badge t-done">완료</span><span class="tt">최종 QA (보안/안전장치/위키 정합성)</span></div>
+<div class="card"><span class="badge t-done">완료</span><span class="tt">문서 Rust 중심 갱신</span></div>
+<div class="card"><span class="badge t-done">완료</span><span class="tt">Python 참조 구현 아카이브 전환</span></div>
+<div class="card"><span class="badge t-done">완료</span><span class="tt">Rust 런타임 KIS 백엔드 조립</span></div>
+<div class="card"><span class="badge t-done">완료</span><span class="tt">Python 참조 구현 패리티 리뷰</span></div>
+<div class="card"><span class="badge t-done">완료</span><span class="tt">Rust VWAP 실행 알고리즘</span></div>
+<div class="card"><span class="badge t-done">완료</span><span class="tt">Rust MACD 교차 전략</span></div>
+<div class="card"><span class="badge t-done">완료</span><span class="tt">Rust 12-1 모멘텀 로테이션 전략</span></div>
+    </section>
+</main>
+<footer>종결: done 56 · superseded 3 · abandoned 0 — 갱신은 <code>llm-wiki board --html</code></footer>
+</body>
+</html>

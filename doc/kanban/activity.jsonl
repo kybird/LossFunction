@@ -191,3 +191,6 @@
 {"ts":"2026-09-20T22:12:13.159Z","action":"claimed","title":"백테스터 candles 데이터 연결","actor":"zcode-main"}
 {"ts":"2026-09-20T22:14:21.936Z","action":"done","title":"백테스터 candles 데이터 연결"}
 {"ts":"2026-09-20T22:14:21.953Z","action":"milestone-done","title":"모듈 경계 완성 — 시장 데이터 수집 격리","detail":"멤버 6장 전원 종결"}
+{"ts":"2026-09-21T19:25:41.458Z","action":"created","title":"상태 페이지 데이터 갱신 제어"}
+{"ts":"2026-09-21T19:25:41.692Z","action":"claimed","title":"상태 페이지 데이터 갱신 제어","actor":"zcode-main"}
+{"ts":"2026-09-21T19:30:53.067Z","action":"done","title":"상태 페이지 데이터 갱신 제어"}

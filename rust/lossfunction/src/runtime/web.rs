@@ -4,6 +4,7 @@
 //! Every DB-sourced string is HTML-escaped; the page is read-only except
 //! for the kill-switch control served by the same listener.
 
+use crate::runtime::backfill::BackfillStatus;
 use crate::storage::{AuditRow, RecentFill, RecentOrder, StoredPosition};
 
 /// Escape DB values for safe HTML interpolation.
@@ -72,6 +73,9 @@ pub struct StatusPageData {
     pub orders: Vec<RecentOrder>,
     pub fills: Vec<RecentFill>,
     pub audit: Vec<AuditRow>,
+    /// (symbol, newest candle ts) — data freshness.
+    pub candle_dates: Vec<(String, String)>,
+    pub backfill: BackfillStatus,
 }
 
 fn table(headers: &[&str], rows: Vec<Vec<String>>) -> String {
@@ -181,6 +185,19 @@ pub fn render_status_page(data: &StatusPageData) -> String {
         })
         .collect();
 
+    let candle_rows = data
+        .candle_dates
+        .iter()
+        .map(|(symbol, ts)| vec![esc(symbol), esc(ts)])
+        .collect();
+
+    let (backfill_line, backfill_disabled) = match &data.backfill {
+        BackfillStatus::Idle => ("대기 — 아직 갱신 없음".to_string(), ""),
+        BackfillStatus::Running => ("실행 중…".to_string(), " disabled"),
+        BackfillStatus::Done { at, summary } => (format!("완료 {at} — {summary}"), ""),
+        BackfillStatus::Failed { at, reason } => (format!("실패 {at} — {reason}"), ""),
+    };
+
     let mode_class = if data.trading_mode == "live" {
         " live"
     } else {
@@ -216,11 +233,16 @@ pub fn render_status_page(data: &StatusPageData) -> String {
 <h2>Recent fills</h2>
 {fills}
 
+<h2>Data</h2>
+{candles}
+<p class="meta">일봉 백필: {backfill_line}
+<button onclick="runBackfill()"{backfill_disabled}>일봉 갱신</button></p>
+
 <h2>Recent audit events</h2>
 {audit}
 
 <footer>JSON: <code>GET /healthz</code> · 제어: <code>POST /control/kill-switch</code>
-(loopback 전용)</footer>
+· <code>POST /control/backfill</code> (loopback 전용)</footer>
 <script>
 function toggleKill(on) {{
   var msg = on ? 'kill switch를 켭니다. 새 주문이 차단됩니다.'
@@ -232,8 +254,19 @@ function toggleKill(on) {{
     body: JSON.stringify({{activate: on, reason: 'manual (web)'}})
   }}).then(function () {{ location.reload(); }});
 }}
+function runBackfill() {{
+  if (!confirm('일봉 백필을 시작합니다 (읽기 전용·수십 초).')) return;
+  fetch('/control/backfill', {{
+    method: 'POST',
+    headers: {{'Content-Type': 'application/json'}},
+    body: JSON.stringify({{years: 5}})
+  }}).then(function () {{ location.reload(); }});
+}}
 </script>
 </body></html>"#,
+        candles = table(&["symbol", "last bar"], candle_rows),
+        backfill_line = esc(&backfill_line),
+        backfill_disabled = backfill_disabled,
         mode = esc(&data.trading_mode),
         broker = esc(&data.broker),
         db = esc(&data.database_path),
@@ -317,5 +350,39 @@ mod tests {
         let page = render_status_page(&payload);
         assert!(page.contains("KILL SWITCH ON"));
         assert!(page.contains("manual halt"));
+    }
+
+    #[test]
+    fn data_section_renders_freshness_and_backfill_state() {
+        let payload = StatusPageData {
+            candle_dates: vec![("005930".into(), "2026-09-19T06:30:00+00:00".into())],
+            backfill: BackfillStatus::Done {
+                at: "2026-09-20 10:00:00 UTC".into(),
+                summary: "3711 bars stored, 0/3 symbols failed".into(),
+            },
+            ..data()
+        };
+        let page = render_status_page(&payload);
+        assert!(page.contains("Data"));
+        assert!(page.contains("005930"));
+        assert!(page.contains("2026-09-19T06:30:00+00:00"));
+        assert!(page.contains("3711 bars stored"));
+        assert!(page.contains("runBackfill"));
+    }
+
+    /// Backfill summaries travel through esc() — failure reasons can embed
+    /// venue messages, which are foreign input.
+    #[test]
+    fn backfill_reason_is_escaped() {
+        let payload = StatusPageData {
+            backfill: BackfillStatus::Failed {
+                at: "2026-09-20 10:00:00 UTC".into(),
+                reason: "<script>x</script>".into(),
+            },
+            ..data()
+        };
+        let page = render_status_page(&payload);
+        assert!(!page.contains("<script>x"), "unescaped reason leaked");
+        assert!(page.contains("&lt;script&gt;"));
     }
 }

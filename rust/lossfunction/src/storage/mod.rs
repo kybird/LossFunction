@@ -28,6 +28,9 @@ pub enum StorageError {
     Internal(String),
 }
 
+/// Clone is cheap — the pool is reference-counted; spawned background tasks
+/// (e.g. backfill) take their own handle.
+#[derive(Clone)]
 pub struct Repository {
     pool: SqlitePool,
 }
@@ -160,6 +163,16 @@ impl Repository {
         }
         tx.commit().await?;
         Ok(written)
+    }
+
+    /// Newest candle timestamp per symbol, symbol-ascending — the status
+    /// page's data-freshness display.
+    pub async fn latest_candle_dates(&self) -> Result<Vec<(String, String)>, StorageError> {
+        let rows: Vec<(String, String)> =
+            sqlx::query_as("SELECT symbol, MAX(ts) FROM candles GROUP BY symbol ORDER BY symbol")
+                .fetch_all(&self.pool)
+                .await?;
+        Ok(rows)
     }
 
     /// Total stored candle rows — backfill sanity check.
