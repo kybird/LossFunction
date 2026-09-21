@@ -256,8 +256,8 @@ pub struct StatusPageData {
     pub sparklines: Vec<(String, Vec<i64>)>,
     pub strategy_label: String,
     pub uptime_seconds: u64,
-    /// (key, name, description, params) from the registry.
-    pub strategies: Vec<(String, String, String, String)>,
+    /// (key, name, description, params, generated) from the registry.
+    pub strategies: Vec<(String, String, String, String, bool)>,
     pub backtest: BackfillStatus,
 }
 
@@ -376,6 +376,31 @@ function runBacktest() {
   if (symbols) body.symbols = symbols.split(',').map(function (s) { return s.trim(); });
   post('/control/backtest', body);
 }
+function generateStrategy() {{
+  var desc = document.getElementById('nl-desc').value.trim();
+  if (!desc) return;
+  var out = document.getElementById('nl-result');
+  out.textContent = '생성 중… (GLM 호출+컴파일 게이트, 수십 초)';
+  document.querySelectorAll('button').forEach(function (b) {{ b.disabled = true; }});
+  fetch('/control/generate-strategy', {{
+    method: 'POST',
+    headers: {{'Content-Type': 'application/json'}},
+    body: JSON.stringify({{description: desc}})
+  }}).then(function (r) {{ return r.json(); }}).then(function (res) {{
+    out.textContent = res.ok
+      ? res.note + '
+
+' + res.code
+      : '실패 — ' + (res.error || '') + (res.code ? '
+
+생성 코드:
+' + res.code : '');
+    document.querySelectorAll('button').forEach(function (b) {{ b.disabled = false; }});
+  }}).catch(function (e) {{
+    out.textContent = '요청 실패: ' + e;
+    document.querySelectorAll('button').forEach(function (b) {{ b.disabled = false; }});
+  }});
+}}
 function runBackfill() {
   if (!confirm('일봉 백필을 시작합니다 (읽기 전용·수십 초).')) return;
   post('/control/backfill', {years: 5});
@@ -516,14 +541,22 @@ pub fn render_lab_page(data: &StatusPageData) -> String {
     let strategy_rows = data
         .strategies
         .iter()
-        .map(|(key, name, description, params)| {
-            vec![esc(key), esc(name), esc(description), esc(params)]
+        .map(|(key, name, description, params, generated)| {
+            let marked = if *generated {
+                format!(
+                    r#"{} <span class="fresh-pill stale">미검증·생성</span>"#,
+                    esc(name)
+                )
+            } else {
+                esc(name)
+            };
+            vec![esc(key), marked, esc(description), esc(params)]
         })
         .collect();
     let strategy_options = data
         .strategies
         .iter()
-        .map(|(key, name, _description, _params)| {
+        .map(|(key, name, _description, _params, _generated)| {
             format!(r#"<option value="{}">{}</option>"#, esc(key), esc(name))
         })
         .collect::<Vec<_>>()
@@ -541,6 +574,12 @@ pub fn render_lab_page(data: &StatusPageData) -> String {
   <button onclick="runBacktest()">실행</button>
 </div>
 <div class="statusline">{bt_line}</div>
+<h2>전략 생성 (자연어 → 코드)</h2>
+<div class="controls">
+  <input id="nl-desc" placeholder="예: RSI가 30 이하로 떨어지면 매수, 60에 도달하면 매도" size="52">
+  <button onclick="generateStrategy()">생성</button>
+</div>
+<div class="statusline" id="nl-result">설명을 쓰고 생성을 누르면 GLM이 Rust 코드를 만들고 컴파일 게이트를 통과한 것만 등록합니다.</div>
 <h2>전략 목록</h2>
 {strategies}"#,
         strategy_options = strategy_options,
@@ -1075,5 +1114,24 @@ mod tests {
             data_page.contains(">999999<"),
             "unknown code falls back bare"
         );
+    }
+
+    /// Generated strategies carry the 미검증·생성 badge in the lab list.
+    #[test]
+    fn generated_strategies_are_badged() {
+        set_page_mode("paper");
+        let payload = StatusPageData {
+            strategies: vec![(
+                "rsi-dip-buy".into(),
+                "RSI 저점 매수".into(),
+                "설명".into(),
+                "RSI 14·30/60".into(),
+                true,
+            )],
+            ..data()
+        };
+        let page = render_lab_page(&payload);
+        assert!(page.contains("미검증·생성"), "badge missing");
+        assert!(page.contains("rsi-dip-buy"));
     }
 }

@@ -100,6 +100,24 @@ pub struct GlmClient {
 }
 
 impl GlmClient {
+    /// Read-only accessors for reuse (strategy codegen shares this client).
+    pub fn api_key(&self) -> &str {
+        &self.api_key
+    }
+
+    pub fn base_url(&self) -> &str {
+        &self.base_url
+    }
+
+    pub fn model(&self) -> &str {
+        &self.model
+    }
+
+    /// Raw HTTP handle (tests mock it; codegen reuses the connection pool).
+    pub fn http(&self) -> &reqwest::Client {
+        &self.http
+    }
+
     pub fn new(api_key: String, base_url: String, model: String, http: reqwest::Client) -> Self {
         Self {
             http,

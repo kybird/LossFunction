@@ -19,6 +19,7 @@ pub mod runtime;
 pub mod storage;
 pub mod strategies;
 pub mod strategies2;
+pub mod strategies_generated;
 pub mod strategy;
 pub mod strategy_registry;
 pub mod types;

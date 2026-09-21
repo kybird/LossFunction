@@ -21,47 +21,57 @@ pub struct StrategySpec {
     pub description: &'static str,
     /// Default parameters in prose ("SMA 5/20").
     pub params: &'static str,
+    /// True for machine-generated strategies ("미검증(생성)" in the UI).
+    pub generated: bool,
 }
 
 pub fn registry() -> Vec<StrategySpec> {
-    vec![
+    let mut all = vec![
         StrategySpec {
+            generated: false,
             key: "sma-cross",
             name: "SMA 교차",
             description: "단기 이동평균이 장기를 상향 돌파하면 매수, 하향 돌파하면 매도",
             params: "빠름 5 · 느림 20",
         },
         StrategySpec {
+            generated: false,
             key: "rsi-reversion",
             name: "RSI 역행",
             description: "과매도(하한 돌파)에서 매수, 과매수(상한 돌파)에서 매도",
             params: "기간 14 · 30/70",
         },
         StrategySpec {
+            generated: false,
             key: "donchian-breakout",
             name: "돈키안 브레이크아웃",
             description: "N일 최고가 돌파 매수, N일 최저가 하회 매도",
             params: "기간 20",
         },
         StrategySpec {
+            generated: false,
             key: "bollinger-reversion",
             name: "볼린저 밴드 역행",
             description: "밴드 하단 이탈에서 매수, 상단 접근에서 매도",
             params: "기간 20 · 2σ",
         },
         StrategySpec {
+            generated: false,
             key: "momentum-rotation",
             name: "12-1 모멘텀 로테이션",
             description: "12개월 수익률 상위 종목으로 포지션을 회전",
             params: "상위 1종목 · 1개월 리밸런스",
         },
         StrategySpec {
+            generated: false,
             key: "macd-cross",
             name: "MACD 교차",
             description: "MACD 신호선 상향 교차 매수, 하향 교차 매도",
             params: "12/26/9",
         },
-    ]
+    ];
+    all.extend(crate::strategies_generated::specs());
+    all
 }
 
 /// Look up a catalog entry by key (cloned — specs are tiny).
@@ -96,7 +106,7 @@ pub fn build(key: &str, symbols: &[Symbol], quantity: Quantity) -> Option<Box<dy
         "macd-cross" => Some(Box::new(MacdCrossStrategy::new(
             symbols, 12, 26, 9, quantity,
         ))),
-        _ => None,
+        _ => crate::strategies_generated::build(key, &symbols, quantity),
     }
 }
 

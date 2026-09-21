@@ -55,6 +55,10 @@ pub fn router(state: SharedState) -> Router {
         .route("/strategies", get(strategies))
         .route("/symbol/{code}", get(symbol_page))
         .route("/control/backtest", post(control_backtest))
+        .route(
+            "/control/generate-strategy",
+            post(control_generate_strategy),
+        )
         .with_state(state)
 }
 
@@ -123,6 +127,7 @@ async fn page_data(state: &SharedState) -> crate::runtime::web::StatusPageData {
                     spec.name.to_string(),
                     spec.description.to_string(),
                     spec.params.to_string(),
+                    spec.generated,
                 )
             })
             .collect(),
@@ -304,6 +309,57 @@ async fn control_backtest(
         Arc::clone(&state.backtest),
     );
     Ok(Json(json!({ "ok": true, "status": "running" })))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GenerateStrategyCommand {
+    pub description: String,
+}
+
+/// Natural-language strategy generation: GLM writes the Rust file, the
+/// compile gate decides whether it lands. Restarts activate successes.
+async fn control_generate_strategy(
+    State(state): State<SharedState>,
+    Json(command): Json<GenerateStrategyCommand>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let description: String = command.description.trim().chars().take(2000).collect();
+    if description.chars().count() < 6 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let Ok(api_key) = std::env::var("GLM_API_KEY") else {
+        return Err(StatusCode::PRECONDITION_FAILED); // 412: key not injected
+    };
+    let base_url = std::env::var("GLM_BASE_URL")
+        .unwrap_or_else(|_| "https://open.bigmodel.cn/api/paas/v4".to_string());
+    let model = std::env::var("GLM_MODEL").unwrap_or_else(|_| "glm-4-flash".to_string());
+    let client = crate::analysis::GlmClient::new(api_key, base_url, model, reqwest::Client::new());
+
+    let outcome = crate::runtime::strategy_codegen::generate_code(&client, &description).await;
+    let result = match outcome {
+        Ok(code) => match crate::runtime::strategy_codegen::write_and_compile_gate(&code) {
+            Ok(()) => serde_json::json!({
+                "ok": true,
+                "code": code,
+                "note": "컴파일 게이트 통과 — 프로세스 재시작 후 실험실에서 활성화됩니다 (미검증·생성 표시)"
+            }),
+            Err(compile_error) => {
+                serde_json::json!({ "ok": false, "code": code, "error": compile_error })
+            }
+        },
+        Err(error) => serde_json::json!({ "ok": false, "error": error }),
+    };
+    let _ = state
+        .repository
+        .record_event(
+            "control.generate_strategy",
+            "operator",
+            &serde_json::json!({
+                "ok": result["ok"],
+                "description": description,
+            }),
+        )
+        .await;
+    Ok(Json(result))
 }
 
 #[derive(Debug, Deserialize)]
@@ -785,5 +841,36 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    /// Generation control: 400 for too-short descriptions, 412 when the
+    /// GLM key is not in the process environment.
+    #[tokio::test]
+    async fn generate_strategy_validates_input_and_key() {
+        let tmp = tempfile::tempdir().unwrap();
+        let app = router(Arc::new(state(tmp.path()).await));
+        let post = |body: String| {
+            let app = app.clone();
+            async move {
+                app.oneshot(
+                    Request::post("/control/generate-strategy")
+                        .header("content-type", "application/json")
+                        .body(Body::from(body))
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+            }
+        };
+
+        std::env::remove_var("GLM_API_KEY");
+        let response = post(serde_json::json!({"description": "너무 짧다"}).to_string()).await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let response = post(
+            serde_json::json!({"description": "RSI 30 이하 매수, 60 매도하는 전략"}).to_string(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::PRECONDITION_FAILED);
     }
 }

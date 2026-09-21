@@ -24,6 +24,7 @@ use crate::strategy::{DecisionLayer, MarketSnapshot, OrderIntent, Strategy};
 pub mod backfill;
 pub mod backtest_runner;
 pub mod sim;
+pub mod strategy_codegen;
 
 use crate::types::{OrderSide, Quote, Symbol};
 
