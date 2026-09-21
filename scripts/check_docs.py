@@ -12,6 +12,7 @@ DOCUMENTED_FILES = [
     ROOT / "docs" / "recovery.md",
     ROOT / "docs" / "deployment.md",
     ROOT / "docs" / "credentials.md",
+    ROOT / "docs" / "strategies.md",
 ]
 
 
