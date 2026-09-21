@@ -30,6 +30,10 @@ param(
     [ValidateSet("memory", "kis")]
     [string]$Backend = "memory",
 
+    # KIS 자격증명을 읽어올 금고 항목. 기본은 모의투자용; 실전 키로 상태 페이지의
+    # 일봉 갱신 버튼(읽기 전용)을 쓰려면 -KisItem "KIS 실전투자".
+    [string]$KisItem = "KIS 모의투자",
+
     [bool]$DemoLoop = $true,
 
     [Parameter(ValueFromRemainingArguments = $true)]
@@ -42,7 +46,6 @@ $ErrorActionPreference = "Stop"
 # KIS 자격증명을 하나의 로그인 항목으로 가정: username=AppKey, password=AppSecret,
 # notes=계좌번호. 항목을 분리해 두었다면 아래 3개의 bw get 호출을 각자 맞춰 고칠 것.
 # (GLM_API_KEY는 런타임이 아직 읽지 않음 — GLM 자동 호출 카드에서 추가 예정)
-$kisItem = "KIS 모의투자"
 
 function Get-BwStatus {
     try { (bw status | ConvertFrom-Json).status } catch { "unknown" }
@@ -102,10 +105,10 @@ function Set-SecretFromVault {
     }
 }
 
-Write-Host "[vault] KIS 자격증명 조회 (항목: $kisItem)"
-Set-SecretFromVault VarName "KIS_APP_KEY"      Getter "username" Item $kisItem
-Set-SecretFromVault VarName "KIS_APP_SECRET"   Getter "password" Item $kisItem
-Set-SecretFromVault VarName "KIS_ACCOUNT_NUMBER" Getter "notes"  Item $kisItem
+Write-Host "[vault] KIS 자격증명 조회 (항목: $KisItem)"
+Set-SecretFromVault VarName "KIS_APP_KEY"      Getter "username" Item $KisItem
+Set-SecretFromVault VarName "KIS_APP_SECRET"   Getter "password" Item $KisItem
+Set-SecretFromVault VarName "KIS_ACCOUNT_NUMBER" Getter "notes"  Item $KisItem
 
 # ── 3. 실행 ───────────────────────────────────────────────────────────────
 $env:TRADING_MODE = $TradingMode
