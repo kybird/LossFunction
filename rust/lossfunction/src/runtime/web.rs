@@ -108,6 +108,39 @@ fn freshness_class(ts: &str, now: &str) -> &'static str {
     }
 }
 
+/// Korean display names for common codes — a convenience label, never a
+/// trading key. Unknown codes render as the bare code.
+const SYMBOL_NAMES: &[(&str, &str)] = &[
+    ("005930", "삼성전자"),
+    ("000660", "SK하이닉스"),
+    ("035420", "NAVER"),
+    ("005380", "현대차"),
+    ("068270", "셀트리온"),
+    ("207940", "삼성바이오로직스"),
+    ("000270", "기아"),
+    ("051910", "LG화학"),
+    ("006400", "삼성SDI"),
+    ("012330", "현대모비스"),
+    ("105560", "KB금융"),
+    ("055550", "신한지주"),
+    ("086790", "하나금융지주"),
+    ("011200", "HMM"),
+    ("028260", "삼성물산"),
+    ("069500", "KODEX 200"),
+    ("102110", "TIGER 미국S&P500"),
+    ("379800", "KODEX 미국채10년"),
+    ("091170", "KODEX 인버스"),
+    ("293940", "KODEX 반도체"),
+];
+
+/// "삼성전자 <small>005930</small>" or the bare code — name passes esc().
+fn symbol_label(code: &str) -> String {
+    match SYMBOL_NAMES.iter().find(|(known, _)| *known == code) {
+        Some((_, name)) => format!(r#"{} <small>{}</small>"#, esc(name), esc(code)),
+        None => esc(code),
+    }
+}
+
 fn status_pill(status: &str) -> String {
     let known = ["filled", "cancelled", "rejected", "unknown"];
     let class = if known.contains(&status) { status } else { "" };
@@ -252,7 +285,7 @@ pub fn render_status_page(data: &StatusPageData) -> String {
                     .to_string()
             };
             vec![
-                esc(&position.symbol),
+                symbol_label(&position.symbol),
                 sparkline(series, rising),
                 position.quantity.to_string(),
                 money(&Some(position.average_price)),
@@ -275,7 +308,7 @@ pub fn render_status_page(data: &StatusPageData) -> String {
             };
             vec![
                 order.created_at.format("%m-%d %H:%M:%S").to_string(),
-                esc(&order.symbol),
+                symbol_label(&order.symbol),
                 format!(r#"<span class="{side_class}">{side_label}</span>"#),
                 order.quantity.to_string(),
                 money(&order.limit_price),
@@ -295,7 +328,7 @@ pub fn render_status_page(data: &StatusPageData) -> String {
             };
             vec![
                 fill.executed_at.format("%m-%d %H:%M:%S").to_string(),
-                esc(&fill.symbol),
+                symbol_label(&fill.symbol),
                 format!(r#"<span class="{side_class}">{side_label}</span>"#),
                 fill.quantity.to_string(),
                 money(&Some(fill.price)),
@@ -329,7 +362,7 @@ pub fn render_status_page(data: &StatusPageData) -> String {
                 _ => "오래됨",
             };
             vec![
-                esc(symbol),
+                symbol_label(symbol),
                 format!(r#"{ts} <span class="fresh-pill {class}">{label}</span>"#),
             ]
         })
@@ -658,5 +691,25 @@ mod tests {
         assert_eq!(fills.len(), 1);
         assert_eq!(fills[0].symbol, "005930");
         assert_eq!(fills[0].side, "buy");
+    }
+
+    /// Known codes render "이름 + 코드"; unknown codes fall back bare.
+    #[test]
+    fn symbol_names_render_with_fallback() {
+        let payload = StatusPageData {
+            positions: vec![StoredPosition {
+                symbol: "005930".into(),
+                quantity: 1,
+                average_price: Decimal::from(1),
+            }],
+            candle_dates: vec![("999999".into(), "2026-09-20T06:30:00+00:00".into())],
+            ..data()
+        };
+        let page = render_status_page(&payload);
+        assert!(
+            page.contains("삼성전자 <small>005930</small>"),
+            "known name shown"
+        );
+        assert!(page.contains(">999999<"), "unknown code falls back bare");
     }
 }
