@@ -21,8 +21,18 @@ fn money(value: &Option<rust_decimal::Decimal>) -> String {
     match value {
         None => "—".to_string(),
         Some(decimal) => {
-            let text = decimal.to_string();
-            text.trim_end_matches('0').trim_end_matches('.').to_string()
+            let mut text = decimal.to_string();
+            // Trim only fractional zeros ("80.0000" -> "80"); an integer
+            // like 80000 must keep its zeros (was: "8").
+            if text.contains('.') {
+                while text.ends_with('0') {
+                    text.pop();
+                }
+                if text.ends_with('.') {
+                    text.pop();
+                }
+            }
+            text
         }
     }
 }
