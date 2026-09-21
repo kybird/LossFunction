@@ -127,6 +127,15 @@ function Set-SecretFromVault {
     }
 }
 
+# GLM API key (optional): 자연어 전략 생성 기능용. 항목이 없으면 경고만.
+$glmKey = bw get password "GLM API key" 2>$null
+if ($glmKey) {
+    $env:GLM_API_KEY = $glmKey
+    Write-Host "  GLM_API_KEY : 주입 완료"
+} else {
+    Write-Host "  GLM_API_KEY : 금고 항목 없음 — 자연어 전략 생성 비활성" -ForegroundColor Yellow
+}
+
 Write-Host "[vault] KIS 자격증명 조회 (항목: $KisItem)"
 Set-SecretFromVault VarName "KIS_APP_KEY"      Getter "username" Item $KisItem
 Set-SecretFromVault VarName "KIS_APP_SECRET"   Getter "password" Item $KisItem
