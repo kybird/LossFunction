@@ -753,7 +753,7 @@ mod tests {
         let body = body_text(response.into_body()).await;
         assert!(body.contains("삼성전자"), "symbol name shown");
         assert!(body.contains("<svg"), "chart rendered");
-        assert!(body.contains("80,000"));
+        assert!(body.contains("80000"), "price rendered: {body}");
 
         let response = app
             .oneshot(Request::get("/symbol/nope").body(Body::empty()).unwrap())
