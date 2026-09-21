@@ -149,10 +149,12 @@ const SYMBOL_NAMES: &[(&str, &str)] = &[
 
 /// "삼성전자 <small>005930</small>" or the bare code — name passes esc().
 fn symbol_label(code: &str) -> String {
-    match SYMBOL_NAMES.iter().find(|(known, _)| *known == code) {
+    // Every symbol display links to its per-symbol page.
+    let inner = match SYMBOL_NAMES.iter().find(|(known, _)| *known == code) {
         Some((_, name)) => format!(r#"{} <small>{}</small>"#, esc(name), esc(code)),
         None => esc(code),
-    }
+    };
+    format!(r#"<a href="/symbol/{}">{inner}</a>"#, esc(code))
 }
 
 fn status_pill(status: &str) -> String {
