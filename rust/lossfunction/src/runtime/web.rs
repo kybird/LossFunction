@@ -208,6 +208,8 @@ pub struct StatusPageData {
     pub sparklines: Vec<(String, Vec<i64>)>,
     pub strategy_label: String,
     pub uptime_seconds: u64,
+    /// (key, name, description, params) from the registry.
+    pub strategies: Vec<(String, String, String, String)>,
 }
 
 fn table(headers: &[&str], rows: Vec<Vec<String>>) -> String {
@@ -351,6 +353,14 @@ pub fn render_status_page(data: &StatusPageData) -> String {
         })
         .collect();
 
+    let strategy_rows = data
+        .strategies
+        .iter()
+        .map(|(key, name, description, params)| {
+            vec![esc(key), esc(name), esc(description), esc(params)]
+        })
+        .collect();
+
     let candle_rows = data
         .candle_dates
         .iter()
@@ -459,6 +469,9 @@ pub fn render_status_page(data: &StatusPageData) -> String {
 <h2>체결 내역</h2>
 {fills}
 
+<h2>전략 목록</h2>
+{strategies}
+
 <h2>데이터 (일봉)</h2>
 {candles}
 <p class="meta">일봉 백필: {backfill_line}
@@ -490,6 +503,7 @@ function runBackfill() {{
 }}
 </script>
 </body></html>"#,
+        strategies = table(&["키", "이름", "설명", "기본 파라미터"], strategy_rows),
         candles = table(&["종목", "마지막 봉"], candle_rows),
         backfill_line = esc(&backfill_line),
         backfill_disabled = backfill_disabled,

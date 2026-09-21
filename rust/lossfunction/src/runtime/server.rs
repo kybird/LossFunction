@@ -47,6 +47,7 @@ pub fn router(state: SharedState) -> Router {
         .route("/healthz", get(health))
         .route("/control/kill-switch", post(control_kill_switch))
         .route("/control/backfill", post(control_backfill))
+        .route("/strategies", get(strategies))
         .with_state(state)
 }
 
@@ -107,9 +108,34 @@ async fn status_page(State(state): State<SharedState>) -> Html<String> {
         },
         strategy_label: state.strategy_label.clone(),
         uptime_seconds: state.started.elapsed().as_secs(),
+        strategies: crate::strategy_registry::registry()
+            .into_iter()
+            .map(|spec| {
+                (
+                    spec.key.to_string(),
+                    spec.name.to_string(),
+                    spec.description.to_string(),
+                    spec.params.to_string(),
+                )
+            })
+            .collect(),
         backfill: state.backfill.lock().expect("backfill status lock").clone(),
     };
     Html(render_status_page(&data))
+}
+
+async fn strategies() -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "strategies": crate::strategy_registry::registry()
+            .into_iter()
+            .map(|spec| serde_json::json!({
+                "key": spec.key,
+                "name": spec.name,
+                "description": spec.description,
+                "params": spec.params,
+            }))
+            .collect::<Vec<_>>(),
+    }))
 }
 
 #[derive(Debug, Deserialize)]
@@ -407,5 +433,29 @@ mod tests {
         assert!(events
             .iter()
             .any(|event| event.event_type == "control.backfill"));
+    }
+
+    #[tokio::test]
+    async fn strategies_endpoint_and_page_section() {
+        let tmp = tempfile::tempdir().unwrap();
+        let app = router(Arc::new(state(tmp.path()).await));
+
+        let response = app
+            .clone()
+            .oneshot(Request::get("/strategies").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = body_text(response.into_body()).await;
+        assert!(body.contains("sma-cross"));
+        assert!(body.contains("momentum-rotation"));
+
+        let response = app
+            .oneshot(Request::get("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let page = body_text(response.into_body()).await;
+        assert!(page.contains("전략 목록"));
+        assert!(page.contains("MACD 교차"));
     }
 }
