@@ -143,7 +143,16 @@ async fn main() {
         }
     };
 
-    let risk = Arc::new(RiskManager::new(RiskLimits::from(settings.risk)));
+    let simulation = std::env::var("SIMULATION")
+        .map(|value| value == "true")
+        .unwrap_or(false);
+    let mut risk_limits = RiskLimits::from(settings.risk);
+    // Replay feeds historical timestamps; the production 30s staleness gate
+    // would reject every simulated order as stale market data.
+    if simulation {
+        risk_limits.stale_quote_max_age = chrono::TimeDelta::weeks(520);
+    }
+    let risk = Arc::new(RiskManager::new(risk_limits));
     let repository = Repository::open(&settings.database_path)
         .await
         .expect("open sqlite database");
