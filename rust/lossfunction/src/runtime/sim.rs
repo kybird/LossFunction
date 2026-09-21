@@ -262,7 +262,8 @@ mod tests {
         }
         assert_eq!(sim.replayed(), 120);
         assert!(
-            sim.tick().await.unwrap() == (),
+            sim.tick().await.unwrap(); // exhausted replay is a no-op
+            assert_eq!(sim.replayed(), 120, "cursor must not advance past the end");
             "exhausted replay is a no-op"
         );
 

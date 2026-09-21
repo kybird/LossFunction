@@ -197,3 +197,22 @@
 {"ts":"2026-09-21T19:47:54.235Z","action":"created","title":"상태 페이지 관측성 개편"}
 {"ts":"2026-09-21T19:47:54.470Z","action":"claimed","title":"상태 페이지 관측성 개편","actor":"zcode-main"}
 {"ts":"2026-09-21T19:58:26.440Z","action":"done","title":"상태 페이지 관측성 개편"}
+{"ts":"2026-09-21T20:26:23.412Z","action":"created","title":"전략 탐색·실험 체계"}
+{"ts":"2026-09-21T20:26:23.645Z","action":"created","title":"전략 레지스트리"}
+{"ts":"2026-09-21T20:26:23.877Z","action":"created","title":"백테스트 실행"}
+{"ts":"2026-09-21T20:26:24.117Z","action":"created","title":"백테스트 설정 UI"}
+{"ts":"2026-09-21T20:26:24.380Z","action":"created","title":"개별 종목 조회 페이지"}
+{"ts":"2026-09-21T20:26:24.619Z","action":"created","title":"전략 추가 가이드"}
+{"ts":"2026-09-21T20:26:35.090Z","action":"claimed","title":"전략 레지스트리","actor":"zcode-main"}
+{"ts":"2026-09-21T20:27:56.492Z","action":"done","title":"전략 레지스트리"}
+{"ts":"2026-09-21T20:28:19.657Z","action":"claimed","title":"백테스트 실행","actor":"zcode-main"}
+{"ts":"2026-09-21T20:33:35.210Z","action":"done","title":"백테스트 실행"}
+{"ts":"2026-09-21T20:38:05.257Z","action":"created","title":"프론트엔드 디자인 패스"}
+{"ts":"2026-09-21T20:38:05.477Z","action":"claimed","title":"백테스트 설정 UI","actor":"zcode-main"}
+{"ts":"2026-09-21T20:38:52.277Z","action":"done","title":"백테스트 설정 UI"}
+{"ts":"2026-09-21T20:39:07.967Z","action":"claimed","title":"개별 종목 조회 페이지","actor":"zcode-main"}
+{"ts":"2026-09-21T20:40:42.795Z","action":"done","title":"개별 종목 조회 페이지"}
+{"ts":"2026-09-21T21:00:15.589Z","action":"done","title":"프론트엔드 디자인 패스"}
+{"ts":"2026-09-21T21:36:34.282Z","action":"created","title":"실데이터 리플레이 시뮬레이션"}
+{"ts":"2026-09-21T21:36:34.484Z","action":"claimed","title":"전략 추가 가이드","actor":"zcode-main"}
+{"ts":"2026-09-21T21:38:20.290Z","action":"done","title":"실데이터 리플레이 시뮬레이션"}
