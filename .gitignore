@@ -25,6 +25,9 @@ htmlcov/
 .vscode/
 .DS_Store
 
+# Generated kanban board view (CLI regenerates on demand)
+doc/kanban/board.html
+
 # Local test PostgreSQL (binaries + data)
 .pgenv/
 .pgdata/
