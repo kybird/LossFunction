@@ -147,6 +147,23 @@ async fn main() {
         .await
         .expect("open sqlite database");
 
+    let backfill_creds = if settings.kis_app_key.expose().is_empty()
+        || settings.kis_app_secret.expose().is_empty()
+    {
+        None
+    } else {
+        Some(lossfunction::runtime::backfill::BackfillCredentials {
+            environment: match settings.kis_environment {
+                lossfunction::config::KisEnvironment::Real => "real",
+                lossfunction::config::KisEnvironment::Mock => "mock",
+            }
+            .to_string(),
+            app_key: settings.kis_app_key.expose().to_string(),
+            app_secret: settings.kis_app_secret.expose().to_string(),
+            account: settings.kis_account_number.clone(),
+            base_url_override: None,
+        })
+    };
     let state: SharedState = Arc::new(AppState {
         trading_mode: settings.trading_mode.to_string(),
         broker: "MockBroker".to_string(),
@@ -154,6 +171,11 @@ async fn main() {
         risk: Arc::clone(&risk),
         repository,
         started: std::time::Instant::now(),
+        backfill: std::sync::Arc::new(std::sync::Mutex::new(
+            lossfunction::runtime::backfill::BackfillStatus::Idle,
+        )),
+        backfill_creds,
+        watchlist: settings.watchlist.clone(),
     });
 
     let mut tasks = Vec::new();
