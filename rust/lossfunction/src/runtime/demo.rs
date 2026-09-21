@@ -120,6 +120,11 @@ impl DemoLoop {
         &mut self.runtime
     }
 
+    /// Strategy identity for the status page header.
+    pub fn strategy_label(&self) -> String {
+        self.runtime.strategy_label()
+    }
+
     pub async fn run(&mut self) {
         loop {
             if let Err(error) = self.tick().await {

@@ -80,6 +80,10 @@ impl DecisionLayer {
         }
     }
 
+    pub fn strategy_version(&self) -> &str {
+        self.strategy.version()
+    }
+
     pub fn strategy_name(&self) -> &str {
         self.strategy.name()
     }

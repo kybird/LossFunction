@@ -164,6 +164,24 @@ async fn main() {
             base_url_override: None,
         })
     };
+    // Demo loop first: the status page reports the strategy it runs.
+    let mut tasks = Vec::new();
+    let strategy_label = if demo_enabled() {
+        let demo = DemoLoop::new(
+            Arc::clone(&broker),
+            Arc::clone(&risk),
+            demo_repository(&settings).await,
+            7,
+            settings.watchlist.clone(),
+        );
+        let label = demo.strategy_label();
+        tasks.push(tokio::spawn(demo_run(demo)));
+        println!("demo loop enabled (synthetic paper market)");
+        label
+    } else {
+        "—".to_string()
+    };
+
     let state: SharedState = Arc::new(AppState {
         trading_mode: settings.trading_mode.to_string(),
         broker: "MockBroker".to_string(),
@@ -176,20 +194,8 @@ async fn main() {
         )),
         backfill_creds,
         watchlist: settings.watchlist.clone(),
+        strategy_label,
     });
-
-    let mut tasks = Vec::new();
-    if demo_enabled() {
-        let demo = DemoLoop::new(
-            Arc::clone(&broker),
-            Arc::clone(&risk),
-            demo_repository(&settings).await,
-            7,
-            settings.watchlist.clone(),
-        );
-        tasks.push(tokio::spawn(demo_run(demo)));
-        println!("demo loop enabled (synthetic paper market)");
-    }
 
     let app = lossfunction::runtime::server::router(Arc::clone(&state));
     let listener = tokio::net::TcpListener::bind(("0.0.0.0", port))

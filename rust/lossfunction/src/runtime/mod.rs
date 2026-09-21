@@ -157,6 +157,15 @@ impl TradingRuntime {
         )
     }
 
+    /// Strategy identity for status display ("name vN").
+    pub fn strategy_label(&self) -> String {
+        format!(
+            "{} v{}",
+            self.decisions.strategy_name(),
+            self.decisions.strategy_version()
+        )
+    }
+
     /// Pull the broker-side execution state for one open local order.
     /// Terminal statuses apply discovered fills and clear the open set.
     pub async fn sync_execution(&mut self, client_order_id: &str) -> Option<OrderStatus> {

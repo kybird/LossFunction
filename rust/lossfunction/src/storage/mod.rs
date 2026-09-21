@@ -333,10 +333,15 @@ impl Repository {
     ) -> Result<bool, StorageError> {
         let mut tx = self.write().await?;
         let inserted = sqlx::query(
-            "INSERT INTO fills (client_order_id, quantity, price, executed_at) \
-             VALUES (?1, ?2, ?3, ?4) ON CONFLICT DO NOTHING RETURNING id",
+            "INSERT INTO fills (client_order_id, symbol, side, quantity, price, executed_at) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT DO NOTHING RETURNING id",
         )
         .bind(client_order_id)
+        .bind(symbol.as_str())
+        .bind(match side {
+            crate::types::OrderSide::Buy => "buy",
+            crate::types::OrderSide::Sell => "sell",
+        })
         .bind(quantity)
         .bind(money_to_int(price))
         .bind(executed_at.to_rfc3339_opts(chrono::SecondsFormat::Nanos, true))
@@ -362,7 +367,7 @@ impl Repository {
 
     pub async fn recent_fills(&self, limit: i64) -> Result<Vec<RecentFill>, StorageError> {
         let rows = sqlx::query(
-            "SELECT client_order_id, quantity, price, executed_at FROM fills \
+            "SELECT client_order_id, symbol, side, quantity, price, executed_at FROM fills \
              ORDER BY executed_at DESC, id DESC LIMIT ?1",
         )
         .bind(limit)
@@ -372,12 +377,33 @@ impl Repository {
             .map(|row| {
                 Ok(RecentFill {
                     client_order_id: row.try_get("client_order_id")?,
+                    symbol: row.try_get("symbol")?,
+                    side: row.try_get("side")?,
                     quantity: row.try_get("quantity")?,
                     price: int_to_money(row.try_get("price")?),
                     executed_at: parse_ts(row.try_get("executed_at")?)?,
                 })
             })
             .collect()
+    }
+
+    /// Newest-last price series for one symbol (quotes table) — the status
+    /// page sparkline source.
+    pub async fn quote_history(
+        &self,
+        symbol: &Symbol,
+        limit: i64,
+    ) -> Result<Vec<Price>, StorageError> {
+        let rows: Vec<i64> = sqlx::query_scalar(
+            "SELECT price FROM quotes WHERE symbol = ?1 ORDER BY id DESC LIMIT ?2",
+        )
+        .bind(symbol.as_str())
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?;
+        let mut prices: Vec<Price> = rows.into_iter().map(int_to_money).collect();
+        prices.reverse(); // oldest first, left-to-right reading order
+        Ok(prices)
     }
 
     // ── positions ──────────────────────────────────────────────────
@@ -503,6 +529,9 @@ pub struct RecentOrder {
 #[derive(Debug, Clone)]
 pub struct RecentFill {
     pub client_order_id: String,
+    pub symbol: String,
+    /// "buy" | "sell" — display decomposition of OrderSide.
+    pub side: String,
     pub quantity: Quantity,
     pub price: Price,
     pub executed_at: DateTime<Utc>,
@@ -562,7 +591,7 @@ mod tests {
             .fetch_one(&repository.pool)
             .await
             .unwrap();
-        assert_eq!(version, 1);
+        assert_eq!(version, 2); // latest registered migration
 
         let tables: Vec<(String,)> = sqlx::query_as(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",

@@ -68,7 +68,14 @@ CREATE TABLE audit_log (
 CREATE INDEX audit_subject_idx ON audit_log (subject, occurred_at DESC);
 "#;
 
-const MIGRATIONS: &[(i64, &str)] = &[(1, MIGRATION_1)];
+/// Fills gain the display columns symbol/side (they previously lived only
+/// in the audit payload — the status page needs them directly).
+const MIGRATION_2: &str = r#"
+ALTER TABLE fills ADD COLUMN symbol TEXT NOT NULL DEFAULT '';
+ALTER TABLE fills ADD COLUMN side TEXT NOT NULL DEFAULT '';
+"#;
+
+const MIGRATIONS: &[(i64, &str)] = &[(1, MIGRATION_1), (2, MIGRATION_2)];
 
 /// Apply pending migrations; returns versions applied this run.
 pub async fn apply(pool: &SqlitePool) -> Result<Vec<i64>, sqlx::Error> {

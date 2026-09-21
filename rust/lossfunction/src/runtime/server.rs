@@ -35,6 +35,8 @@ pub struct AppState {
     /// upstream); the web layer never fetches secrets itself.
     pub backfill_creds: Option<BackfillCredentials>,
     pub watchlist: Vec<Symbol>,
+    /// "name vN" — what is deciding right now.
+    pub strategy_label: String,
 }
 
 pub type SharedState = Arc<AppState>;
@@ -85,6 +87,26 @@ async fn status_page(State(state): State<SharedState>) -> Html<String> {
             .latest_candle_dates()
             .await
             .unwrap_or_default(),
+        sparklines: {
+            let mut series = Vec::with_capacity(state.watchlist.len());
+            for symbol in &state.watchlist {
+                let prices = state
+                    .repository
+                    .quote_history(symbol, 60)
+                    .await
+                    .unwrap_or_default();
+                series.push((
+                    symbol.as_str().to_string(),
+                    prices
+                        .iter()
+                        .map(|price| price.mantissa() as i64)
+                        .collect::<Vec<_>>(),
+                ));
+            }
+            series
+        },
+        strategy_label: state.strategy_label.clone(),
+        uptime_seconds: state.started.elapsed().as_secs(),
         backfill: state.backfill.lock().expect("backfill status lock").clone(),
     };
     Html(render_status_page(&data))
@@ -210,6 +232,7 @@ mod tests {
             backfill: Arc::new(std::sync::Mutex::new(BackfillStatus::Idle)),
             backfill_creds: None,
             watchlist: vec![Symbol::parse("005930").unwrap()],
+            strategy_label: "EntryPriceStrategy v1".into(),
         }
     }
 

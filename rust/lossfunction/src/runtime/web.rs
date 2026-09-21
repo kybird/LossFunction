@@ -27,6 +27,87 @@ fn money(value: &Option<rust_decimal::Decimal>) -> String {
     }
 }
 
+/// Thousands-grouped integer KRW ("12,345,678").
+fn krw_int(value: &rust_decimal::Decimal) -> String {
+    let rounded = value.round_dp(0);
+    let text = rounded.abs().to_string();
+    let grouped = text
+        .as_bytes()
+        .rchunks(3)
+        .rev()
+        .map(std::str::from_utf8)
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap_or_default()
+        .join(",");
+    if rounded.is_sign_negative() {
+        format!("-{grouped}")
+    } else {
+        grouped
+    }
+}
+
+/// Signed pnl span: green up / red down.
+fn pnl_span(amount: &rust_decimal::Decimal) -> String {
+    let (class, sign) = if amount.is_sign_negative() {
+        ("down", "")
+    } else {
+        ("up", "+")
+    };
+    format!(
+        r#"<span class="pnl {class}">{sign}{}원</span>"#,
+        krw_int(&amount.abs())
+    )
+}
+
+/// Inline-SVG sparkline from 1e-4 KRW ints — numeric-only, no escaping
+/// surface. Flat series renders as a centered line.
+fn sparkline(points: &[i64], up: bool) -> String {
+    if points.len() < 2 {
+        return r#"<span class="empty">—</span>"#.to_string();
+    }
+    let (min, max) = (*points.iter().min().unwrap(), *points.iter().max().unwrap());
+    let (w, h, pad) = (120u32, 28u32, 2u32);
+    let span = (max - min).max(1) as f64;
+    let step = (w - 2 * pad) as f64 / (points.len() - 1) as f64;
+    let coords = points
+        .iter()
+        .enumerate()
+        .map(|(i, value)| {
+            let x = pad as f64 + i as f64 * step;
+            let y = (h - pad) as f64 - ((value - min) as f64 / span) * (h - 2 * pad) as f64;
+            format!("{x:.1},{y:.1}")
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+    let stroke = if up { "#8fd694" } else { "#ff9c9c" };
+    format!(
+        r#"<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}"><polyline points="{coords}" fill="none" stroke="{stroke}" stroke-width="1.5"/></svg>"#
+    )
+}
+
+/// Freshness class for a candle timestamp: green <=7d, amber <=30d, red
+/// older. Day-field arithmetic — display guidance, not billing.
+fn freshness_class(ts: &str, now: &str) -> &'static str {
+    fn day_tuple(text: &str) -> Option<(i64, i64, i64)> {
+        Some((
+            text.get(0..4)?.parse().ok()?,
+            text.get(5..7)?.parse().ok()?,
+            text.get(8..10)?.parse().ok()?,
+        ))
+    }
+    let (Some((ty, tm, td)), Some((ny, nm, nd))) = (day_tuple(ts), day_tuple(now)) else {
+        return "old";
+    };
+    let approx_days = (ny - ty) * 365 + (nm - tm) * 30 + (nd - td);
+    if approx_days <= 7 {
+        "fresh"
+    } else if approx_days <= 30 {
+        "stale"
+    } else {
+        "old"
+    }
+}
+
 fn status_pill(status: &str) -> String {
     let known = ["filled", "cancelled", "rejected", "unknown"];
     let class = if known.contains(&status) { status } else { "" };
@@ -54,6 +135,20 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .pill.rejected { color: #ff9c9c; } .pill.unknown { color: #e2b93b; }
 .kill { font-size: 12px; padding: 2px 8px; border-radius: 4px;
         background: #5a1f1f; color: #ff9c9c; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+         gap: 10px; margin: 14px 0 4px; }
+.card { background: #161a22; border: 1px solid #232833; border-radius: 8px;
+        padding: 10px 14px; }
+.card .k { color: #7b8494; font-size: 11px; text-transform: uppercase;
+           letter-spacing: .05em; margin-bottom: 4px; }
+.card .v { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.card .v small { color: #7b8494; font-size: 12px; font-weight: 400; }
+.pnl.up { color: #8fd694; } .pnl.down { color: #ff9c9c; }
+.side-buy { color: #8fd694; } .side-sell { color: #ff9c9c; }
+.fresh-pill { padding: 1px 7px; border-radius: 9px; font-size: 11px; }
+.fresh-pill.fresh { background: #1d3325; color: #8fd694; }
+.fresh-pill.stale { background: #3a311d; color: #e2b93b; }
+.fresh-pill.old { background: #3a1d1d; color: #ff9c9c; }
 .kill button { margin-left: 8px; font-size: 12px; padding: 2px 10px;
                cursor: pointer; }
 footer { margin-top: 28px; color: #566070; font-size: 12px; }
@@ -76,6 +171,10 @@ pub struct StatusPageData {
     /// (symbol, newest candle ts) — data freshness.
     pub candle_dates: Vec<(String, String)>,
     pub backfill: BackfillStatus,
+    /// (symbol, newest-last 1e-4 KRW ints) for inline-SVG sparklines.
+    pub sparklines: Vec<(String, Vec<i64>)>,
+    pub strategy_label: String,
+    pub uptime_seconds: u64,
 }
 
 fn table(headers: &[&str], rows: Vec<Vec<String>>) -> String {
@@ -119,25 +218,48 @@ pub fn render_status_page(data: &StatusPageData) -> String {
         .map(|(symbol, price)| (symbol.as_str(), price))
         .collect();
 
+    let spark_map: std::collections::HashMap<&str, &[i64]> = data
+        .sparklines
+        .iter()
+        .map(|(symbol, series)| (symbol.as_str(), series.as_slice()))
+        .collect();
     let position_rows = data
         .positions
         .iter()
         .map(|position| {
             let last = prices.get(position.symbol.as_str());
-            let value = last
-                .map(|price| {
-                    money(&Some(
-                        rust_decimal::Decimal::from(position.quantity) * *price,
-                    ))
-                })
-                .unwrap_or_else(|| "—".to_string());
+            let qty = rust_decimal::Decimal::from(position.quantity);
+            let cost = qty * position.average_price;
+            let (value, pnl) = match last {
+                Some(price) => {
+                    let value = qty * **price;
+                    (value.to_string(), value - cost)
+                }
+                None => (cost.to_string(), rust_decimal::Decimal::ZERO),
+            };
+            let series = spark_map
+                .get(position.symbol.as_str())
+                .copied()
+                .unwrap_or(&[]);
+            let rising = last
+                .map(|price| **price >= position.average_price)
+                .unwrap_or(false);
+            let pnl_pct = if cost.is_zero() {
+                "0".to_string()
+            } else {
+                (pnl * rust_decimal::Decimal::from(100) / cost)
+                    .round_dp(2)
+                    .to_string()
+            };
             vec![
                 esc(&position.symbol),
+                sparkline(series, rising),
                 position.quantity.to_string(),
                 money(&Some(position.average_price)),
                 last.map(|p| money(&Some(**p)))
                     .unwrap_or_else(|| "—".to_string()),
                 value,
+                format!("{} <small>({pnl_pct}%)</small>", pnl_span(&pnl)),
             ]
         })
         .collect();
@@ -146,14 +268,18 @@ pub fn render_status_page(data: &StatusPageData) -> String {
         .orders
         .iter()
         .map(|order| {
+            let (side_label, side_class) = if order.side == "sell" {
+                ("매도", "side-sell")
+            } else {
+                ("매수", "side-buy")
+            };
             vec![
-                esc(&order.client_order_id),
+                order.created_at.format("%m-%d %H:%M:%S").to_string(),
                 esc(&order.symbol),
-                esc(&order.side),
+                format!(r#"<span class="{side_class}">{side_label}</span>"#),
                 order.quantity.to_string(),
                 money(&order.limit_price),
                 status_pill(&order.status),
-                order.created_at.format("%m-%d %H:%M:%S").to_string(),
             ]
         })
         .collect();
@@ -162,11 +288,18 @@ pub fn render_status_page(data: &StatusPageData) -> String {
         .fills
         .iter()
         .map(|fill| {
+            let (side_label, side_class) = if fill.side == "sell" {
+                ("매도", "side-sell")
+            } else {
+                ("매수", "side-buy")
+            };
             vec![
-                esc(&fill.client_order_id),
-                money(&Some(fill.price)),
-                fill.quantity.to_string(),
                 fill.executed_at.format("%m-%d %H:%M:%S").to_string(),
+                esc(&fill.symbol),
+                format!(r#"<span class="{side_class}">{side_label}</span>"#),
+                fill.quantity.to_string(),
+                money(&Some(fill.price)),
+                krw_int(&(fill.price * rust_decimal::Decimal::from(fill.quantity))),
             ]
         })
         .collect();
@@ -188,7 +321,18 @@ pub fn render_status_page(data: &StatusPageData) -> String {
     let candle_rows = data
         .candle_dates
         .iter()
-        .map(|(symbol, ts)| vec![esc(symbol), esc(ts)])
+        .map(|(symbol, ts)| {
+            let class = freshness_class(ts, &data.now_utc);
+            let label = match class {
+                "fresh" => "최신",
+                "stale" => "갱신 필요",
+                _ => "오래됨",
+            };
+            vec![
+                esc(symbol),
+                format!(r#"{ts} <span class="fresh-pill {class}">{label}</span>"#),
+            ]
+        })
         .collect();
 
     let (backfill_line, backfill_disabled) = match &data.backfill {
@@ -197,6 +341,54 @@ pub fn render_status_page(data: &StatusPageData) -> String {
         BackfillStatus::Done { at, summary } => (format!("완료 {at} — {summary}"), ""),
         BackfillStatus::Failed { at, reason } => (format!("실패 {at} — {reason}"), ""),
     };
+
+    // Summary: what is happening, in one row of cards.
+    let (cost_total, value_total) = data.positions.iter().fold(
+        (rust_decimal::Decimal::ZERO, rust_decimal::Decimal::ZERO),
+        |(cost, value), position| {
+            let qty = rust_decimal::Decimal::from(position.quantity);
+            let cost = cost + qty * position.average_price;
+            let value = value
+                + qty
+                    * prices
+                        .get(position.symbol.as_str())
+                        .copied()
+                        .unwrap_or(&position.average_price);
+            (cost, value)
+        },
+    );
+    let unrealized = value_total - cost_total;
+    let unrealized_pct = if cost_total.is_zero() {
+        rust_decimal::Decimal::ZERO
+    } else {
+        unrealized * rust_decimal::Decimal::from(100) / cost_total
+    };
+    let uptime = {
+        let secs = data.uptime_seconds;
+        if secs >= 3600 {
+            format!("{}시간 {}분", secs / 3600, (secs % 3600) / 60)
+        } else {
+            format!("{}분", secs / 60)
+        }
+    };
+    let cards = format!(
+        r#"<div class="cards">
+<div class="card"><div class="k">전략</div><div class="v">{strategy}</div></div>
+<div class="card"><div class="k">모드 · 브로커</div><div class="v">{mode} <small>{broker}</small></div></div>
+<div class="card"><div class="k">총 평가금액</div><div class="v">{value}원</div></div>
+<div class="card"><div class="k">미실현 손익</div><div class="v">{pnl} <small>{pct}%</small></div></div>
+<div class="card"><div class="k">보유 종목</div><div class="v">{count}</div></div>
+<div class="card"><div class="k">가동</div><div class="v">{uptime}</div></div>
+</div>"#,
+        strategy = esc(&data.strategy_label),
+        broker = esc(&data.broker),
+        mode = esc(&data.trading_mode),
+        value = krw_int(&value_total),
+        pnl = pnl_span(&unrealized),
+        pct = unrealized_pct.round_dp(2),
+        count = data.positions.len(),
+        uptime = esc(&uptime),
+    );
 
     let mode_class = if data.trading_mode == "live" {
         " live"
@@ -222,23 +414,24 @@ pub fn render_status_page(data: &StatusPageData) -> String {
 <style>{STYLE}</style></head>
 <body>
 <h1>LossFunction <span class="mode{mode_class}">{mode}</span> {kill_badge}</h1>
-<p class="meta">broker {broker} · db {db} · {now} · 새로고침 5초</p>
+<p class="meta">{db} · {now} · 새로고침 5초</p>
+{cards}
 
-<h2>Positions</h2>
+<h2>보유 포지션</h2>
 {positions}
 
-<h2>Recent orders</h2>
+<h2>주문 내역</h2>
 {orders}
 
-<h2>Recent fills</h2>
+<h2>체결 내역</h2>
 {fills}
 
-<h2>Data</h2>
+<h2>데이터 (일봉)</h2>
 {candles}
 <p class="meta">일봉 백필: {backfill_line}
 <button onclick="runBackfill()"{backfill_disabled}>일봉 갱신</button></p>
 
-<h2>Recent audit events</h2>
+<h2>감사 로그</h2>
 {audit}
 
 <footer>JSON: <code>GET /healthz</code> · 제어: <code>POST /control/kill-switch</code>
@@ -264,23 +457,34 @@ function runBackfill() {{
 }}
 </script>
 </body></html>"#,
-        candles = table(&["symbol", "last bar"], candle_rows),
+        candles = table(&["종목", "마지막 봉"], candle_rows),
         backfill_line = esc(&backfill_line),
         backfill_disabled = backfill_disabled,
         mode = esc(&data.trading_mode),
-        broker = esc(&data.broker),
         db = esc(&data.database_path),
         now = esc(&data.now_utc),
+        cards = cards,
         positions = table(
-            &["symbol", "qty", "avg price", "last", "value"],
+            &[
+                "종목",
+                "추이",
+                "수량",
+                "평단가",
+                "현재가",
+                "평가금액",
+                "손익"
+            ],
             position_rows
         ),
         orders = table(
-            &["order id", "symbol", "side", "qty", "limit", "status", "created"],
+            &["시각", "종목", "구분", "수량", "주문가", "상태"],
             order_rows
         ),
-        fills = table(&["order id", "price", "qty", "executed"], fill_rows),
-        audit = table(&["at", "event", "subject", "payload"], audit_rows),
+        fills = table(
+            &["시각", "종목", "구분", "수량", "가격", "체결금액"],
+            fill_rows
+        ),
+        audit = table(&["시각", "이벤트", "주체", "내용"], audit_rows),
     )
 }
 
@@ -308,10 +512,12 @@ mod tests {
             "LossFunction",
             "MockBroker",
             "/data/lossfunction.db",
-            "Positions",
-            "Recent orders",
-            "Recent fills",
-            "Recent audit events",
+            "미실현 손익",
+            "보유 포지션",
+            "주문 내역",
+            "체결 내역",
+            "데이터 (일봉)",
+            "감사 로그",
             "(no rows)",
             "http-equiv=\"refresh\" content=\"5\"",
             "/healthz",
@@ -363,7 +569,7 @@ mod tests {
             ..data()
         };
         let page = render_status_page(&payload);
-        assert!(page.contains("Data"));
+        assert!(page.contains("데이터 (일봉)"));
         assert!(page.contains("005930"));
         assert!(page.contains("2026-09-19T06:30:00+00:00"));
         assert!(page.contains("3711 bars stored"));
@@ -384,5 +590,73 @@ mod tests {
         let page = render_status_page(&payload);
         assert!(!page.contains("<script>x"), "unescaped reason leaked");
         assert!(page.contains("&lt;script&gt;"));
+    }
+
+    /// AC: the page states what is happening — strategy, money, pnl, and a
+    /// per-symbol sparkline from the quote series.
+    #[test]
+    fn summary_cards_state_the_story() {
+        use rust_decimal::Decimal;
+        let payload = StatusPageData {
+            strategy_label: "EntryPriceStrategy v1".into(),
+            uptime_seconds: 7_200,
+            positions: vec![StoredPosition {
+                symbol: "005930".into(),
+                quantity: 10,
+                average_price: Decimal::from(80_000),
+            }],
+            latest_prices: vec![("005930".into(), Decimal::from(90_000))],
+            sparklines: vec![(
+                "005930".into(),
+                (80_000i64..80_060).map(|v| v * 10_000).collect(),
+            )],
+            ..data()
+        };
+        let page = render_status_page(&payload);
+        assert!(page.contains("EntryPriceStrategy v1"), "strategy shown");
+        assert!(page.contains("900,000원"), "total mark value 10x90,000");
+        assert!(page.contains("+100,000원"), "unrealized pnl");
+        assert!(page.contains("12.50%"), "pnl percentage");
+        assert!(page.contains("<svg"), "sparkline rendered");
+        assert!(page.contains("2시간 0분"), "uptime");
+    }
+
+    /// AC: fills read back with symbol and side for the 매수/매도 display.
+    #[tokio::test]
+    async fn fills_read_back_with_symbol_and_side() {
+        let dir = tempfile::tempdir().unwrap();
+        let repository =
+            crate::storage::Repository::open(dir.path().join("fills.db").to_str().unwrap())
+                .await
+                .unwrap();
+        repository.migrate().await.unwrap();
+
+        use crate::types::{OrderSide, OrderType, Symbol};
+        let order = crate::domain::order::Order::new(
+            "ord-0001",
+            Symbol::parse("005930").unwrap(),
+            OrderSide::Buy,
+            OrderType::Market,
+            10,
+            None,
+        )
+        .unwrap();
+        repository.create_order(&order, "paper").await.unwrap();
+        repository
+            .record_fill(
+                "ord-0001",
+                &Symbol::parse("005930").unwrap(),
+                OrderSide::Buy,
+                10,
+                rust_decimal::Decimal::from(80_000),
+                chrono::Utc::now(),
+            )
+            .await
+            .unwrap();
+
+        let fills = repository.recent_fills(10).await.unwrap();
+        assert_eq!(fills.len(), 1);
+        assert_eq!(fills[0].symbol, "005930");
+        assert_eq!(fills[0].side, "buy");
     }
 }
