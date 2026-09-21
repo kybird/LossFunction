@@ -36,10 +36,15 @@ fn now_iso() -> String {
     Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Nanos, true)
 }
 
-fn parse_ts(raw: &str) -> DateTime<Utc> {
+/// Stored timestamps are app-supplied RFC3339 — a row that is not (corrupt
+/// or foreign data) surfaces as a storage error, never a panic: reads must
+/// not kill the process that owns the database.
+fn parse_ts(raw: &str) -> Result<DateTime<Utc>, StorageError> {
     DateTime::parse_from_rfc3339(raw)
-        .expect("stored timestamps are RFC3339")
-        .with_timezone(&Utc)
+        .map_err(|error| {
+            StorageError::Internal(format!("invalid stored timestamp {raw:?}: {error}"))
+        })
+        .map(|parsed| parsed.with_timezone(&Utc))
 }
 
 impl Repository {
@@ -186,7 +191,7 @@ impl Repository {
                     symbol: Symbol::parse(raw)
                         .map_err(|_| StorageError::BadSymbol(raw.to_string()))?,
                     timeframe,
-                    timestamp: parse_ts(row.try_get("ts")?),
+                    timestamp: parse_ts(row.try_get("ts")?)?,
                     open: int_to_money(row.try_get::<i64, _>("open")?),
                     high: int_to_money(row.try_get::<i64, _>("high")?),
                     low: int_to_money(row.try_get::<i64, _>("low")?),
@@ -295,7 +300,7 @@ impl Repository {
                         .try_get::<Option<i64>, _>("limit_price")?
                         .map(int_to_money),
                     status: row.try_get("status")?,
-                    created_at: parse_ts(row.try_get("created_at")?),
+                    created_at: parse_ts(row.try_get("created_at")?)?,
                 })
             })
             .collect()
@@ -356,7 +361,7 @@ impl Repository {
                     client_order_id: row.try_get("client_order_id")?,
                     quantity: row.try_get("quantity")?,
                     price: int_to_money(row.try_get("price")?),
-                    executed_at: parse_ts(row.try_get("executed_at")?),
+                    executed_at: parse_ts(row.try_get("executed_at")?)?,
                 })
             })
             .collect()
@@ -443,10 +448,10 @@ impl Repository {
                     subject: row.try_get::<Option<String>, _>("subject")?,
                     payload: serde_json::from_str(row.try_get::<&str, _>("payload")?)
                         .unwrap_or(serde_json::Value::Null),
-                    occurred_at: parse_ts(row.try_get("occurred_at")?),
+                    occurred_at: parse_ts(row.try_get("occurred_at")?)?,
                 })
             })
-            .collect::<Result<_, sqlx::Error>>()?;
+            .collect::<Result<_, StorageError>>()?;
         events.reverse(); // oldest first for display
         Ok(events)
     }
@@ -663,5 +668,29 @@ mod tests {
         let events = repository.recent_audit(10).await.unwrap();
         assert_eq!(events[0].event_type, "control.kill_switch");
         assert_eq!(events[0].payload["activate"], serde_json::json!(true));
+    }
+
+    /// A corrupted stored timestamp surfaces as a storage error, never a
+    /// panic — reads must not kill the process owning the database
+    /// (was: parse_ts `.expect`).
+    #[tokio::test]
+    async fn corrupted_timestamp_is_an_error_not_a_panic() {
+        let (_dir, repository) = repo().await;
+        repository.migrate().await.unwrap();
+
+        sqlx::query(
+            "INSERT INTO candles (symbol, timeframe, ts, open, high, low, close, volume)              VALUES ('005930', 'day', 'not-a-timestamp', 100, 100, 100, 100, 1)",
+        )
+        .execute(&repository.pool)
+        .await
+        .unwrap();
+
+        let result = repository
+            .daily_candles(
+                &Symbol::parse("005930").unwrap(),
+                crate::marketdata::Timeframe::Day,
+            )
+            .await;
+        assert!(matches!(result, Err(StorageError::Internal(_))));
     }
 }

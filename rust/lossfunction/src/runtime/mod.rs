@@ -114,7 +114,12 @@ impl TradingRuntime {
         let decision = self.decisions.decide(&snapshot);
         let mut submitted = Vec::new();
         for intent in &decision.intents {
-            let order = self.new_order(intent);
+            // A malformed strategy intent is rejected like a risk rejection —
+            // one bad intent must never kill the runtime. Recording is the
+            // ops layer's job (audit trail), same as risk rejections.
+            let Ok(order) = self.new_order(intent) else {
+                continue;
+            };
             if self
                 .risk
                 .check_order(&order, &self.portfolio, &self.quotes)
@@ -137,7 +142,7 @@ impl TradingRuntime {
         submitted
     }
 
-    fn new_order(&mut self, intent: &OrderIntent) -> Order {
+    fn new_order(&mut self, intent: &OrderIntent) -> Result<Order, crate::domain::DomainError> {
         self.order_seq += 1;
         let client_order_id = format!("{}-{:04}", self.order_prefix, self.order_seq);
         Order::new(
@@ -148,7 +153,6 @@ impl TradingRuntime {
             intent.quantity,
             intent.limit_price,
         )
-        .expect("strategy intents are shape-valid by construction")
     }
 
     /// Pull the broker-side execution state for one open local order.
@@ -279,5 +283,75 @@ impl TradingRuntime {
             }
         }
         self.portfolio = next;
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::broker::mock::MockBroker;
+    use crate::risk::RiskLimits;
+    use crate::strategy::{MarketSnapshot, StrategyDecision};
+    use crate::types::OrderType;
+    use chrono::TimeDelta;
+    use rust_decimal::Decimal;
+
+    fn risk() -> Arc<RiskManager> {
+        Arc::new(RiskManager::with_clock(
+            RiskLimits {
+                max_order_notional: Decimal::from(10_000_000),
+                max_position_quantity: 50,
+                max_gross_exposure: Decimal::from(30_000_000),
+                daily_loss_limit: Decimal::from(500_000),
+                stale_quote_max_age: TimeDelta::seconds(60),
+            },
+            chrono::Utc::now,
+        ))
+    }
+
+    /// Emits a shape-invalid intent (zero quantity) every cycle.
+    struct BadIntentStrategy;
+
+    impl Strategy for BadIntentStrategy {
+        fn name(&self) -> &str {
+            "bad-intent"
+        }
+        fn version(&self) -> &str {
+            "1"
+        }
+        fn decide(&self, _snapshot: &MarketSnapshot) -> StrategyDecision {
+            StrategyDecision {
+                strategy_name: "bad-intent".into(),
+                strategy_version: "1".into(),
+                intents: vec![OrderIntent {
+                    symbol: Symbol::parse("005930").unwrap(),
+                    side: OrderSide::Buy,
+                    order_type: OrderType::Market,
+                    quantity: 0, // shape-invalid: Order::new refuses this
+                    limit_price: None,
+                }],
+                features: Default::default(),
+                rationale: String::new(),
+            }
+        }
+    }
+
+    /// A malformed strategy intent must be skipped, never a panic — the
+    /// runtime outlives any single bad strategy output (was: `.expect`).
+    #[tokio::test]
+    async fn malformed_intent_is_rejected_not_fatal() {
+        let mut runtime = TradingRuntime::new(
+            Arc::new(MockBroker::new()) as Arc<dyn Broker>,
+            Box::new(BadIntentStrategy),
+            risk(),
+            "ord",
+            10,
+        );
+
+        let submitted = runtime.run_decision_cycle().await;
+        assert!(submitted.is_empty());
+
+        // Still alive and deciding on the next cycle.
+        let again = runtime.run_decision_cycle().await;
+        assert!(again.is_empty());
     }
 }
