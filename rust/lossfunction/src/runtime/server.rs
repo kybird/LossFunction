@@ -147,6 +147,53 @@ pub struct BacktestCommand {
     pub strategy: String,
     pub symbols: Option<Vec<String>>,
     pub years: Option<i64>,
+    /// Optional BacktestConfig overrides (card: 백테스트 설정 UI).
+    pub config: Option<BacktestConfigOverrides>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BacktestConfigOverrides {
+    pub initial_cash: Option<i64>,
+    /// Percent, e.g. 0.015 means 0.015% — converted to a rate.
+    pub commission_pct: Option<rust_decimal::Decimal>,
+    pub tax_pct: Option<rust_decimal::Decimal>,
+    pub history_capacity: Option<usize>,
+}
+
+impl BacktestConfigOverrides {
+    /// Apply with range validation; a violation refuses the request.
+    fn apply(
+        &self,
+        mut config: crate::backtest::BacktestConfig,
+    ) -> Result<crate::backtest::BacktestConfig, &'static str> {
+        use rust_decimal::Decimal;
+        let hundred = Decimal::from(100);
+        if let Some(cash) = self.initial_cash {
+            if !(1_000_000..=100_000_000_000).contains(&cash) {
+                return Err("initial_cash out of range (1,000,000 .. 100,000,000,000)");
+            }
+            config.initial_cash = Decimal::from(cash);
+        }
+        if let Some(pct) = self.commission_pct {
+            if !(Decimal::ZERO..=Decimal::from(1)).contains(&pct) {
+                return Err("commission_pct out of range (0 .. 1)");
+            }
+            config.commission_rate = pct / hundred;
+        }
+        if let Some(pct) = self.tax_pct {
+            if !(Decimal::ZERO..=Decimal::from(1)).contains(&pct) {
+                return Err("tax_pct out of range (0 .. 1)");
+            }
+            config.tax_rate = pct / hundred;
+        }
+        if let Some(capacity) = self.history_capacity {
+            if !(2..=1000).contains(&capacity) {
+                return Err("history_capacity out of range (2 .. 1000)");
+            }
+            config.history_capacity = capacity;
+        }
+        Ok(config)
+    }
 }
 
 /// Kick off a background backtest over stored candles. Offline by
@@ -174,6 +221,19 @@ async fn control_backtest(
             return Err(StatusCode::CONFLICT);
         }
     }
+    let config = match &command.config {
+        Some(overrides) => overrides
+            .apply(crate::backtest::BacktestConfig::default())
+            .map_err(|reason| {
+                let at = Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
+                *state.backtest.lock().expect("backtest status lock") = BackfillStatus::Failed {
+                    at,
+                    reason: reason.to_string(),
+                };
+                StatusCode::BAD_REQUEST
+            })?,
+        None => crate::backtest::BacktestConfig::default(),
+    };
     state
         .repository
         .record_event(
@@ -188,7 +248,7 @@ async fn control_backtest(
         command.strategy,
         symbols,
         years,
-        crate::backtest::BacktestConfig::default(),
+        config,
         Arc::clone(&state.backtest),
     );
     Ok(Json(json!({ "ok": true, "status": "running" })))
@@ -598,5 +658,42 @@ mod tests {
         assert!(events
             .iter()
             .any(|event| event.event_type == "control.backtest"));
+    }
+
+    /// BacktestConfig overrides: valid values change the run config,
+    /// out-of-range values are refused with 400.
+    #[tokio::test]
+    async fn backtest_config_overrides_apply_and_validate() {
+        use crate::backtest::BacktestConfig;
+        use rust_decimal::Decimal;
+
+        let defaults = BacktestConfig::default();
+        let applied = BacktestConfigOverrides {
+            initial_cash: Some(50_000_000),
+            commission_pct: Some(Decimal::from_str_exact("0.02").unwrap()),
+            tax_pct: Some(Decimal::ZERO), // ETF-style: no tax
+            history_capacity: Some(30),
+        }
+        .apply(defaults)
+        .unwrap();
+        assert_eq!(applied.initial_cash, Decimal::from(50_000_000));
+        assert_eq!(
+            applied.commission_rate,
+            Decimal::from_str_exact("0.0002").unwrap()
+        );
+        assert_eq!(applied.tax_rate, Decimal::ZERO);
+        assert_eq!(applied.history_capacity, 30);
+
+        assert!(
+            BacktestConfigOverrides {
+                initial_cash: Some(-1),
+                commission_pct: None,
+                tax_pct: None,
+                history_capacity: None,
+            }
+            .apply(BacktestConfig::default())
+            .is_err(),
+            "negative cash must be refused"
+        );
     }
 }

@@ -483,6 +483,9 @@ pub fn render_status_page(data: &StatusPageData) -> String {
 <select id="bt-strategy">{strategy_options}</select>
 <input id="bt-symbols" placeholder="종목코드 (쉼표 구분, 비우면 watchlist)" size="34">
 <input id="bt-years" type="number" value="5" min="1" max="30" size="3">년
+<input id="bt-cash" type="number" value="100000000" min="1000000" title="초기 자금(원)">원
+<input id="bt-commission" type="number" value="0.015" step="0.001" min="0" max="1" title="수수료(%)">%
+<input id="bt-tax" type="number" value="0.15" step="0.01" min="0" max="1" title="거래세(%)">%
 <button onclick="runBacktest()">실행</button></p>
 
 <h2>데이터 (일봉)</h2>
@@ -510,7 +513,12 @@ function runBacktest() {{
   var symbols = document.getElementById('bt-symbols').value.trim();
   var body = {{
     strategy: document.getElementById('bt-strategy').value,
-    years: parseInt(document.getElementById('bt-years').value, 10) || 5
+    years: parseInt(document.getElementById('bt-years').value, 10) || 5,
+    config: {{
+      initial_cash: parseInt(document.getElementById('bt-cash').value, 10) || 100000000,
+      commission_pct: parseFloat(document.getElementById('bt-commission').value),
+      tax_pct: parseFloat(document.getElementById('bt-tax').value)
+    }}
   }};
   if (symbols) body.symbols = symbols.split(',').map(function (s) {{ return s.trim(); }});
   fetch('/control/backtest', {{
