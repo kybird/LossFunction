@@ -38,6 +38,10 @@ param(
 
     # 실데이터 리플레이 시뮬레이션: 저장된 실제 일봉으로 매매 시뮬레이션(주문 없음).
     # 별도 시뮬 DB를 사용해 랜덤 데모 데이터와 분리한다.
+    # Mode shortcut: demo | sim (same as -Simulate)
+    [ValidateSet("demo", "sim")]
+    [string]$Mode = "",
+
     [switch]$Simulate,
 
     # 시뮬레이션에 쓸 전략 키 (기본 sma-cross — 전체 목록은 /lab 참고)
