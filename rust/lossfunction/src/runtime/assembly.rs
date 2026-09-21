@@ -28,6 +28,8 @@ pub enum AssemblyError {
     LiveNotConfirmed,
     #[error("backend {0:?} is not available yet")]
     Unavailable(PaperBackend),
+    #[error("paper backend must use the mock KIS domain — refusing a real-domain broker under a paper label")]
+    PaperRequiresMockDomain,
 }
 
 /// Build the venue broker selected by the loaded settings. `None` means the
@@ -42,9 +44,19 @@ pub fn assemble_broker(
         settings.kis_environment,
     ) {
         (TradingMode::Paper, PaperBackend::Memory, _) => Ok((None, AssembledBroker::Memory)),
-        (TradingMode::Paper, PaperBackend::Kis, environment) => {
-            let broker = build_kis(settings, environment)?;
-            Ok((Some(broker), AssembledBroker::Kis { environment }))
+        (TradingMode::Paper, PaperBackend::Kis, KisEnvironment::Mock) => {
+            let broker = build_kis(settings, KisEnvironment::Mock)?;
+            Ok((
+                Some(broker),
+                AssembledBroker::Kis {
+                    environment: KisEnvironment::Mock,
+                },
+            ))
+        }
+        // Defense in depth: settings validation already refuses this — if the
+        // two ever disagree, refuse here too rather than trade real money.
+        (TradingMode::Paper, PaperBackend::Kis, KisEnvironment::Real) => {
+            Err(AssemblyError::PaperRequiresMockDomain)
         }
         (TradingMode::Live, PaperBackend::Kis, KisEnvironment::Real) => {
             if !settings.live_trading_confirmed {
@@ -152,6 +164,22 @@ mod tests {
                 environment: KisEnvironment::Real
             }
         );
+    }
+
+    /// Defense in depth: even if settings validation regresses, assembly
+    /// refuses a real-domain broker under a paper label.
+    #[test]
+    fn paper_kis_real_domain_refused() {
+        let settings = settings_with(
+            TradingMode::Paper,
+            false,
+            KisEnvironment::Real,
+            PaperBackend::Kis,
+        );
+        assert!(matches!(
+            assemble_broker(&settings),
+            Err(AssemblyError::PaperRequiresMockDomain)
+        ));
     }
 
     #[test]

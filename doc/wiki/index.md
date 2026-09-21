@@ -51,4 +51,4 @@ LossFunction 프로젝트의 구조화된 지식 베이스입니다. `doc/raw/` 
 - Total patterns: 4
 - Total anti-patterns: 1
 - Total answers: 0
-- Last updated: 2026-09-20
+- Last updated: 2026-09-21

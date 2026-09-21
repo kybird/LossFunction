@@ -233,6 +233,18 @@ impl Settings {
                 return Err(ConfigError::LiveRequiresRealEnvironment);
             }
         }
+        // Paper must NEVER reach the real domain through a broker — a "paper"
+        // label with real credentials is how real money leaves by accident.
+        if self.trading_mode == TradingMode::Paper
+            && self.paper_backend == PaperBackend::Kis
+            && self.kis_environment != KisEnvironment::Mock
+        {
+            return Err(ConfigError::Invalid {
+                field: "KIS_ENVIRONMENT",
+                message: "paper trading must use the mock domain — refusing a                           real-domain broker under a paper label (set                           KIS_ENVIRONMENT=mock or obtain mock credentials)"
+                    .to_string(),
+            });
+        }
         Ok(())
     }
 }
@@ -364,6 +376,25 @@ mod tests {
             Settings::load().unwrap_err(),
             ConfigError::LiveNotConfirmed
         ));
+
+        // Paper with a KIS broker on the REAL domain is refused — a paper
+        // label must never carry real credentials to the real market.
+        env::set_var("TRADING_MODE", "paper");
+        env::set_var("PAPER_BACKEND", "kis");
+        env::set_var("KIS_ENVIRONMENT", "real");
+        assert!(matches!(
+            Settings::load().unwrap_err(),
+            ConfigError::Invalid {
+                field: "KIS_ENVIRONMENT",
+                ..
+            }
+        ));
+        // Paper on the mock domain stays legal.
+        env::set_var("KIS_ENVIRONMENT", "mock");
+        Settings::load().unwrap();
+        env::remove_var("PAPER_BACKEND");
+        env::remove_var("KIS_ENVIRONMENT");
+        env::set_var("TRADING_MODE", "live"); // restore for the live checks below
 
         // Live confirmed but mock environment is refused.
         env::set_var("LIVE_TRADING_CONFIRMED", "true");
