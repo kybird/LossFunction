@@ -6,6 +6,7 @@ mod chart_tests;
 pub mod rest;
 #[cfg(test)]
 mod rest_tests;
+pub mod screener;
 pub mod ws;
 #[cfg(test)]
 mod ws_tests;

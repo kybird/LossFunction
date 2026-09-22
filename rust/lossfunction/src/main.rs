@@ -245,6 +245,9 @@ async fn main() {
         backtest: std::sync::Arc::new(std::sync::Mutex::new(
             lossfunction::runtime::backfill::BackfillStatus::Idle,
         )),
+        screen: std::sync::Arc::new(std::sync::Mutex::new(
+            lossfunction::runtime::backfill::BackfillStatus::Idle,
+        )),
     });
 
     let app = lossfunction::runtime::server::router(Arc::clone(&state));

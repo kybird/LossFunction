@@ -259,6 +259,7 @@ pub struct StatusPageData {
     /// (key, name, description, params, generated) from the registry.
     pub strategies: Vec<(String, String, String, String, bool)>,
     pub backtest: BackfillStatus,
+    pub screen: BackfillStatus,
 }
 
 fn table(headers: &[&str], rows: Vec<Vec<String>>) -> String {
@@ -376,6 +377,10 @@ function runBacktest() {
   };
   if (symbols) body.symbols = symbols.split(',').map(function (s) { return s.trim(); });
   post('/control/backtest', body);
+}
+function runScreener() {
+  if (!confirm('KIS 거래금액순 상위로 워치리스트를 갱신합니다 (위험 종목은 조회에서 제외).')) return;
+  post('/control/screener', {});
 }
 function wlAdd() {
   var code = document.getElementById('wl-add').value.trim();
@@ -699,9 +704,16 @@ pub fn render_watchlist_page(data: &StatusPageData) -> String {
 <div class="controls" style="margin-top:12px">
   <input id="wl-add" placeholder="종목코드 6자리" size="12">
   <button onclick="wlAdd()">추가</button>
-  <span class="meta">스크리너(자동 갱신)는 이 목록을 그대로 사용한다 — 변경은 audit에 기록됨</span>
+  <button onclick="runScreener()">스크리닝 갱신 (거래금액순)</button>
+  <span class="meta">{screen_line}</span>
 </div>"#,
         table = table(&["종목", "최신가", "일봉", "추이", ""], rows),
+        screen_line = esc(&match &data.screen {
+            BackfillStatus::Idle => "스크리너: 대기".to_string(),
+            BackfillStatus::Running => "스크리너: 실행 중…".to_string(),
+            BackfillStatus::Done { at, summary } => format!("스크리너 완료 {at} — {summary}"),
+            BackfillStatus::Failed { at, reason } => format!("스크리너 실패 {at} — {reason}"),
+        }),
     );
     layout(
         "워치리스트",

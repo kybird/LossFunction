@@ -38,6 +38,8 @@ pub struct AppState {
     pub strategy_label: String,
     /// Live backtest-run state shown on the status page.
     pub backtest: Arc<std::sync::Mutex<BackfillStatus>>,
+    /// Screener run state shown on the watchlist page.
+    pub screen: Arc<std::sync::Mutex<BackfillStatus>>,
 }
 
 pub type SharedState = Arc<AppState>;
@@ -57,6 +59,7 @@ pub fn router(state: SharedState) -> Router {
         .route("/control/backtest", post(control_backtest))
         .route("/watchlist", get(watchlist_page))
         .route("/control/watchlist", post(control_watchlist))
+        .route("/control/screener", post(control_screener))
         .route(
             "/control/generate-strategy",
             post(control_generate_strategy),
@@ -140,6 +143,7 @@ async fn page_data(state: &SharedState) -> crate::runtime::web::StatusPageData {
             .collect(),
         backfill: state.backfill.lock().expect("backfill status lock").clone(),
         backtest: state.backtest.lock().expect("backtest status lock").clone(),
+        screen: state.screen.lock().expect("screen status lock").clone(),
     }
 }
 
@@ -326,6 +330,112 @@ async fn watchlist_page(State(state): State<SharedState>) -> Html<String> {
     let mut data = page_data(&state).await;
     data.strategies = Vec::new(); // not shown on this screen
     Html(crate::runtime::web::render_watchlist_page(&data))
+}
+
+/// Liquidity screener: KIS 거래금액순 상위로 워치리스트를 갱신한다.
+/// 위험 종목(투자위험/관리/정리매매/불성실/거래정지/SPAC)은 요청 자체가 제외.
+async fn control_screener(
+    State(state): State<SharedState>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let Some(credentials) = state.backfill_creds.clone() else {
+        return Err(StatusCode::PRECONDITION_FAILED);
+    };
+    {
+        let status = state.screen.lock().expect("screen status lock");
+        if matches!(&*status, BackfillStatus::Running) {
+            return Err(StatusCode::CONFLICT);
+        }
+    }
+    let repository = state.repository.clone();
+    let status = Arc::clone(&state.screen);
+    *status.lock().expect("screen status lock") = BackfillStatus::Running;
+    tokio::spawn(async move {
+        let at = Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
+        let result = run_screen(&credentials, &repository, 20).await;
+        let (next, payload) = match result {
+            Ok(summary) => (
+                BackfillStatus::Done {
+                    at,
+                    summary: summary.clone(),
+                },
+                serde_json::json!({"outcome": "done", "summary": summary}),
+            ),
+            Err(reason) => (
+                BackfillStatus::Failed {
+                    at,
+                    reason: reason.clone(),
+                },
+                serde_json::json!({"outcome": "failed", "reason": reason}),
+            ),
+        };
+        let _ = repository
+            .record_event("control.screener", "operator", &payload)
+            .await;
+        *status.lock().expect("screen status lock") = next;
+    });
+    Ok(Json(json!({ "ok": true, "status": "running" })))
+}
+
+/// One screening pass — read-only on the venue (ranking quotation only).
+async fn run_screen(
+    credentials: &crate::runtime::backfill::BackfillCredentials,
+    repository: &Repository,
+    top: usize,
+) -> Result<String, String> {
+    let base_url = credentials
+        .base_url_override
+        .clone()
+        .unwrap_or_else(|| crate::kis::auth::kis_base_url(&credentials.environment).to_string());
+    let http = reqwest::Client::new();
+    let auth = crate::kis::auth::KisAuth::new(
+        base_url.clone(),
+        credentials.app_key.clone(),
+        credentials.app_secret.clone(),
+        http.clone(),
+    );
+    let rest = crate::kis::rest::KisRestClient::new(
+        auth,
+        &credentials.account,
+        &credentials.environment,
+        base_url,
+        http,
+        "screener",
+    )
+    .map_err(|error| format!("클라이언트 구성 실패: {error}"))?;
+    let ranked = crate::kis::screener::volume_rank_top(&rest, top).await?;
+
+    let current = repository.watchlist().await.map_err(|e| e.to_string())?;
+    let mut dropped = 0usize;
+    for symbol in &current {
+        if !ranked.iter().any(|r| r.code == symbol.as_str())
+            && repository
+                .remove_from_watchlist(symbol)
+                .await
+                .unwrap_or(false)
+        {
+            dropped += 1;
+        }
+    }
+    let mut added = 0usize;
+    for entry in &ranked {
+        if let Ok(symbol) = Symbol::parse(entry.code.clone()) {
+            if repository
+                .add_to_watchlist(&symbol, "screener")
+                .await
+                .unwrap_or(false)
+            {
+                added += 1;
+            }
+        }
+    }
+    let total = repository
+        .watchlist()
+        .await
+        .map_err(|e| e.to_string())?
+        .len();
+    Ok(format!(
+        "거래금액순 상위 {top}종목 — 신규 {added}, 제외 {dropped}, 총 {total}종목 (위험종목은 조회 단계에서 제외)"
+    ))
 }
 
 #[derive(Debug, Deserialize)]
@@ -536,6 +646,7 @@ mod tests {
             watchlist: vec![Symbol::parse("005930").unwrap()],
             strategy_label: "EntryPriceStrategy v1".into(),
             backtest: Arc::new(std::sync::Mutex::new(BackfillStatus::Idle)),
+            screen: Arc::new(std::sync::Mutex::new(BackfillStatus::Idle)),
         }
     }
 
