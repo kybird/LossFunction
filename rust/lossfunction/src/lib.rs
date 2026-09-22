@@ -7,6 +7,7 @@
 
 pub mod analysis;
 pub mod backtest;
+pub mod backtest_optimize;
 pub mod broker;
 pub mod config;
 pub mod domain;

@@ -85,7 +85,23 @@ CREATE TABLE watchlist (
 );
 "#;
 
-const MIGRATIONS: &[(i64, &str)] = &[(1, MIGRATION_1), (2, MIGRATION_2), (3, MIGRATION_3)];
+/// Walk-forward results offered as suggested defaults (per strategy).
+const MIGRATION_4: &str = r#"
+CREATE TABLE strategy_suggestions (
+    strategy_key TEXT PRIMARY KEY,
+    params_label TEXT NOT NULL,
+    improvement  TEXT NOT NULL,
+    metrics_json TEXT NOT NULL,
+    updated_at   TEXT NOT NULL
+);
+"#;
+
+const MIGRATIONS: &[(i64, &str)] = &[
+    (1, MIGRATION_1),
+    (2, MIGRATION_2),
+    (3, MIGRATION_3),
+    (4, MIGRATION_4),
+];
 
 /// Apply pending migrations; returns versions applied this run.
 pub async fn apply(pool: &SqlitePool) -> Result<Vec<i64>, sqlx::Error> {

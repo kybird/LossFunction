@@ -260,6 +260,9 @@ pub struct StatusPageData {
     pub strategies: Vec<(String, String, String, String, bool)>,
     pub backtest: BackfillStatus,
     pub screen: BackfillStatus,
+    pub optimize: BackfillStatus,
+    /// (strategy_key, params_label, improvement) — walk-forward winners.
+    pub suggestions: Vec<(String, String, String)>,
 }
 
 fn table(headers: &[&str], rows: Vec<Vec<String>>) -> String {
@@ -390,6 +393,12 @@ function wlAdd() {
 function wlRemove(code) {
   if (!confirm(code + '을(를) 워치리스트에서 제거합니다.')) return;
   post('/control/watchlist', {action: 'remove', symbol: code});
+}
+function runOptimize() {
+  post('/control/optimize', {
+    strategy: document.getElementById('opt-strategy').value,
+    years: parseInt(document.getElementById('opt-years').value, 10) || 5
+  });
 }
 function generateStrategy() {{
   var desc = document.getElementById('nl-desc').value.trim();
@@ -557,6 +566,17 @@ pub fn render_lab_page(data: &StatusPageData) -> String {
         .strategies
         .iter()
         .map(|(key, name, description, params, generated)| {
+            let key_str = key;
+            let suggestion = data
+                .suggestions
+                .iter()
+                .find(|(key, _, _)| *key == *key_str)
+                .map(|(_, label, improvement)| {
+                    format!(
+                        r#" <span class="fresh-pill fresh" title="walk-forward 제안 기본값">제안 {label} ({improvement})</span>"#
+                    )
+                })
+                .unwrap_or_default();
             let marked = if *generated {
                 format!(
                     r#"{} <span class="fresh-pill stale">미검증·생성</span>"#,
@@ -565,7 +585,7 @@ pub fn render_lab_page(data: &StatusPageData) -> String {
             } else {
                 esc(name)
             };
-            vec![esc(key), marked, esc(description), esc(params)]
+            vec![esc(key), format!("{marked}{suggestion}"), esc(description), esc(params)]
         })
         .collect();
     let strategy_options = data
@@ -589,6 +609,13 @@ pub fn render_lab_page(data: &StatusPageData) -> String {
   <button onclick="runBacktest()">실행</button>
 </div>
 <div class="statusline">{bt_line}</div>
+<div class="controls" style="margin-top:10px">
+  <label>파라미터 탐색</label>
+  <select id="opt-strategy">{strategy_options}</select>
+  <label>기간</label><input id="opt-years" type="number" value="5" min="1" max="30" size="3">년
+  <button onclick="runOptimize()">walk-forward 탐색</button>
+  <span class="meta">{opt_line}</span>
+</div>
 <h2>전략 생성 (자연어 → 코드)</h2>
 <div class="controls">
   <input id="nl-desc" placeholder="예: RSI가 30 이하로 떨어지면 매수, 60에 도달하면 매도" size="52">
@@ -599,6 +626,12 @@ pub fn render_lab_page(data: &StatusPageData) -> String {
 {strategies}"#,
         strategy_options = strategy_options,
         bt_line = esc(&bt_line),
+        opt_line = esc(&match &data.optimize {
+            BackfillStatus::Idle => "탐색: 대기".to_string(),
+            BackfillStatus::Running => "탐색: 실행 중…".to_string(),
+            BackfillStatus::Done { at, summary } => format!("탐색 완료 {at} — {summary}"),
+            BackfillStatus::Failed { at, reason } => format!("탐색 실패 {at} — {reason}"),
+        }),
         strategies = table(&["키", "이름", "설명", "기본 파라미터"], strategy_rows),
     );
     layout(
@@ -1233,5 +1266,25 @@ mod tests {
         let page = render_lab_page(&payload);
         assert!(page.contains("미검증·생성"), "badge missing");
         assert!(page.contains("rsi-dip-buy"));
+    }
+
+    /// Walk-forward winners render as the 제안 badge in the strategy table.
+    #[test]
+    fn suggested_defaults_are_badged_in_lab() {
+        set_page_mode("paper");
+        let payload = StatusPageData {
+            strategies: vec![(
+                "sma-cross".into(),
+                "SMA 교차".into(),
+                "설명".into(),
+                "빠름 5 · 느림 20".into(),
+                false,
+            )],
+            suggestions: vec![("sma-cross".into(), "7/40".into(), "+2.10%p".into())],
+            ..data()
+        };
+        let page = render_lab_page(&payload);
+        assert!(page.contains("제안 7/40 (+2.10%p)"), "badge missing");
+        assert!(page.contains("runOptimize"), "search control missing");
     }
 }

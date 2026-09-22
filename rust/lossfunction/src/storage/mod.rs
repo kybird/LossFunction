@@ -228,6 +228,39 @@ impl Repository {
         Ok(())
     }
 
+    /// Upsert the suggested default for one strategy (walk-forward winner).
+    pub async fn upsert_strategy_suggestion(
+        &self,
+        strategy_key: &str,
+        params_label: &str,
+        improvement: &str,
+        metrics_json: &serde_json::Value,
+    ) -> Result<(), StorageError> {
+        sqlx::query(
+            "INSERT INTO strategy_suggestions (strategy_key, params_label, improvement, metrics_json, updated_at)              VALUES (?1, ?2, ?3, ?4, ?5)              ON CONFLICT (strategy_key) DO UPDATE SET                  params_label = excluded.params_label,                  improvement = excluded.improvement,                  metrics_json = excluded.metrics_json,                  updated_at = excluded.updated_at",
+        )
+        .bind(strategy_key)
+        .bind(params_label)
+        .bind(improvement)
+        .bind(metrics_json.to_string())
+        .bind(now_iso())
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    /// (strategy_key, params_label, improvement) for the strategy table.
+    pub async fn strategy_suggestions(
+        &self,
+    ) -> Result<Vec<(String, String, String)>, StorageError> {
+        let rows: Vec<(String, String, String)> = sqlx::query_as(
+            "SELECT strategy_key, params_label, improvement FROM strategy_suggestions",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows)
+    }
+
     /// Total stored candle rows — backfill sanity check.
     pub async fn candle_count(&self) -> Result<i64, StorageError> {
         let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM candles")
@@ -644,7 +677,7 @@ mod tests {
             .fetch_one(&repository.pool)
             .await
             .unwrap();
-        assert_eq!(version, 3); // latest registered migration
+        assert_eq!(version, 4); // latest registered migration
 
         let tables: Vec<(String,)> = sqlx::query_as(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",

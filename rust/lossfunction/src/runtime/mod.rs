@@ -23,6 +23,7 @@ use crate::risk::RiskManager;
 use crate::strategy::{DecisionLayer, MarketSnapshot, OrderIntent, Strategy};
 pub mod backfill;
 pub mod backtest_runner;
+pub mod optimize_runner;
 pub mod sim;
 pub mod strategy_codegen;
 

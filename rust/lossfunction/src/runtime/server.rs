@@ -40,6 +40,8 @@ pub struct AppState {
     pub backtest: Arc<std::sync::Mutex<BackfillStatus>>,
     /// Screener run state shown on the watchlist page.
     pub screen: Arc<std::sync::Mutex<BackfillStatus>>,
+    /// Optimize run state shown in the lab.
+    pub optimize: Arc<std::sync::Mutex<BackfillStatus>>,
 }
 
 pub type SharedState = Arc<AppState>;
@@ -60,6 +62,7 @@ pub fn router(state: SharedState) -> Router {
         .route("/watchlist", get(watchlist_page))
         .route("/control/watchlist", post(control_watchlist))
         .route("/control/screener", post(control_screener))
+        .route("/control/optimize", post(control_optimize))
         .route(
             "/control/generate-strategy",
             post(control_generate_strategy),
@@ -129,6 +132,11 @@ async fn page_data(state: &SharedState) -> crate::runtime::web::StatusPageData {
         },
         strategy_label: state.strategy_label.clone(),
         uptime_seconds: state.started.elapsed().as_secs(),
+        suggestions: state
+            .repository
+            .strategy_suggestions()
+            .await
+            .unwrap_or_default(),
         strategies: crate::strategy_registry::registry()
             .into_iter()
             .map(|spec| {
@@ -144,6 +152,7 @@ async fn page_data(state: &SharedState) -> crate::runtime::web::StatusPageData {
         backfill: state.backfill.lock().expect("backfill status lock").clone(),
         backtest: state.backtest.lock().expect("backtest status lock").clone(),
         screen: state.screen.lock().expect("screen status lock").clone(),
+        optimize: state.optimize.lock().expect("optimize status lock").clone(),
     }
 }
 
@@ -209,6 +218,13 @@ async fn data_page(State(state): State<SharedState>) -> Html<String> {
 async fn audit_page(State(state): State<SharedState>) -> Html<String> {
     let data = page_data(&state).await;
     Html(crate::runtime::web::render_audit_page(&data))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct OptimizeCommand {
+    pub strategy: String,
+    pub symbols: Option<Vec<String>>,
+    pub years: Option<i64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -285,7 +301,9 @@ async fn control_backtest(
             .repository
             .watchlist()
             .await
-            .unwrap_or_else(|_| state.watchlist.clone()),
+            .ok()
+            .filter(|list| !list.is_empty())
+            .unwrap_or_else(|| state.watchlist.clone()),
     };
     {
         let status = state.backtest.lock().expect("backtest status lock");
@@ -436,6 +454,56 @@ async fn run_screen(
     Ok(format!(
         "거래금액순 상위 {top}종목 — 신규 {added}, 제외 {dropped}, 총 {total}종목 (위험종목은 조회 단계에서 제외)"
     ))
+}
+
+/// Parameter walk-forward search: background run over stored candles
+/// (offline — no venue contact); the winner is persisted as the strategy's
+/// suggested default and shown in the strategy table.
+async fn control_optimize(
+    State(state): State<SharedState>,
+    Json(command): Json<OptimizeCommand>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let years = command.years.filter(|y| (1..=30).contains(y)).unwrap_or(5);
+    if crate::strategy_registry::find(&command.strategy).is_none() {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    let symbols: Vec<Symbol> = match command.symbols {
+        Some(list) if !list.is_empty() => list
+            .into_iter()
+            .map(Symbol::parse)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|_| StatusCode::BAD_REQUEST)?,
+        _ => state
+            .repository
+            .watchlist()
+            .await
+            .ok()
+            .filter(|list| !list.is_empty())
+            .unwrap_or_else(|| state.watchlist.clone()),
+    };
+    {
+        let status = state.optimize.lock().expect("optimize status lock");
+        if matches!(&*status, BackfillStatus::Running) {
+            return Err(StatusCode::CONFLICT);
+        }
+    }
+    state
+        .repository
+        .record_event(
+            "control.optimize",
+            "operator",
+            &json!({ "action": "start", "strategy": command.strategy, "years": years }),
+        )
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    crate::runtime::optimize_runner::spawn_optimize(
+        state.repository.clone(),
+        command.strategy,
+        symbols,
+        years,
+        Arc::clone(&state.optimize),
+    );
+    Ok(Json(json!({ "ok": true, "status": "running" })))
 }
 
 #[derive(Debug, Deserialize)]
@@ -647,6 +715,7 @@ mod tests {
             strategy_label: "EntryPriceStrategy v1".into(),
             backtest: Arc::new(std::sync::Mutex::new(BackfillStatus::Idle)),
             screen: Arc::new(std::sync::Mutex::new(BackfillStatus::Idle)),
+            optimize: Arc::new(std::sync::Mutex::new(BackfillStatus::Idle)),
         }
     }
 
@@ -1084,5 +1153,88 @@ mod tests {
         assert!(page.contains("/symbol/035720"));
         let events = repository.recent_audit(10).await.unwrap();
         assert!(events.iter().any(|e| e.event_type == "control.watchlist"));
+    }
+
+    /// Optimize control: offline run over seeded candles settles Done,
+    /// persists the suggestion, and 404s unknown strategies.
+    #[tokio::test]
+    async fn optimize_control_runs_and_persists_suggestion() {
+        let tmp = tempfile::tempdir().unwrap();
+        let shared: SharedState = Arc::new(state(tmp.path()).await);
+        let repository = shared.repository.clone();
+        repository.migrate().await.unwrap();
+        let symbol = Symbol::parse("005930").unwrap();
+        let mut seeded = Vec::new();
+        for i in 0..200i64 {
+            let day =
+                chrono::NaiveDate::from_ymd_opt(2025, 1, 1).unwrap() + chrono::Duration::days(i);
+            let ts = chrono::TimeZone::from_utc_datetime(
+                &chrono::Utc,
+                &day.and_hms_opt(6, 30, 0).unwrap(),
+            );
+            let base = if i % 40 < 20 { 80_000 } else { 90_000 };
+            let close = crate::storage::int_to_money((base + (i % 20) * 100) * 10_000);
+            seeded.push(crate::marketdata::bar(
+                &symbol, ts, close, close, close, close, 1_000,
+            ));
+        }
+        repository.upsert_candles(&seeded).await.unwrap();
+
+        let response = shared.repository.clone().watchlist().await.unwrap(); // ensure table exists
+        let _ = response;
+
+        let app = router(Arc::clone(&shared));
+        let response = app
+            .clone()
+            .oneshot(
+                Request::post("/control/optimize")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({"strategy": "ghost"}).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        let response = app
+            .clone()
+            .oneshot(
+                Request::post("/control/optimize")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({"strategy": "sma-cross", "years": 1}).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+        loop {
+            let settled = !matches!(
+                *shared.optimize.lock().unwrap(),
+                BackfillStatus::Running | BackfillStatus::Idle
+            );
+            if settled {
+                break;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "optimize never settled"
+            );
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        }
+        match &*shared.optimize.lock().unwrap() {
+            BackfillStatus::Done { summary, .. } => {
+                assert!(summary.contains("최적"), "got: {summary}");
+            }
+            other => panic!("expected Done, got {other:?}"),
+        }
+        let suggestions = repository.strategy_suggestions().await.unwrap();
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].0, "sma-cross");
     }
 }

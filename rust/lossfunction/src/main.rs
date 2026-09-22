@@ -248,6 +248,9 @@ async fn main() {
         screen: std::sync::Arc::new(std::sync::Mutex::new(
             lossfunction::runtime::backfill::BackfillStatus::Idle,
         )),
+        optimize: std::sync::Arc::new(std::sync::Mutex::new(
+            lossfunction::runtime::backfill::BackfillStatus::Idle,
+        )),
     });
 
     let app = lossfunction::runtime::server::router(Arc::clone(&state));

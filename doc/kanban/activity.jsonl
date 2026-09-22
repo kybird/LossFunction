@@ -240,3 +240,6 @@
 {"ts":"2026-09-22T05:09:58.038Z","action":"claimed","title":"유니버스 스크리너","actor":"zcode-main"}
 {"ts":"2026-09-22T05:16:05.381Z","action":"done","title":"유니버스 스크리너"}
 {"ts":"2026-09-22T05:16:05.395Z","action":"milestone-done","title":"전략 탐색·실험 체계","detail":"멤버 10장 전원 종결"}
+{"ts":"2026-09-22T06:00:40.713Z","action":"claimed","title":"파라미터 walk-forward 탐색","actor":"zcode-main"}
+{"ts":"2026-09-22T06:10:46.373Z","action":"done","title":"파라미터 walk-forward 탐색"}
+{"ts":"2026-09-22T06:10:46.384Z","action":"milestone-done","title":"전략 최적화","detail":"멤버 1장 전원 종결"}
