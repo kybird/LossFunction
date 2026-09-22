@@ -186,19 +186,23 @@ async fn main() {
         .unwrap_or(false);
     let sim_strategy = std::env::var("SIM_STRATEGY").unwrap_or_else(|_| "sma-cross".to_string());
 
+    // Candle source for lab controls (backtest/optimize): the backfilled
+    // real bars live in SIM_SOURCE during simulation sessions; otherwise
+    // the main database is the source.
+    let source_path =
+        std::env::var("SIM_SOURCE").unwrap_or_else(|_| settings.database_path.clone());
+    let source = Repository::open(&source_path)
+        .await
+        .expect("open simulation source database");
+    source.migrate().await.expect("migrate simulation source");
+
     let mut tasks = Vec::new();
     let strategy_label = if simulation {
-        let source_path =
-            std::env::var("SIM_SOURCE").unwrap_or_else(|_| settings.database_path.clone());
-        let source = Repository::open(&source_path)
-            .await
-            .expect("open simulation source database");
-        source.migrate().await.expect("migrate simulation source");
         let sim = SimLoop::new(
             Arc::clone(&broker),
             Arc::clone(&risk),
             demo_repository(&settings).await,
-            source,
+            source.clone(),
             settings.watchlist.clone(),
             &sim_strategy,
             std::time::Duration::from_millis(300),
@@ -234,7 +238,7 @@ async fn main() {
         broker: "MockBroker".to_string(),
         database_path: settings.database_path.clone(),
         risk: Arc::clone(&risk),
-        repository,
+        repository: repository.clone(),
         started: std::time::Instant::now(),
         backfill: std::sync::Arc::new(std::sync::Mutex::new(
             lossfunction::runtime::backfill::BackfillStatus::Idle,
@@ -251,6 +255,11 @@ async fn main() {
         optimize: std::sync::Arc::new(std::sync::Mutex::new(
             lossfunction::runtime::backfill::BackfillStatus::Idle,
         )),
+        candle_source: if simulation {
+            source
+        } else {
+            repository.clone()
+        },
     });
 
     let app = lossfunction::runtime::server::router(Arc::clone(&state));

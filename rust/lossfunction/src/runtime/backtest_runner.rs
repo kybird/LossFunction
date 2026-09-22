@@ -15,7 +15,7 @@ use crate::types::Symbol;
 /// engine over stored candles with a price-tracking mock broker — no network,
 /// no orders can leave.
 pub async fn run_backtest(
-    repository: &Repository,
+    candle_source: &Repository,
     strategy_key: &str,
     symbols: &[Symbol],
     years: i64,
@@ -23,7 +23,7 @@ pub async fn run_backtest(
 ) -> Result<String, String> {
     let strategy = strategy_registry::build(strategy_key, symbols, 10)
         .ok_or_else(|| format!("알 수 없는 전략 키: {strategy_key}"))?;
-    let bars = crate::backtest::load_bars_from_candles(repository, symbols, 60)
+    let bars = crate::backtest::load_bars_from_candles(candle_source, symbols, 60)
         .await
         .map_err(|error| format!("봉 데이터 부족: {error}"))?;
     let years_bars = bars.len();
@@ -54,6 +54,7 @@ pub async fn run_backtest(
 /// Drive the status machine + audit trail around one background run.
 pub fn spawn_backtest(
     repository: Repository,
+    candle_source: Repository,
     strategy_key: String,
     symbols: Vec<Symbol>,
     years: i64,
@@ -63,7 +64,15 @@ pub fn spawn_backtest(
     *status.lock().expect("backtest status lock") = BackfillStatus::Running;
     tokio::spawn(async move {
         let at = Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
-        let result = run_backtest(&repository, &strategy_key, &symbols, years, config).await;
+        let result = run_backtest(
+            &repository,
+            &candle_source,
+            &strategy_key,
+            &symbols,
+            years,
+            config,
+        )
+        .await;
         let (next, payload) = match result {
             Ok(summary) => (
                 BackfillStatus::Done {

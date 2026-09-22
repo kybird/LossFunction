@@ -42,6 +42,10 @@ pub struct AppState {
     pub screen: Arc<std::sync::Mutex<BackfillStatus>>,
     /// Optimize run state shown in the lab.
     pub optimize: Arc<std::sync::Mutex<BackfillStatus>>,
+    /// Where candles come from for lab controls (backtest/optimize). In a
+    /// simulation session the live DB is the sim target — real bars live in
+    /// the source DB, which this field points at (same DB outside sim).
+    pub candle_source: Repository,
 }
 
 pub type SharedState = Arc<AppState>;
@@ -335,6 +339,7 @@ async fn control_backtest(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     crate::runtime::backtest_runner::spawn_backtest(
         state.repository.clone(),
+        state.candle_source.clone(),
         command.strategy,
         symbols,
         years,
@@ -498,6 +503,7 @@ async fn control_optimize(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     crate::runtime::optimize_runner::spawn_optimize(
         state.repository.clone(),
+        state.candle_source.clone(),
         command.strategy,
         symbols,
         years,
@@ -707,7 +713,7 @@ mod tests {
                 daily_loss_limit: rust_decimal::Decimal::from(100_000),
                 stale_quote_max_age: chrono::TimeDelta::seconds(30),
             })),
-            repository,
+            repository: repository.clone(),
             started: Instant::now(),
             backfill: Arc::new(std::sync::Mutex::new(BackfillStatus::Idle)),
             backfill_creds: None,
@@ -716,6 +722,7 @@ mod tests {
             backtest: Arc::new(std::sync::Mutex::new(BackfillStatus::Idle)),
             screen: Arc::new(std::sync::Mutex::new(BackfillStatus::Idle)),
             optimize: Arc::new(std::sync::Mutex::new(BackfillStatus::Idle)),
+            candle_source: repository.clone(),
         }
     }
 

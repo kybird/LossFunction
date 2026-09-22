@@ -14,11 +14,12 @@ use crate::types::Symbol;
 /// persists the winning combo as the strategy's suggested default.
 pub async fn run_optimize(
     repository: &Repository,
+    candle_source: &Repository,
     strategy_key: &str,
     symbols: &[Symbol],
     years: i64,
 ) -> Result<String, String> {
-    let bars = crate::backtest::load_bars_from_candles(repository, symbols, 120)
+    let bars = crate::backtest::load_bars_from_candles(candle_source, symbols, 120)
         .await
         .map_err(|error| format!("봉 데이터 부족: {error}"))?;
     let years_bars = bars.len();
@@ -80,6 +81,7 @@ pub async fn run_optimize(
 /// Status machine + audit around one background run.
 pub fn spawn_optimize(
     repository: Repository,
+    candle_source: Repository,
     strategy_key: String,
     symbols: Vec<Symbol>,
     years: i64,
@@ -88,7 +90,8 @@ pub fn spawn_optimize(
     *status.lock().expect("optimize status lock") = BackfillStatus::Running;
     tokio::spawn(async move {
         let at = Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
-        let result = run_optimize(&repository, &strategy_key, &symbols, years).await;
+        let result =
+            run_optimize(&repository, &candle_source, &strategy_key, &symbols, years).await;
         let (next, payload) = match result {
             Ok(summary) => (
                 BackfillStatus::Done {
