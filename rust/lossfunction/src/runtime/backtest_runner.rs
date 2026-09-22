@@ -64,15 +64,7 @@ pub fn spawn_backtest(
     *status.lock().expect("backtest status lock") = BackfillStatus::Running;
     tokio::spawn(async move {
         let at = Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
-        let result = run_backtest(
-            &repository,
-            &candle_source,
-            &strategy_key,
-            &symbols,
-            years,
-            config,
-        )
-        .await;
+        let result = run_backtest(&candle_source, &strategy_key, &symbols, years, config).await;
         let (next, payload) = match result {
             Ok(summary) => (
                 BackfillStatus::Done {
