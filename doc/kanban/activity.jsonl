@@ -216,3 +216,15 @@
 {"ts":"2026-09-21T21:36:34.282Z","action":"created","title":"실데이터 리플레이 시뮬레이션"}
 {"ts":"2026-09-21T21:36:34.484Z","action":"claimed","title":"전략 추가 가이드","actor":"zcode-main"}
 {"ts":"2026-09-21T21:38:20.290Z","action":"done","title":"실데이터 리플레이 시뮬레이션"}
+{"ts":"2026-09-21T22:16:38.539Z","action":"created","title":"자연어 전략 생성 (GLM)"}
+{"ts":"2026-09-21T23:31:29.503Z","action":"created","title":"워치리스트 페이지"}
+{"ts":"2026-09-21T23:31:29.772Z","action":"created","title":"유니버스 스크리너"}
+{"ts":"2026-09-21T23:38:23.665Z","action":"claimed","title":"전략 추가 가이드","actor":"zcode-main"}
+{"ts":"2026-09-21T23:39:46.464Z","action":"done","title":"전략 추가 가이드"}
+{"ts":"2026-09-21T23:47:40.935Z","action":"done","title":"자연어 전략 생성 (GLM)"}
+{"ts":"2026-09-22T04:46:36.772Z","action":"created","title":"동적 전략 로딩 (WASM)"}
+{"ts":"2026-09-22T04:46:37.054Z","action":"created","title":"WASM 전략 런타임 임베딩"}
+{"ts":"2026-09-22T04:46:37.326Z","action":"created","title":"코드→WASM 전략 파이프라인"}
+{"ts":"2026-09-22T04:46:37.607Z","action":"handoff","title":"WASM 전략 런타임 임베딩","detail":"조건 게이트: 피닉스 서버에서 생성 전략의 즉시 활성화가 실제로 필요해짐 (현재는 개발 머신 재시작 활성화로 충분). 조건 성립의 객관적 근거와 함께 resume할 것"}
+{"ts":"2026-09-22T04:47:30.652Z","action":"created","title":"전략 최적화"}
+{"ts":"2026-09-22T04:47:30.927Z","action":"created","title":"파라미터 walk-forward 탐색"}
