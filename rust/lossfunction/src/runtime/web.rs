@@ -315,7 +315,7 @@ fn layout(title: &str, active: &str, kill_badge: &str, content: &str, meta: &str
 <body>
 <header class="topbar">
   <span class="brand">LossFunction<span class="mode{mode_class}">{mode}</span></span>
-  <nav class="nav">{nav_home}{nav_positions}{nav_lab}{nav_data}{nav_audit}</nav>
+  <nav class="nav">{nav_home}{nav_positions}{nav_lab}{nav_data}{nav_watchlist}{nav_audit}</nav>
   {kill_badge}
 </header>
 <main>
@@ -332,6 +332,7 @@ fn layout(title: &str, active: &str, kill_badge: &str, content: &str, meta: &str
         nav_positions = tab("positions", "/positions", "포지션·내역"),
         nav_lab = tab("lab", "/lab", "실험실"),
         nav_data = tab("data", "/data", "데이터"),
+        nav_watchlist = tab("watchlist", "/watchlist", "워치리스트"),
         nav_audit = tab("audit", "/audit", "로그"),
         kill_badge = kill_badge,
         meta = meta,
@@ -375,6 +376,15 @@ function runBacktest() {
   };
   if (symbols) body.symbols = symbols.split(',').map(function (s) { return s.trim(); });
   post('/control/backtest', body);
+}
+function wlAdd() {
+  var code = document.getElementById('wl-add').value.trim();
+  if (!code) return;
+  post('/control/watchlist', {action: 'add', symbol: code});
+}
+function wlRemove(code) {
+  if (!confirm(code + '을(를) 워치리스트에서 제거합니다.')) return;
+  post('/control/watchlist', {action: 'remove', symbol: code});
 }
 function generateStrategy() {{
   var desc = document.getElementById('nl-desc').value.trim();
@@ -622,6 +632,84 @@ pub fn render_data_page(data: &StatusPageData) -> String {
         &format!(
             r#"<p class="meta">{db} · {now}</p>"#,
             db = esc(&data.database_path),
+            now = esc(&data.now_utc)
+        ),
+    )
+}
+
+/// 워치리스트 화면: 종목 선정의 중심 상태 — 이름·최신가·신선도·스파크라인,
+/// 추가/제거 컨트롤. 스파크라인/최신가는 page_data가 watchlist 기준으로 채움.
+pub fn render_watchlist_page(data: &StatusPageData) -> String {
+    set_page_mode(&data.trading_mode);
+    let prices: std::collections::HashMap<&str, &rust_decimal::Decimal> = data
+        .latest_prices
+        .iter()
+        .map(|(symbol, price)| (symbol.as_str(), price))
+        .collect();
+    let fresh: std::collections::HashMap<&str, &str> = data
+        .candle_dates
+        .iter()
+        .map(|(symbol, ts)| {
+            let class = freshness_class(ts, &data.now_utc);
+            let label = match class {
+                "fresh" => "최신",
+                "stale" => "갱신 필요",
+                _ => "오래됨",
+            };
+            (symbol.as_str(), label)
+        })
+        .collect();
+
+    let rows = data
+        .sparklines
+        .iter()
+        .map(|(symbol, series)| {
+            let code = symbol.as_str();
+            let last = prices.get(code).copied();
+            let rising = last
+                .zip(series.last())
+                .map(|(price, last_tick)| *price >= crate::storage::int_to_money(*last_tick))
+                .unwrap_or(true);
+            let freshness = fresh
+                .get(code)
+                .map(|label| {
+                    let class = if *label == "최신" {
+                        "fresh"
+                    } else if *label == "갱신 필요" {
+                        "stale"
+                    } else {
+                        "old"
+                    };
+                    format!(r#"<span class="fresh-pill {class}">{label}</span>"#)
+                })
+                .unwrap_or_else(|| r#"<span class="fresh-pill old">봉 없음</span>"#.to_string());
+            vec![
+                symbol_label(code),
+                last.map(|p| money(&Some(*p)))
+                    .unwrap_or_else(|| "—".to_string()),
+                freshness,
+                sparkline(series, rising),
+                format!(r#"<button onclick="wlRemove('{code}')">제거</button>"#),
+            ]
+        })
+        .collect();
+    let content = format!(
+        r#"<h2>워치리스트</h2>
+{table}
+<div class="controls" style="margin-top:12px">
+  <input id="wl-add" placeholder="종목코드 6자리" size="12">
+  <button onclick="wlAdd()">추가</button>
+  <span class="meta">스크리너(자동 갱신)는 이 목록을 그대로 사용한다 — 변경은 audit에 기록됨</span>
+</div>"#,
+        table = table(&["종목", "최신가", "일봉", "추이", ""], rows),
+    );
+    layout(
+        "워치리스트",
+        "watchlist",
+        &kill_badge(data),
+        &content,
+        &format!(
+            r#"<p class="meta">{now} · 새로고침 5초</p>"#,
             now = esc(&data.now_utc)
         ),
     )

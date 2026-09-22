@@ -175,6 +175,59 @@ impl Repository {
         Ok(rows)
     }
 
+    // ── watchlist (persistent, editable) ───────────────────────────
+
+    /// Current watchlist, position-ordered.
+    pub async fn watchlist(&self) -> Result<Vec<Symbol>, StorageError> {
+        let rows: Vec<String> =
+            sqlx::query_scalar("SELECT symbol FROM watchlist ORDER BY position, symbol")
+                .fetch_all(&self.pool)
+                .await?;
+        rows.into_iter()
+            .map(|raw| Symbol::parse(&raw).map_err(|_| StorageError::BadSymbol(raw.clone())))
+            .collect()
+    }
+
+    /// Insert if absent; false when it was already there (dup is a no-op).
+    pub async fn add_to_watchlist(
+        &self,
+        symbol: &Symbol,
+        source: &str,
+    ) -> Result<bool, StorageError> {
+        let inserted = sqlx::query(
+            "INSERT INTO watchlist (symbol, position, added_at, source)              VALUES (?1, (SELECT COALESCE(MAX(position), 0) + 1 FROM watchlist), ?2, ?3)              ON CONFLICT (symbol) DO NOTHING RETURNING symbol",
+        )
+        .bind(symbol.as_str())
+        .bind(now_iso())
+        .bind(source)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(inserted.is_some())
+    }
+
+    /// Delete if present; false when it was not.
+    pub async fn remove_from_watchlist(&self, symbol: &Symbol) -> Result<bool, StorageError> {
+        let result = sqlx::query("DELETE FROM watchlist WHERE symbol = ?1")
+            .bind(symbol.as_str())
+            .execute(&self.pool)
+            .await?;
+        Ok(result.rows_affected() > 0)
+    }
+
+    /// First-boot seeding: only when the table is empty.
+    pub async fn seed_watchlist(&self, symbols: &[Symbol]) -> Result<(), StorageError> {
+        let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM watchlist")
+            .fetch_one(&self.pool)
+            .await?;
+        if count > 0 {
+            return Ok(());
+        }
+        for symbol in symbols {
+            self.add_to_watchlist(symbol, "settings-seed").await?;
+        }
+        Ok(())
+    }
+
     /// Total stored candle rows — backfill sanity check.
     pub async fn candle_count(&self) -> Result<i64, StorageError> {
         let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM candles")
@@ -591,7 +644,7 @@ mod tests {
             .fetch_one(&repository.pool)
             .await
             .unwrap();
-        assert_eq!(version, 2); // latest registered migration
+        assert_eq!(version, 3); // latest registered migration
 
         let tables: Vec<(String,)> = sqlx::query_as(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
@@ -734,5 +787,37 @@ mod tests {
             )
             .await;
         assert!(matches!(result, Err(StorageError::Internal(_))));
+    }
+
+    /// Watchlist persistence: seed-once, add (dup no-op), remove, order.
+    #[tokio::test]
+    async fn watchlist_add_remove_seed_semantics() {
+        let (_dir, repository) = repo().await;
+        repository.migrate().await.unwrap();
+
+        let samsung = Symbol::parse("005930").unwrap();
+        let naver = Symbol::parse("035420").unwrap();
+        repository
+            .seed_watchlist(&[samsung.clone(), naver.clone()])
+            .await
+            .unwrap();
+        // Seeding again must not duplicate.
+        repository
+            .seed_watchlist(std::slice::from_ref(&samsung))
+            .await
+            .unwrap();
+        assert_eq!(repository.watchlist().await.unwrap().len(), 2);
+
+        // Duplicate add is a no-op (false).
+        assert!(!repository.add_to_watchlist(&samsung, "web").await.unwrap());
+        let kakao = Symbol::parse("035720").unwrap();
+        assert!(repository.add_to_watchlist(&kakao, "web").await.unwrap());
+        assert_eq!(repository.watchlist().await.unwrap().len(), 3);
+
+        assert!(repository.remove_from_watchlist(&naver).await.unwrap());
+        assert!(!repository.remove_from_watchlist(&naver).await.unwrap());
+        let remaining = repository.watchlist().await.unwrap();
+        assert_eq!(remaining.len(), 2);
+        assert!(remaining.contains(&kakao));
     }
 }

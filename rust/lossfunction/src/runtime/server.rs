@@ -55,6 +55,8 @@ pub fn router(state: SharedState) -> Router {
         .route("/strategies", get(strategies))
         .route("/symbol/{code}", get(symbol_page))
         .route("/control/backtest", post(control_backtest))
+        .route("/watchlist", get(watchlist_page))
+        .route("/control/watchlist", post(control_watchlist))
         .route(
             "/control/generate-strategy",
             post(control_generate_strategy),
@@ -100,8 +102,13 @@ async fn page_data(state: &SharedState) -> crate::runtime::web::StatusPageData {
             .await
             .unwrap_or_default(),
         sparklines: {
-            let mut series = Vec::with_capacity(state.watchlist.len());
-            for symbol in &state.watchlist {
+            let watch = state
+                .repository
+                .watchlist()
+                .await
+                .unwrap_or_else(|_| state.watchlist.clone());
+            let mut series = Vec::with_capacity(watch.len());
+            for symbol in &watch {
                 let prices = state
                     .repository
                     .quote_history(symbol, 60)
@@ -270,7 +277,11 @@ async fn control_backtest(
             .map(Symbol::parse)
             .collect::<Result<Vec<_>, _>>()
             .map_err(|_| StatusCode::BAD_REQUEST)?,
-        _ => state.watchlist.clone(),
+        _ => state
+            .repository
+            .watchlist()
+            .await
+            .unwrap_or_else(|_| state.watchlist.clone()),
     };
     {
         let status = state.backtest.lock().expect("backtest status lock");
@@ -309,6 +320,46 @@ async fn control_backtest(
         Arc::clone(&state.backtest),
     );
     Ok(Json(json!({ "ok": true, "status": "running" })))
+}
+
+async fn watchlist_page(State(state): State<SharedState>) -> Html<String> {
+    let mut data = page_data(&state).await;
+    data.strategies = Vec::new(); // not shown on this screen
+    Html(crate::runtime::web::render_watchlist_page(&data))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WatchlistCommand {
+    /// "add" | "remove"
+    pub action: String,
+    pub symbol: String,
+}
+
+/// Edit the persistent watchlist. Same interface for humans and the
+/// screener: every change is audited with its source.
+async fn control_watchlist(
+    State(state): State<SharedState>,
+    Json(command): Json<WatchlistCommand>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let symbol = Symbol::parse(command.symbol.trim()).map_err(|_| StatusCode::BAD_REQUEST)?;
+    let source = "web";
+    let changed = match command.action.as_str() {
+        "add" => state.repository.add_to_watchlist(&symbol, source).await,
+        "remove" => state.repository.remove_from_watchlist(&symbol).await,
+        _ => return Err(StatusCode::BAD_REQUEST),
+    }
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    state
+        .repository
+        .record_event(
+            "control.watchlist",
+            "operator",
+            &json!({ "action": command.action, "symbol": symbol.as_str(),
+                     "changed": changed, "source": source }),
+        )
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(Json(json!({ "ok": true, "changed": changed })))
 }
 
 #[derive(Debug, Deserialize)]
@@ -872,5 +923,55 @@ mod tests {
         )
         .await;
         assert_eq!(response.status(), StatusCode::PRECONDITION_FAILED);
+    }
+
+    /// Watchlist control: add/remove persist and appear; bad codes 400.
+    #[tokio::test]
+    async fn watchlist_control_roundtrip() {
+        let tmp = tempfile::tempdir().unwrap();
+        let shared: SharedState = Arc::new(state(tmp.path()).await);
+        let repository = shared.repository.clone();
+        repository.migrate().await.unwrap();
+        repository
+            .seed_watchlist(&[Symbol::parse("005930").unwrap()])
+            .await
+            .unwrap();
+        let app = router(shared);
+        let post = |body: String| {
+            let app = app.clone();
+            async move {
+                app.oneshot(
+                    Request::post("/control/watchlist")
+                        .header("content-type", "application/json")
+                        .body(Body::from(body))
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+            }
+        };
+
+        let response =
+            post(serde_json::json!({"action": "add", "symbol": "035720"}).to_string()).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let response =
+            post(serde_json::json!({"action": "add", "symbol": "nope"}).to_string()).await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let response =
+            post(serde_json::json!({"action": "remove", "symbol": "005930"}).to_string()).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(repository.watchlist().await.unwrap().len(), 1);
+
+        // The page renders the remaining symbol with remove buttons.
+        let response = app
+            .oneshot(Request::get("/watchlist").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let page = body_text(response.into_body()).await;
+        assert!(page.contains("워치리스트"));
+        assert!(page.contains("wlRemove"));
+        assert!(page.contains("/symbol/035720"));
+        let events = repository.recent_audit(10).await.unwrap();
+        assert!(events.iter().any(|e| e.event_type == "control.watchlist"));
     }
 }

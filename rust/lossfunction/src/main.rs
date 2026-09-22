@@ -52,6 +52,11 @@ async fn backfill_daily_bars(settings: &Settings, years: i64) {
         .await
         .expect("open sqlite database");
     repository.migrate().await.expect("run migrations");
+    repository
+        .seed_watchlist(&settings.watchlist)
+        .await
+        .expect("seed watchlist");
+    repository.migrate().await.expect("run migrations");
 
     let to = chrono::Utc::now();
     let from = to - chrono::Duration::days(365 * years);

@@ -75,7 +75,17 @@ ALTER TABLE fills ADD COLUMN symbol TEXT NOT NULL DEFAULT '';
 ALTER TABLE fills ADD COLUMN side TEXT NOT NULL DEFAULT '';
 "#;
 
-const MIGRATIONS: &[(i64, &str)] = &[(1, MIGRATION_1), (2, MIGRATION_2)];
+/// The watchlist becomes a first-class, editable, persistent state.
+const MIGRATION_3: &str = r#"
+CREATE TABLE watchlist (
+    symbol    TEXT PRIMARY KEY,
+    position  INTEGER NOT NULL DEFAULT 0,
+    added_at  TEXT NOT NULL,
+    source    TEXT NOT NULL DEFAULT 'manual'
+);
+"#;
+
+const MIGRATIONS: &[(i64, &str)] = &[(1, MIGRATION_1), (2, MIGRATION_2), (3, MIGRATION_3)];
 
 /// Apply pending migrations; returns versions applied this run.
 pub async fn apply(pool: &SqlitePool) -> Result<Vec<i64>, sqlx::Error> {
