@@ -1,10 +1,11 @@
 ---
 title: 코드→WASM 전략 파이프라인
-status: todo
+status: abandoned
 ordinal: 12000
 created: 2026-09-21
 depends_on: ["WASM 전략 런타임 임베딩"]
 milestone: 동적 전략 로딩 (WASM)
+discard_reason: 마일스톤 스킵(사용자 판단)
 ---
 
 ## Goal

@@ -1,9 +1,10 @@
 ---
 title: WASM 전략 런타임 임베딩
-status: review
+status: abandoned
 ordinal: 11000
 created: 2026-09-21
 milestone: 동적 전략 로딩 (WASM)
+discard_reason: 사용자 판단: 당분간 불필요 — 개발 머신 재시작 활성화로 충분, WASM 동적 로딩은 요구가 생기면 재등록
 ---
 
 ## Goal
