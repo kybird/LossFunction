@@ -3,7 +3,7 @@
   "kind": "board-timeline",
   "repo": "LossFunction",
   "wip": 2,
-  "generatedAt": "2026-09-20T22:14:41.165Z",
+  "generatedAt": "2026-09-22T06:11:05.709Z",
   "events": [
     {
       "ts": "2026-09-14T23:55:45.705Z",
@@ -1034,6 +1034,284 @@
       "action": "milestone-done",
       "title": "모듈 경계 완성 — 시장 데이터 수집 격리",
       "detail": "멤버 6장 전원 종결"
+    },
+    {
+      "ts": "2026-09-21T19:25:41.458Z",
+      "action": "created",
+      "title": "상태 페이지 데이터 갱신 제어"
+    },
+    {
+      "ts": "2026-09-21T19:25:41.692Z",
+      "action": "claimed",
+      "title": "상태 페이지 데이터 갱신 제어",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-21T19:30:53.067Z",
+      "action": "done",
+      "title": "상태 페이지 데이터 갱신 제어"
+    },
+    {
+      "ts": "2026-09-21T19:47:54.235Z",
+      "action": "created",
+      "title": "상태 페이지 관측성 개편"
+    },
+    {
+      "ts": "2026-09-21T19:47:54.470Z",
+      "action": "claimed",
+      "title": "상태 페이지 관측성 개편",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-21T19:58:26.440Z",
+      "action": "done",
+      "title": "상태 페이지 관측성 개편"
+    },
+    {
+      "ts": "2026-09-21T20:26:23.412Z",
+      "action": "created",
+      "title": "전략 탐색·실험 체계"
+    },
+    {
+      "ts": "2026-09-21T20:26:23.645Z",
+      "action": "created",
+      "title": "전략 레지스트리"
+    },
+    {
+      "ts": "2026-09-21T20:26:23.877Z",
+      "action": "created",
+      "title": "백테스트 실행"
+    },
+    {
+      "ts": "2026-09-21T20:26:24.117Z",
+      "action": "created",
+      "title": "백테스트 설정 UI"
+    },
+    {
+      "ts": "2026-09-21T20:26:24.380Z",
+      "action": "created",
+      "title": "개별 종목 조회 페이지"
+    },
+    {
+      "ts": "2026-09-21T20:26:24.619Z",
+      "action": "created",
+      "title": "전략 추가 가이드"
+    },
+    {
+      "ts": "2026-09-21T20:26:35.090Z",
+      "action": "claimed",
+      "title": "전략 레지스트리",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-21T20:27:56.492Z",
+      "action": "done",
+      "title": "전략 레지스트리"
+    },
+    {
+      "ts": "2026-09-21T20:28:19.657Z",
+      "action": "claimed",
+      "title": "백테스트 실행",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-21T20:33:35.210Z",
+      "action": "done",
+      "title": "백테스트 실행"
+    },
+    {
+      "ts": "2026-09-21T20:38:05.257Z",
+      "action": "created",
+      "title": "프론트엔드 디자인 패스"
+    },
+    {
+      "ts": "2026-09-21T20:38:05.477Z",
+      "action": "claimed",
+      "title": "백테스트 설정 UI",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-21T20:38:52.277Z",
+      "action": "done",
+      "title": "백테스트 설정 UI"
+    },
+    {
+      "ts": "2026-09-21T20:39:07.967Z",
+      "action": "claimed",
+      "title": "개별 종목 조회 페이지",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-21T20:40:42.795Z",
+      "action": "done",
+      "title": "개별 종목 조회 페이지"
+    },
+    {
+      "ts": "2026-09-21T21:00:15.589Z",
+      "action": "done",
+      "title": "프론트엔드 디자인 패스"
+    },
+    {
+      "ts": "2026-09-21T21:36:34.282Z",
+      "action": "created",
+      "title": "실데이터 리플레이 시뮬레이션"
+    },
+    {
+      "ts": "2026-09-21T21:36:34.484Z",
+      "action": "claimed",
+      "title": "전략 추가 가이드",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-21T21:38:20.290Z",
+      "action": "done",
+      "title": "실데이터 리플레이 시뮬레이션"
+    },
+    {
+      "ts": "2026-09-21T22:16:38.539Z",
+      "action": "created",
+      "title": "자연어 전략 생성 (GLM)"
+    },
+    {
+      "ts": "2026-09-21T23:31:29.503Z",
+      "action": "created",
+      "title": "워치리스트 페이지"
+    },
+    {
+      "ts": "2026-09-21T23:31:29.772Z",
+      "action": "created",
+      "title": "유니버스 스크리너"
+    },
+    {
+      "ts": "2026-09-21T23:38:23.665Z",
+      "action": "claimed",
+      "title": "전략 추가 가이드",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-21T23:39:46.464Z",
+      "action": "done",
+      "title": "전략 추가 가이드"
+    },
+    {
+      "ts": "2026-09-21T23:47:40.935Z",
+      "action": "done",
+      "title": "자연어 전략 생성 (GLM)"
+    },
+    {
+      "ts": "2026-09-22T04:46:36.772Z",
+      "action": "created",
+      "title": "동적 전략 로딩 (WASM)"
+    },
+    {
+      "ts": "2026-09-22T04:46:37.054Z",
+      "action": "created",
+      "title": "WASM 전략 런타임 임베딩"
+    },
+    {
+      "ts": "2026-09-22T04:46:37.326Z",
+      "action": "created",
+      "title": "코드→WASM 전략 파이프라인"
+    },
+    {
+      "ts": "2026-09-22T04:46:37.607Z",
+      "action": "handoff",
+      "title": "WASM 전략 런타임 임베딩",
+      "detail": "조건 게이트: 피닉스 서버에서 생성 전략의 즉시 활성화가 실제로 필요해짐 (현재는 개발 머신 재시작 활성화로 충분). 조건 성립의 객관적 근거와 함께 resume할 것"
+    },
+    {
+      "ts": "2026-09-22T04:47:30.652Z",
+      "action": "created",
+      "title": "전략 최적화"
+    },
+    {
+      "ts": "2026-09-22T04:47:30.927Z",
+      "action": "created",
+      "title": "파라미터 walk-forward 탐색"
+    },
+    {
+      "ts": "2026-09-22T04:53:14.610Z",
+      "action": "abandoned",
+      "title": "코드→WASM 전략 파이프라인",
+      "detail": "마일스톤 스킵(사용자 판단)"
+    },
+    {
+      "ts": "2026-09-22T04:53:14.891Z",
+      "action": "abandoned",
+      "title": "WASM 전략 런타임 임베딩",
+      "detail": "사용자 판단: 당분간 불필요 — 개발 머신 재시작 활성화로 충분, WASM 동적 로딩은 요구가 생기면 재등록"
+    },
+    {
+      "ts": "2026-09-22T04:53:14.908Z",
+      "action": "milestone-done",
+      "title": "동적 전략 로딩 (WASM)",
+      "detail": "멤버 2장 전원 종결"
+    },
+    {
+      "ts": "2026-09-22T04:56:15.403Z",
+      "action": "created",
+      "title": "동적 전략 로딩 (WASM 장기)"
+    },
+    {
+      "ts": "2026-09-22T04:56:15.713Z",
+      "action": "created",
+      "title": "WASM 전략 런타임"
+    },
+    {
+      "ts": "2026-09-22T04:56:16.019Z",
+      "action": "created",
+      "title": "전략 WASM 빌드 파이프라인"
+    },
+    {
+      "ts": "2026-09-22T04:56:16.962Z",
+      "action": "handoff",
+      "title": "WASM 전략 런타임",
+      "detail": "조건 게이트(장기 대기): 피닉스 서버에서 생성 전략 즉시 활성화가 실제로 필요해짐 — 객관적 근거와 함께 resume"
+    },
+    {
+      "ts": "2026-09-22T05:04:58.287Z",
+      "action": "claimed",
+      "title": "워치리스트 페이지",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-22T05:09:42.039Z",
+      "action": "done",
+      "title": "워치리스트 페이지"
+    },
+    {
+      "ts": "2026-09-22T05:09:58.038Z",
+      "action": "claimed",
+      "title": "유니버스 스크리너",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-22T05:16:05.381Z",
+      "action": "done",
+      "title": "유니버스 스크리너"
+    },
+    {
+      "ts": "2026-09-22T05:16:05.395Z",
+      "action": "milestone-done",
+      "title": "전략 탐색·실험 체계",
+      "detail": "멤버 10장 전원 종결"
+    },
+    {
+      "ts": "2026-09-22T06:00:40.713Z",
+      "action": "claimed",
+      "title": "파라미터 walk-forward 탐색",
+      "actor": "zcode-main"
+    },
+    {
+      "ts": "2026-09-22T06:10:46.373Z",
+      "action": "done",
+      "title": "파라미터 walk-forward 탐색"
+    },
+    {
+      "ts": "2026-09-22T06:10:46.384Z",
+      "action": "milestone-done",
+      "title": "전략 최적화",
+      "detail": "멤버 1장 전원 종결"
     }
   ]
 }
