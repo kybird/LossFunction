@@ -12,6 +12,7 @@ use lossfunction::broker::mock::MockBroker;
 use lossfunction::config::{PaperBackend, Settings};
 use lossfunction::risk::{RiskLimits, RiskManager};
 use lossfunction::runtime::demo::DemoLoop;
+use lossfunction::runtime::realtime::RealtimeLoop;
 use lossfunction::runtime::server::{AppState, SharedState};
 use lossfunction::runtime::sim::SimLoop;
 use lossfunction::storage::Repository;
@@ -67,7 +68,40 @@ async fn backfill_daily_bars(settings: &Settings, years: i64) {
         settings.database_path,
         environment
     );
-    let outcomes = backfill_daily(&source, &repository, &settings.watchlist, from, to).await;
+    let mut outcomes = backfill_daily(&source, &repository, &settings.watchlist, from, to).await;
+
+    // KIS serves short-term 500s under load (raw 2026-09-20 Case 9 — cleared
+    // after a 90s pause). Retry server-side failures once; the token is
+    // cached in-process, so no tokenP re-issue (once-a-day principle).
+    let server_failed: Vec<lossfunction::types::Symbol> = outcomes
+        .iter()
+        .filter(|(_, outcome)| {
+            matches!(
+                outcome,
+                Err(lossfunction::marketdata::MarketDataError::Source(message))
+                    if message.contains("server error")
+            )
+        })
+        .map(|(symbol, _)| symbol.clone())
+        .collect();
+    if !server_failed.is_empty() {
+        println!(
+            "  {} symbol(s) hit KIS server 500s — retrying once after 90s (token reused)",
+            server_failed.len()
+        );
+        tokio::time::sleep(std::time::Duration::from_secs(90)).await;
+        for (symbol, outcome) in
+            backfill_daily(&source, &repository, &server_failed, from, to).await
+        {
+            if let Some(slot) = outcomes
+                .iter_mut()
+                .find(|(existing, _)| existing == &symbol)
+            {
+                slot.1 = outcome;
+            }
+        }
+    }
+
     let mut failures = 0usize;
     for (symbol, outcome) in &outcomes {
         match outcome {
@@ -217,7 +251,94 @@ async fn main() {
         );
         tasks.push(tokio::spawn(sim_run(sim)));
         label
-    } else if demo_enabled() {
+    } else if settings.quotes_source == lossfunction::config::QuotesSource::Kis {
+        // Realtime fake-fill simulation: KIS realtime quotes (read-only
+        // market data) drive the mock broker — no order can leave.
+        let environment = match settings.kis_environment {
+            lossfunction::config::KisEnvironment::Real => "real",
+            lossfunction::config::KisEnvironment::Mock => "mock",
+        };
+        let http = reqwest::Client::new();
+        let rest_base = lossfunction::kis::auth::kis_base_url(environment).to_string();
+        let ws_url = lossfunction::kis::auth::kis_ws_url(environment).to_string();
+        let provider = {
+            let http = http.clone();
+            let rest_base = rest_base.clone();
+            let app_key = settings.kis_app_key.expose().to_string();
+            let app_secret = settings.kis_app_secret.expose().to_string();
+            Arc::new(move || {
+                let http = http.clone();
+                let rest_base = rest_base.clone();
+                let app_key = app_key.clone();
+                let app_secret = app_secret.clone();
+                Box::pin(async move {
+                    lossfunction::kis::ws::fetch_approval_key(
+                        &http,
+                        &rest_base,
+                        &app_key,
+                        &app_secret,
+                    )
+                    .await
+                })
+                    as lossfunction::kis::ws::BoxFuture<'static, Result<String, String>>
+            }) as lossfunction::kis::ws::ApprovalKeyProvider
+        };
+        let (quote_tx, quote_rx) = tokio::sync::mpsc::unbounded_channel();
+        let on_quote = {
+            let quote_tx = quote_tx.clone();
+            // First tick per symbol — the "data is actually flowing" signal.
+            let seen: std::sync::Mutex<std::collections::HashSet<String>> =
+                std::sync::Mutex::new(std::collections::HashSet::new());
+            Arc::new(move |quote: &lossfunction::types::Quote| {
+                if seen
+                    .lock()
+                    .unwrap()
+                    .insert(quote.symbol.as_str().to_string())
+                {
+                    println!(
+                        "first live tick: {} @ {}",
+                        quote.symbol.as_str(),
+                        quote.last_price.round_dp(0)
+                    );
+                }
+                // Receiver gone = loop task ended; drop the tick.
+                let _ = quote_tx.send(quote.clone());
+            }) as lossfunction::kis::ws::QuoteCallback
+        };
+        let client = lossfunction::kis::ws::KisMarketDataClient::new(
+            provider,
+            ws_url,
+            Arc::new(lossfunction::kis::ws::TungsteniteFactory),
+            on_quote,
+        );
+        for symbol in &settings.watchlist {
+            client.subscribe(symbol).await;
+        }
+        let strategy_key =
+            std::env::var("REALTIME_STRATEGY").unwrap_or_else(|_| "sma-cross".to_string());
+        let realtime = RealtimeLoop::new(
+            Arc::clone(&broker),
+            Arc::clone(&risk),
+            demo_repository(&settings).await,
+            repository.clone(),
+            settings.watchlist.clone(),
+            &strategy_key,
+            settings.history_window_bars,
+            std::time::Duration::from_millis(500),
+        )
+        .await;
+        let label = realtime.strategy_label();
+        tasks.push(tokio::spawn(async move {
+            client.run().await;
+        }));
+        tasks.push(tokio::spawn(realtime_run(realtime, quote_rx)));
+        println!(
+            "realtime quotes enabled: KIS H0STCNT0 x {} symbols (strategy {}, mock fills only)",
+            settings.watchlist.len(),
+            strategy_key
+        );
+        label
+    } else if demo_enabled() || settings.quotes_source == lossfunction::config::QuotesSource::Demo {
         let demo = DemoLoop::new(
             Arc::clone(&broker),
             Arc::clone(&risk),
@@ -304,4 +425,11 @@ async fn sim_run(mut sim: SimLoop) {
 
 async fn demo_run(mut demo: DemoLoop) {
     demo.run().await;
+}
+
+async fn realtime_run(
+    mut realtime: RealtimeLoop,
+    quotes: tokio::sync::mpsc::UnboundedReceiver<lossfunction::types::Quote>,
+) {
+    realtime.run(quotes).await;
 }

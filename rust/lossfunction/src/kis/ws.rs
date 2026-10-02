@@ -15,14 +15,18 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use chrono::{FixedOffset, NaiveDateTime, Utc};
+use futures_util::SinkExt;
 use rust_decimal::Decimal;
 use serde_json::Value;
 use tokio::sync::Mutex;
 
 use crate::types::{Quote, Symbol};
 
-/// 국내주식 실시간체결가(KRX) H0STCNT0 — official column order (46 columns).
-pub const H0STCNT0_COLUMNS: [&str; 46] = [
+/// 국내주식 실시간체결가(KRX) H0STCNT0 — measured column order (47 columns).
+/// The official guide documents 46, but the live stream carries one more
+/// trailing column (measured 2026-10-02, value "2", semantics unverified) —
+/// the third pipe field is the record COUNT ("001"|"003"), not the tr_key.
+pub const H0STCNT0_COLUMNS: [&str; 47] = [
     "MKSC_SHRN_ISCD",
     "STCK_CNTG_HOUR",
     "STCK_PRPR",
@@ -69,6 +73,10 @@ pub const H0STCNT0_COLUMNS: [&str; 46] = [
     "HOUR_CLS_CODE",
     "MRKT_TRTM_CLS_CODE",
     "VI_STND_PRC",
+    // Undocumented trailing column observed in the live stream (2026-10-02):
+    // every H0STCNT0 record carries a 47th value ("2" during the session).
+    // Kept explicit so the width check stays honest; semantics unknown.
+    "UNDOCUMENTED_FIELD_47",
 ];
 
 const COLUMN_INDEX: fn(&str) -> Option<usize> =
@@ -211,6 +219,77 @@ pub trait ConnectionFactory: Send + Sync {
     async fn connect(&self, url: &str) -> Result<Arc<dyn WsConnection>, String>;
 }
 
+type TungsteniteStream =
+    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
+
+/// Real transport over tokio-tungstenite. The KIS realtime endpoint is plain
+/// `ws://`, so the TLS-free feature set is sufficient. A disconnect surfaces
+/// as a `recv` error; the client's reconnect loop then replays subscriptions.
+pub struct TungsteniteConnection {
+    sink: Arc<Mutex<futures_util::stream::SplitSink<TungsteniteStream, WsMessage>>>,
+    stream: Arc<Mutex<futures_util::stream::SplitStream<TungsteniteStream>>>,
+}
+
+type WsMessage = tokio_tungstenite::tungstenite::Message;
+
+#[async_trait::async_trait]
+impl WsConnection for TungsteniteConnection {
+    async fn send(&self, message: &str) -> Result<(), String> {
+        let mut sink = self.sink.lock().await;
+        sink.send(WsMessage::Text(message.to_string().into()))
+            .await
+            .map_err(|error| format!("ws send failed: {error}"))
+    }
+
+    async fn recv(&self) -> Result<String, String> {
+        let mut stream = self.stream.lock().await;
+        use futures_util::StreamExt;
+        loop {
+            match stream.next().await {
+                Some(Ok(WsMessage::Text(text))) => return Ok(text.to_string()),
+                Some(Ok(WsMessage::Ping(payload))) => {
+                    // Protocol-level ping: answer inline so the peer keeps us.
+                    let mut sink = self.sink.lock().await;
+                    let _ = sink.send(WsMessage::Pong(payload)).await;
+                }
+                // Binary/pong frames — KIS market data speaks text only.
+                Some(Ok(_)) => continue,
+                Some(Err(error)) => return Err(format!("ws recv failed: {error}")),
+                None => return Err("ws stream closed".to_string()),
+            }
+        }
+    }
+
+    fn pong(&self, data: &str) {
+        // KIS application-level keepalive (JSON header.tr_id == PINGPONG):
+        // echo the message back. Fire-and-forget — the trait is sync and the
+        // reply is not on any critical path.
+        let sink = Arc::clone(&self.sink);
+        let text = data.to_string();
+        tokio::spawn(async move {
+            let mut sink = sink.lock().await;
+            let _ = sink.send(WsMessage::Text(text.into())).await;
+        });
+    }
+}
+
+/// Connection factory for the real KIS realtime endpoint.
+pub struct TungsteniteFactory;
+
+#[async_trait::async_trait]
+impl ConnectionFactory for TungsteniteFactory {
+    async fn connect(&self, url: &str) -> Result<Arc<dyn WsConnection>, String> {
+        let (stream, _response) = tokio_tungstenite::connect_async(url)
+            .await
+            .map_err(|error| format!("ws connect to {url} failed: {error}"))?;
+        let (sink, stream) = futures_util::StreamExt::split(stream);
+        Ok(Arc::new(TungsteniteConnection {
+            sink: Arc::new(Mutex::new(sink)),
+            stream: Arc::new(Mutex::new(stream)),
+        }))
+    }
+}
+
 pub type QuoteCallback = Arc<dyn Fn(&Quote) + Send + Sync>;
 pub type ApprovalKeyProvider =
     Arc<dyn Fn() -> BoxFuture<'static, Result<String, String>> + Send + Sync>;
@@ -276,7 +355,8 @@ impl KisMarketDataClient {
         loop {
             let connection = match self.connect.connect(&self.url).await {
                 Ok(connection) => connection,
-                Err(_) => {
+                Err(error) => {
+                    eprintln!("ws connect failed ({error}) — backing off");
                     (self.sleep)(self.reconnect_delays[delay_index]).await;
                     delay_index = (delay_index + 1).min(self.reconnect_delays.len() - 1);
                     continue;
@@ -285,7 +365,8 @@ impl KisMarketDataClient {
 
             let approval_key = match (self.approval_key)().await {
                 Ok(key) => key,
-                Err(_) => {
+                Err(error) => {
+                    eprintln!("approval key issuance failed ({error}) — backing off");
                     (self.sleep)(self.reconnect_delays[delay_index]).await;
                     delay_index = (delay_index + 1).min(self.reconnect_delays.len() - 1);
                     continue;
@@ -293,35 +374,56 @@ impl KisMarketDataClient {
             };
 
             // Replay desired subscriptions (sorted for determinism).
+            let mut replayed = 0usize;
             for symbol in self.desired.lock().await.iter() {
                 let message =
                     build_subscribe_message(&approval_key, "H0STCNT0", symbol.as_str(), true);
                 if connection.send(&message.to_string()).await.is_err() {
                     break;
                 }
+                replayed += 1;
             }
+            println!(
+                "ws connected to {} — {replayed} subscription(s) replayed",
+                self.url
+            );
 
             delay_index = 0;
             while let Ok(raw) = connection.recv().await {
                 self.handle_raw(&connection, &raw);
             }
             // recv error = disconnect: desired state replays on the next one.
+            eprintln!("ws disconnected — reconnecting");
             (self.sleep)(self.reconnect_delays.first().copied().unwrap_or_default()).await;
         }
     }
 
     fn handle_raw(&self, connection: &Arc<dyn WsConnection>, raw: &str) {
         if raw.starts_with("0|") || raw.starts_with("1|") {
-            if let Ok(quotes) = parse_market_data(raw) {
-                for quote in quotes {
-                    (self.on_quote)(&quote);
+            static LOGGED_FULL: std::sync::atomic::AtomicBool =
+                std::sync::atomic::AtomicBool::new(false);
+            match parse_market_data(raw) {
+                Ok(quotes) => {
+                    for quote in quotes {
+                        (self.on_quote)(&quote);
+                    }
+                }
+                // A real frame that fails to parse is a spec break — dump the
+                // FIRST one in full (layout ground truth), then stay quiet.
+                Err(error) => {
+                    if !LOGGED_FULL.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                        eprintln!("ws frame parse failed (full frame): {error}\n{raw}");
+                    }
                 }
             }
             return;
         }
         if is_pingpong(raw) {
             connection.pong(raw);
+            return;
         }
-        // Other system messages (subscription acks) — nothing to do yet.
+        // Subscription acks and realtime error notices (bad approval key,
+        // no permission) arrive as these system messages — surface them.
+        eprintln!("ws system message: {}", &raw[..raw.len().min(300)]);
     }
 }

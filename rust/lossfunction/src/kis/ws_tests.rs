@@ -13,13 +13,33 @@ fn symbol() -> Symbol {
 }
 
 fn data_frame(price: &str, hour: &str, date: &str) -> String {
-    let mut values = vec![""; 46];
+    let mut values = vec![""; 47];
     let idx = |name: &str| H0STCNT0_COLUMNS.iter().position(|c| *c == name).unwrap();
     values[idx("MKSC_SHRN_ISCD")] = "005930";
     values[idx("STCK_CNTG_HOUR")] = hour;
     values[idx("STCK_PRPR")] = price;
     values[idx("BSOP_DATE")] = date;
     format!("0|H0STCNT0|005930|{}", values.join("^"))
+}
+
+/// Regression against the REAL production frame measured 2026-10-02
+/// (verbatim from the live stream): three intra-second records, 47 columns
+/// each, count field "003", one empty mid-record field, trailing
+/// undocumented column "2". The 46-column official-sample assumption
+/// dropped every tick of the first live session — this frame is the proof.
+#[test]
+fn parses_measured_production_frame() {
+    let raw = "0|H0STCNT0|003|005930^144918^274750^5^-1250^-0.45^275321.52^273500^277000^271500^275000^274500^104^9320874^2566237186000^66432^46300^-20132^113.55^4187143^4754672^1^0.52^67.83^090007^2^1250^092406^5^-2250^090336^2^3250^20261002^20^N^16729^92579^974533^678758^0.16^11242578^82.91^0^^273500^2^005930^144918^274750^5^-1250^-0.45^275321.52^273500^277000^271500^275000^274500^1^9320875^2566237460750^66432^46301^-20131^113.55^4187143^4754673^1^0.52^67.83^090007^2^1250^092406^5^-2250^090336^2^3250^20261002^20^N^16841^92579^974198^678758^0.16^11242578^82.91^0^^273500^2^005930^144919^274500^5^-1500^-0.54^275321.52^273500^277000^271500^275000^274500^3^9320878^2566238284250^66433^46301^-20132^113.55^4187146^4754673^5^0.52^67.83^090007^2^1000^092406^5^-2500^090336^2^3000^20261002^20^N^16841^92579^974198^678758^0.16^11242578^82.91^0^^273500^2";
+    let quotes = parse_market_data(raw).unwrap();
+    assert_eq!(quotes.len(), 3);
+    assert_eq!(quotes[0].symbol.as_str(), "005930");
+    assert_eq!(quotes[0].last_price, Decimal::from(274_750));
+    // 14:49:18 KST == 05:49:18 UTC.
+    assert_eq!(
+        quotes[0].timestamp.to_rfc3339(),
+        "2026-10-02T05:49:18+00:00"
+    );
+    assert_eq!(quotes[2].last_price, Decimal::from(274_500));
 }
 
 #[test]
@@ -319,3 +339,84 @@ fn desired_state_is_queryable() {
 static _KEEP: AtomicUsize = AtomicUsize::new(0);
 #[allow(dead_code)]
 fn _unused(_notify: &Notify) {}
+
+/// Real transport end-to-end against a local WebSocket server: the subscribe
+/// (with approval key) arrives, a market-data frame parses into the quote
+/// callback, and the PINGPONG keepalive is echoed back.
+#[tokio::test]
+#[serial_test::serial]
+async fn tungstenite_transport_end_to_end() {
+    use futures_util::StreamExt;
+    use tokio_tungstenite::tungstenite::Message;
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+
+    let server = tokio::spawn(async move {
+        use futures_util::SinkExt;
+        let (stream, _) = listener.accept().await.unwrap();
+        let mut ws = tokio_tungstenite::accept_async(stream).await.unwrap();
+
+        let subscribe = tokio::time::timeout(Duration::from_secs(5), ws.next())
+            .await
+            .expect("subscribe timeout")
+            .unwrap()
+            .unwrap();
+        let subscribe = subscribe.into_text().unwrap().to_string();
+
+        ws.send(Message::Text(
+            data_frame("80500", "093012", "20260915").into(),
+        ))
+        .await
+        .unwrap();
+
+        ws.send(Message::Text(
+            r#"{"header": {"tr_id": "PINGPONG"}}"#.to_string().into(),
+        ))
+        .await
+        .unwrap();
+        let echo = tokio::time::timeout(Duration::from_secs(5), ws.next())
+            .await
+            .expect("echo timeout")
+            .unwrap()
+            .unwrap();
+        (subscribe, echo.into_text().unwrap().to_string())
+    });
+
+    let quotes: Arc<Mutex<Vec<Quote>>> = Arc::new(Mutex::new(Vec::new()));
+    let on_quote: QuoteCallback = {
+        let quotes = Arc::clone(&quotes);
+        Arc::new(move |quote: &Quote| quotes.lock().unwrap().push(quote.clone()))
+    };
+    let client = Arc::new(KisMarketDataClient::new(
+        approval_provider(),
+        format!("ws://{addr}"),
+        Arc::new(TungsteniteFactory),
+        on_quote,
+    ));
+    client.subscribe(&symbol()).await;
+    let task = tokio::spawn({
+        let runner = Arc::clone(&client);
+        async move {
+            runner.run().await;
+        }
+    });
+
+    wait_until(|| !quotes.lock().unwrap().is_empty()).await;
+    let (subscribe, echo) = tokio::time::timeout(Duration::from_secs(5), server)
+        .await
+        .expect("server script timeout")
+        .unwrap();
+    task.abort();
+
+    let subscribe: serde_json::Value = serde_json::from_str(&subscribe).unwrap();
+    assert_eq!(subscribe["header"]["approval_key"], "approval-1");
+    assert_eq!(subscribe["body"]["input"]["tr_key"], "005930");
+    assert!(
+        echo.contains("PINGPONG"),
+        "keepalive echo missing: {echo:?}"
+    );
+
+    let captured = quotes.lock().unwrap();
+    assert_eq!(captured[0].last_price, Decimal::from(80_500));
+}

@@ -37,6 +37,18 @@ pub enum PaperBackend {
     Kis,
 }
 
+/// Where the runtime's market-data loop gets its quotes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum QuotesSource {
+    /// No loop (HTTP server only) — current default.
+    #[default]
+    None,
+    /// Synthetic random-walk market (the demo loop).
+    Demo,
+    /// KIS realtime execution-price WebSocket (read-only market data).
+    Kis,
+}
+
 /// Credentials are kept opaque so they never leak through Debug logs.
 #[derive(Clone, PartialEq, Eq, Default)]
 pub struct Secret(String);
@@ -91,6 +103,8 @@ pub struct Settings {
     /// Symbol universe the runtime trades/watches. WATCHLIST env overrides
     /// (comma-separated 6-digit codes); invalid codes refuse to boot.
     pub watchlist: Vec<Symbol>,
+    /// Market-data loop source. QUOTES_SOURCE env (none|demo|kis).
+    pub quotes_source: QuotesSource,
 }
 
 impl Default for Settings {
@@ -107,6 +121,7 @@ impl Default for Settings {
             risk: RiskSettings::default(),
             history_window_bars: 120,
             watchlist: default_watchlist(),
+            quotes_source: QuotesSource::None,
         }
     }
 }
@@ -199,6 +214,19 @@ impl Settings {
         settings.kis_app_key = Secret(read_optional("KIS_APP_KEY")?.unwrap_or_default());
         settings.kis_app_secret = Secret(read_optional("KIS_APP_SECRET")?.unwrap_or_default());
         settings.kis_account_number = read_optional("KIS_ACCOUNT_NUMBER")?.unwrap_or_default();
+        if let Some(source) = read_optional("QUOTES_SOURCE")? {
+            settings.quotes_source = match source.to_ascii_lowercase().as_str() {
+                "none" | "" => QuotesSource::None,
+                "demo" => QuotesSource::Demo,
+                "kis" => QuotesSource::Kis,
+                other => {
+                    return Err(ConfigError::Invalid {
+                        field: "QUOTES_SOURCE",
+                        message: format!("unknown value {other:?} (expected none|demo|kis)"),
+                    })
+                }
+            };
+        }
         if let Some(raw) = read_optional("WATCHLIST")? {
             settings.watchlist = parse_watchlist(&raw)?;
         }
@@ -242,6 +270,17 @@ impl Settings {
             return Err(ConfigError::Invalid {
                 field: "KIS_ENVIRONMENT",
                 message: "paper trading must use the mock domain — refusing a                           real-domain broker under a paper label (set                           KIS_ENVIRONMENT=mock or obtain mock credentials)"
+                    .to_string(),
+            });
+        }
+        // The KIS quote stream needs credentials to issue an approval key —
+        // selecting it without them is a wiring mistake, not a fallback case.
+        if self.quotes_source == QuotesSource::Kis
+            && (self.kis_app_key.expose().is_empty() || self.kis_app_secret.expose().is_empty())
+        {
+            return Err(ConfigError::Invalid {
+                field: "KIS_APP_KEY",
+                message: "QUOTES_SOURCE=kis requires KIS_APP_KEY / KIS_APP_SECRET in the                           environment — refusing to start without quote credentials"
                     .to_string(),
             });
         }
@@ -303,6 +342,9 @@ mod tests {
             "PAPER_BACKEND",
             "DATABASE_PATH",
             "WATCHLIST",
+            "QUOTES_SOURCE",
+            "KIS_APP_KEY",
+            "KIS_APP_SECRET",
         ] {
             env::remove_var(key);
         }
@@ -344,6 +386,45 @@ mod tests {
             }
         ));
         env::remove_var("WATCHLIST");
+    }
+
+    #[test]
+    fn quotes_source_parses_and_guards_credentials() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        clear_vars();
+
+        // Default: no loop.
+        assert_eq!(Settings::load().unwrap().quotes_source, QuotesSource::None);
+
+        env::set_var("QUOTES_SOURCE", "kis");
+        // Without credentials the settings refuse to load (fail-loud, same
+        // posture as the paper+real broker guard).
+        assert!(matches!(
+            Settings::load().unwrap_err(),
+            ConfigError::Invalid {
+                field: "KIS_APP_KEY",
+                ..
+            }
+        ));
+        env::set_var("KIS_APP_KEY", "key");
+        assert!(Settings::load().is_err(), "secret still missing");
+        env::set_var("KIS_APP_SECRET", "secret");
+        let settings = Settings::load().unwrap();
+        assert_eq!(settings.quotes_source, QuotesSource::Kis);
+
+        // demo parses; unknown values refuse.
+        env::set_var("QUOTES_SOURCE", "demo");
+        assert_eq!(Settings::load().unwrap().quotes_source, QuotesSource::Demo);
+        env::set_var("QUOTES_SOURCE", "moon");
+        assert!(matches!(
+            Settings::load().unwrap_err(),
+            ConfigError::Invalid {
+                field: "QUOTES_SOURCE",
+                ..
+            }
+        ));
+
+        clear_vars();
     }
 
     #[test]

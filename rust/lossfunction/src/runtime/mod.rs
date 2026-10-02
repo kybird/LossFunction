@@ -24,6 +24,7 @@ use crate::strategy::{DecisionLayer, MarketSnapshot, OrderIntent, Strategy};
 pub mod backfill;
 pub mod backtest_runner;
 pub mod optimize_runner;
+pub mod realtime;
 pub mod sim;
 pub mod strategy_codegen;
 
@@ -99,6 +100,18 @@ impl TradingRuntime {
         }
         self.quotes.insert(quote.symbol.clone(), quote);
         self.snapshot()
+    }
+
+    /// Seed the lookback window with a historical daily close (backfilled
+    /// bars), so indicator strategies can decide from the first live tick
+    /// instead of waiting for days of aggregated quotes. Same window the
+    /// aggregator feeds — capacity rules of `HistoryWindow` still apply.
+    pub fn seed_daily_close(
+        &mut self,
+        symbol: &crate::types::Symbol,
+        close: rust_decimal::Decimal,
+    ) {
+        self.history.push(symbol, close);
     }
 
     pub fn snapshot(&self) -> MarketSnapshot {

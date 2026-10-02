@@ -44,6 +44,17 @@ Docker 단일 컨테이너 + SQLite 볼륨 + PowerShell 배포 스크립트.
 - 복구: 재시작 후 docs/recovery.md 절차(미결제 reconciliation → 잔고
   재구성 → 재구독 → 신규 주문).
 
+## 배포 상태의 재검증
+
+- "배포 완료" 기록을 신뢰하지 않는다 — 재접속 시점에 `docker inspect`
+  (Config.Cmd, 이미지 CreatedAt)로 실측한다. 2026-10-02 실측에서 "Rust 배포
+  완료" 기록이 옛 Python 컨테이너(`python -m lossfunction.runtime.cli`)로
+  뒤집혔다. 헬스 응답 형상은 양쪽 런타임이 동일해 구별 불가였다.
+- 시세 시뮬레이션의 가용 요구는 **거래소 시간표가 결정**한다 — 틱은 장중(평일
+  09:00-15:30 KST)에만 흐르므로 24/7 서버의 데이터 이득이 없다. 오너 결정
+  (2026-10-02): 시뮬레이션은 개발 머신 가동, 피닉스는 장중 무인 수집·실전
+  진입 시에만 재개.
+
 ## Trade-offs
 
 - 금고 서버(Vaultwarden)와 공유 박스: 메모리 상한과 loopback 포트로
@@ -61,3 +72,5 @@ Docker 단일 컨테이너 + SQLite 볼륨 + PowerShell 배포 스크립트.
 - doc/raw/2026-09-14.md Case 19 (알림, `hash:4a2bd72`)
 - doc/raw/2026-09-14.md Case 22 (배포 스크립트+재시작 실증, `hash:4f716c5`)
 - doc/raw/2026-09-14.md Case 23 (상태 페이지, `hash:22c9209`)
+- doc/raw/2026-10-02.md Case 3 (피닉스 재검증 — Python 컨테이너 실측)
+- doc/raw/2026-10-02.md Case 4 (배포 타깃 결정 — 개발 머신 우선)

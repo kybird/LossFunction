@@ -23,6 +23,14 @@ pub fn kis_base_url(environment: &str) -> &'static str {
     }
 }
 
+/// Realtime market-data WebSocket endpoint (plain ws, wiki: kis-api).
+pub fn kis_ws_url(environment: &str) -> &'static str {
+    match environment {
+        "real" => "ws://ops.koreainvestment.com:21000",
+        _ => "ws://vops.koreainvestment.com:21000",
+    }
+}
+
 /// Parse the KST wall-time expiry ("%Y-%m-%d %H:%M:%S", no zone marker).
 pub fn parse_kst_expiry(raw: &str) -> Option<DateTime<Utc>> {
     NaiveDateTime::parse_from_str(raw, "%Y-%m-%d %H:%M:%S")

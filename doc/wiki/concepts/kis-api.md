@@ -22,6 +22,11 @@ confidence: 4
   (`"%Y-%m-%d %H:%M:%S"`, **KST 월시간, 타임존 마커 없음** → 파싱 시
   `timezone(timedelta(hours=9))` 부여 필수).
 - 토큰 유효 ~1일. 6시간 이내 재발급 요청은 서버가 동일 토큰 반환.
+- **공식 원칙(2026-10-02 발급 안내 원문): "접근 토큰은 1일 1회 발급 원칙이며,
+  유효기간내 잦은 토큰 발급 발생 시 이용이 제한 될 수 있습니다."** 프로세스
+  재실행 = 재발급 요청 — 백필 실패에 연달아 재실행하면 500→403으로 제한이
+  깊어진다(raw 2026-09-20 Case 9, 2026-10-02 Case 5). 90초 대기 + 프로세스 내
+  토큰 재사용이 해법.
 - WebSocket 접속키는 별도: `POST /oauth2/Approval`, body 필드명이
   **`secretkey`** (REST의 `appsecret`이 아님!).
 - 도메인: 실전 `https://openapi.koreainvestment.com:9443`, 모의
@@ -34,7 +39,7 @@ confidence: 4
 | 현금주문 | POST `/uapi/domestic-stock/v1/trading/order-cash` | TTTC0012U·TTTC0011U(매수·매도) / V prefix | body **대문자 키 + 전부 문자열**(CANO, ACNT_PRDT_CD, PDNO, ORD_DVSN, ORD_QTY, ORD_UNPR, EXCG_ID_DVSN_CD…). ORD_DVSN 00=지정가 01=시장가(시장가는 ORD_UNPR="0"). 응답 output.ODNO=주문번호, KRX_FWDG_ORD_ORGNO=취소에 필요 |
 | 정정취소 | POST `.../order-rvsecncl` | TTTC0013U / VTTC0013U | 취소: RVSE_CNCL_DVSN_CD="02", QTY_ALL_ORD_YN="Y"(잔량 전부, 수량/단가는 "0") |
 | 잔고 | GET `.../inquire-balance` | TTTC8434R / VTTC8434R | 페이지네이션: 응답 헤더 tr_cont M/F인 한 ctx_area_fk100/nk100 반송. 보유수량 0 행 존재 |
-| 당일체결 | GET `.../inquire-daily-ccld` | TTTC0081R / VTTC0081R | ODNO 필터. 필드: odno/ord_qty/tot_ccld_qty/tot_ccld_amt/cncl_yn/sll_buy_dvsn_cd(02=매수)/pdno — 커뮤니티 문서 기반, 모의 도메인 실증 pending |
+| 당일체결 | GET `.../inquire-daily-ccld` | TTTC0081R / VTTC0081R | ODNO 필터. 필드: odno/ord_qty/tot_ccld_qty/tot_ccld_amt/cncl_yn/sll_buy_dvsn_cd(02=매수)/pdno — 커뮤니티 문서 기반. 모의 도메인 불가(2026-10-02 판명)로 실증은 실전 도메인 조회(주문 없는 읽기라 안전)로 수행 |
 | 현재가 | GET `.../quotations/inquire-price` | FHKST01010100(공통) | FID_COND_MRKT_DIV_CODE=J, 현재가 필드 `stck_prpr` |
 | 기간별시세(일/주/월/년) | GET `.../quotations/inquire-daily-itemchartprice` | FHKST03010100(공통, 실전=모의) | FID_COND_MRKT_DIV_CODE=J, FID_INPUT_ISCD, FID_INPUT_DATE_1/2(YYYYMMDD), FID_PERIOD_DIV_CODE=D/W/M/Y, FID_ORG_ADJ_PRC(0=수정주가 1=원주가). **호출당 최대 100건, tr_cont 연속 없음** → 장기 백필은 날짜창 분할(구현: 낱개 100달력일 창 + 만페이지 재분할). output2 행 필드(전부 문자열): `stck_bsop_date`(YYYYMMDD), `stck_oprc`/`stck_hgpr`/`stck_lwpr`/`stck_clpr`, `acml_vol`. 누락 필드는 fail-loud |
 
@@ -47,9 +52,20 @@ tr_cont. 계좌는 8-2 자리("12345678-01").
   `ws://vops.koreainvestment.com:21000`.
 - 구독: `{"header": {"approval_key", "tr_type": "1"|"0", "custtype": "P"},
   "body": {"input": {"tr_id", "tr_key"}}}`.
-- 데이터 프레임: 파이프 구분 `0|TR_ID|TR_KEY|값1^값2^...` — H0STCNT0
-  (실시간체결가 KRX) 컬럼 **46개**. 주요 인덱스: MKSC_SHRN_ISCD=0,
-  STCK_CNTG_HOUR=1, STCK_PRPR=2, BSOP_DATE=33.
+- 구독 ACK(실측 2026-10-02): JSON `{"header":{"tr_id","tr_key","encrypt":"N"},
+  "body":{"rt_cd":"0","msg_cd":"OPSP0000","msg1":"SUBSCRIBE SUCCESS",
+  "output":{"iv","key"}}}` — output의 iv·key는 AES 소재로 추정(체결통보용).
+  거부 사유도 이 시스템 메시지로 온다.
+- 데이터 프레임: 파이프 구분 `0|TR_ID|건수|값1^값2^...` — **3번째 필드는 건수**
+  ("001"|"003")다(tr_key 아님). 한 프레임에 같은 초의 체결 다발이 멀티레코드로
+  온다. H0STCNT0(실시간체결가 KRX) 컬럼 **실측 47개** — 공식 문서 46개 +
+  미문서화 마지막 열(값 '2', 의미 미확정). 열 0~45는 문서 테이블과 일치
+  (BSOP_DATE=33, TRHT_YN=35, VI_STND_PRC=45). 주요 인덱스: MKSC_SHRN_ISCD=0,
+  STCK_CNTG_HOUR=1, STCK_PRPR=2, BSOP_DATE=33. 실측 프레임 회귀:
+  ws_tests parses_measured_production_frame.
+- 실시간 소비 계약: 당일 틱은 집계기에서 봉 확정(다음 날짜 경계 틱 도착) 전까지
+  지표 히스토리에 들어가지 않는다(look-ahead 원천 차단) — 실시간 런타임은 백필
+  봉으로 히스토리를 시딩해야 첫 틱부터 판단 가능(TradingRuntime::seed_daily_close).
 - Keepalive: 서버가 JSON(header.tr_id=="PINGPONG") 전송 → pong으로 echo.
 - 주문 체결통보는 암호화(AES): 실전 H0STCNI0 / **모의 H0STCNI9**.
 
@@ -69,3 +85,6 @@ tr_cont. 계좌는 8-2 자리("12345678-01").
 - doc/raw/2026-09-14.md Case 6 (WS 스펙, `hash:ff1e528`)
 - doc/raw/2026-09-14.md Case 9 (정정취소 스펙, `hash:8c36798`)
 - doc/raw/2026-09-20.md Case 2 (기간별시세 스펙 — 공식 샘플 examples_llm/inquire_daily_itemchartprice + 공개 구현 교차검증, `hash:5d65ab6`)
+- doc/raw/2026-10-02.md Case 2 (WS 실시간 소비 계약 — 시딩 필요성)
+- doc/raw/2026-10-02.md Case 5 (토큰 1일 1회 발급 원칙 실측 + 500 자동 재시도)
+- doc/raw/2026-10-02.md Case 6 (H0STCNT0 실측 47열·구독 ACK 형상·첫 실틱 실증)

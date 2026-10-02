@@ -243,3 +243,12 @@
 {"ts":"2026-09-22T06:00:40.713Z","action":"claimed","title":"파라미터 walk-forward 탐색","actor":"zcode-main"}
 {"ts":"2026-09-22T06:10:46.373Z","action":"done","title":"파라미터 walk-forward 탐색"}
 {"ts":"2026-09-22T06:10:46.384Z","action":"milestone-done","title":"전략 최적화","detail":"멤버 1장 전원 종결"}
+{"ts":"2026-10-02T04:43:36.240Z","action":"created","title":"실시세 시뮬레이션 가동"}
+{"ts":"2026-10-02T04:43:36.556Z","action":"created","title":"실시간 시세 런타임 배선"}
+{"ts":"2026-10-02T04:43:50.750Z","action":"created","title":"KIS 실시간 체결가 WS 실증"}
+{"ts":"2026-10-02T04:44:04.293Z","action":"created","title":"시뮬레이션 피닉스 배포"}
+{"ts":"2026-10-02T04:44:18.610Z","action":"created","title":"잔고·당일체결 REST 실증"}
+{"ts":"2026-10-02T05:02:14.566Z","action":"claimed","title":"실시간 시세 런타임 배선","actor":"main-agent"}
+{"ts":"2026-10-02T05:15:25.439Z","action":"done","title":"실시간 시세 런타임 배선"}
+{"ts":"2026-10-02T05:23:47.869Z","action":"handoff","title":"시뮬레이션 피닉스 배포","detail":"조건(오너 결정 2026-10-02): 시뮬레이션은 개발 머신에서 가동 — 틱은 장중(09:00-15:30 KST)에만 흘러 24/7 가동의 데이터 이득이 없고, 피닉스 배포는 loopback 관측+자격증명 프로비저닝 공수만 추가. 피닉스가 다시 필요해질 객관적 근거(장중 무인 수집 필요·실전 진입)가 생기면 resume. 재개 시 옛 Python 컨테이너 치환 + 데모 539MB DB 리셋 포함"}
+{"ts":"2026-10-02T05:54:28.428Z","action":"done","title":"KIS 실시간 체결가 WS 실증"}
