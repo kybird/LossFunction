@@ -1,6 +1,6 @@
 ---
 title: MLP 학습·ONNX 내보내기
-status: todo
+status: done
 ordinal: 24000
 created: 2026-11-20
 milestone: MLP ort 추론 경로
@@ -13,9 +13,9 @@ reference ml/pipeline.py의 sklearn MLP(MLPClassifier+StandardScaler, 1/5/20 룩
 
 ## Acceptance Criteria
 <!-- kanban:ac:begin -->
-- [ ] #1 skl2onnx로 내보낸 .onnx가 생성되고 onnxruntime으로 로드된다
-- [ ] #2 onnxruntime 출력이 sklearn 추론 출력과 허용오차 내 일치(결정론 시드 고정)
-- [ ] #3 학습 분할은 reference의 walk-forward·embargo 절차를 따른다
+- [x] #1 skl2onnx로 내보낸 .onnx가 생성되고 onnxruntime으로 로드된다
+- [x] #2 onnxruntime 출력이 sklearn 추론 출력과 허용오차 내 일치(결정론 시드 고정)
+- [x] #3 학습 분할은 reference의 walk-forward·embargo 절차를 따른다
 <!-- kanban:ac:end -->
 
 ## Plan
@@ -27,3 +27,4 @@ reference ml/pipeline.py의 sklearn MLP(MLPClassifier+StandardScaler, 1/5/20 룩
 ## Handoff
 
 ## Result
+- 2026-11-20T13:58+09:00 — 완료 — AC 3/3 충족. 산출: models/{005930,035420,069500}.onnx(각 1,591B) + models/meta.json(피처 순서 log_return_1/5/20, 시드 7, 분할 구간, 라이브러리 버전) + models/regression_fixture.json(RAW 27행→onnxruntime 기대출력, 허용오차 1e-5) + scripts/ml/train_mlp.py(reference 절차 복사: 시간순 분할+embargo, train-only StandardScaler, MLPClassifier(16,), max_iter=300, random_state=7; StandardScaler는 Pipeline으로 ONNX 그래프에 포함 — Rust는 원 피처 투입). 검증: (1) onnxruntime 3파일 로드 성공 (2) sklearn predict_proba 대비 최대절대차 1.37e-07/8.56e-08/1.06e-07 — 허용오차 1e-05 내, 라벨 불일치 0, 재실행 바이트 동일(SHA-256) (3) 분할 n_train=900/n_test=301, train_end=2025-06-26, test_start=2025-06-30. walk-forward 검증 정확도(양측 이항검정 p vs 동전): 005930 0.4684(p=0.2995, 무의미) · 035420 0.5415(p=0.1665, 무의미) · 069500 0.5814(p=0.0056, 5% 유의) — 파이프라인 표준화가 1차 목표였고 예측력은 2차로 카드 완성에 지장 없음. 데이터 주의: 오너 복사본 DB — 일봉 2026-09-21까지(금고 locked로 backfill 불가, ~2개월 공백). 버전: sklearn 1.9.1 / skl2onnx 1.20.0 / onnxruntime 1.32.0 / numpy 2.5.5 / Python 3.13.11. 근거: docs/raw/2026-11-20.md Case 2, hash:6b13f94·hash:0496ab2
