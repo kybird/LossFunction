@@ -17,6 +17,50 @@ use lossfunction::runtime::server::{AppState, SharedState};
 use lossfunction::runtime::sim::SimLoop;
 use lossfunction::storage::Repository;
 
+/// One-shot backtest baseline: walk-forward every registered strategy over
+/// stored candles and print each summary (also persisted as suggestions).
+async fn optimize_all_strategies(settings: &Settings, symbols_csv: Option<String>) {
+    use lossfunction::strategy_registry;
+    use lossfunction::types::Symbol;
+
+    let repository = Repository::open(&settings.database_path)
+        .await
+        .expect("open sqlite database");
+    let symbols: Vec<Symbol> = match symbols_csv {
+        Some(csv) => csv
+            .split(',')
+            .map(|code| code.trim())
+            .filter(|code| !code.is_empty())
+            .map(|code| Symbol::parse(code).expect("valid symbol code"))
+            .collect(),
+        None => repository
+            .watchlist()
+            .await
+            .ok()
+            .filter(|list| !list.is_empty())
+            .unwrap_or_else(|| settings.watchlist.clone()),
+    };
+    println!(
+        "optimize: {} strategies x {} symbols (walk-forward 70/30, survivors 3)",
+        strategy_registry::registry().len(),
+        symbols.len()
+    );
+    for spec in strategy_registry::registry() {
+        match lossfunction::runtime::optimize_runner::run_optimize(
+            &repository,
+            &repository,
+            spec.key,
+            &symbols,
+            5,
+        )
+        .await
+        {
+            Ok(summary) => println!("[{}] {}", spec.key, summary),
+            Err(error) => println!("[{}] FAILED — {}", spec.key, error),
+        }
+    }
+}
+
 async fn backfill_daily_bars(settings: &Settings, years: i64) {
     use lossfunction::kis::auth::{kis_base_url, KisAuth};
     use lossfunction::kis::chart::KisChartSource;
@@ -154,6 +198,17 @@ async fn main() {
             .and_then(|value| value.parse().ok())
             .unwrap_or(5);
         backfill_daily_bars(&settings, years).await;
+        return;
+    }
+
+    // Headless walk-forward over every registered strategy — the backtest
+    // half of the backtest → paper → live ladder. `--optimize-all [symbols]`
+    // (comma-separated codes; default: the stored watchlist).
+    if let Some(position) = std::env::args().position(|arg| arg == "--optimize-all") {
+        let symbols_csv = std::env::args()
+            .nth(position + 1)
+            .filter(|value| !value.starts_with('-'));
+        optimize_all_strategies(&settings, symbols_csv).await;
         return;
     }
     let port: u16 = std::env::var("HEALTH_PORT")
