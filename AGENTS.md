@@ -15,6 +15,7 @@ Files are the source of truth. Kanban card files are written ONLY via the CLI �
 | Sanity check of the knowledge base | `wiki-lint` skill or `llm-wiki lint` |
 | Planning work (person present) | `kanban-plan` skill → cards via `llm-wiki card new "<title>"` |
 | Unattended execution | `work-loop` skill → `llm-wiki pick --claim <name>`, park judgment calls with `handoff` |
+| Daily bars stale (vault locked) | `kis-backfill` skill → interactive password window + `data/backfill-status.txt` polling |
 
 ## Rules
 
