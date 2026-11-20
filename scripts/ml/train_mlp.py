@@ -227,9 +227,9 @@ def main() -> None:
             "numpy": np.__version__,
         },
         "data": {
-            "source": "data/lossfunction.db (owner dev-machine copy — daily bars"
-            " stop at 2026-09-21; ~2-month gap to 2026-11-20 not backfilled,"
-            " vault locked so backfill-daily.ps1 was not runnable)",
+            "source": "data/lossfunction.db candles (KIS daily backfill —"
+            " scripts/dev/backfill-daily.ps1, rate-limit throttled since"
+            " 2026-11-20)",
             "symbols": {s: {"n_bars": r["n_bars"], "data_end": r["data_end"]} for s, r in records.items()},
         },
         "symbols": records,

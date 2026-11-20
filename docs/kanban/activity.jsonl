@@ -262,3 +262,5 @@
 {"ts":"2026-11-20T09:24:54.241Z","action":"created","title":"KIS 백필 500 — EGW00201 초당한도: 스로틀+본문 인식"}
 {"ts":"2026-11-20T09:29:24.904Z","action":"done","title":"KIS 백필 500 — EGW00201 초당한도: 스로틀+본문 인식"}
 {"ts":"2026-11-20T09:29:25.203Z","action":"created","title":"백필 갱신 데이터로 MLP 재학습"}
+{"ts":"2026-11-20T09:36:24.815Z","action":"claimed","title":"백필 갱신 데이터로 MLP 재학습","actor":"zcode"}
+{"ts":"2026-11-20T09:37:37.157Z","action":"done","title":"백필 갱신 데이터로 MLP 재학습"}
