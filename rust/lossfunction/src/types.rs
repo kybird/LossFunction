@@ -28,18 +28,24 @@ pub enum OrderType {
     Limit,
 }
 
-/// A validated 6-digit domestic ticker (e.g. `"005930"`).
+/// A validated 6-character domestic ticker (e.g. `"005930"`, and the newer
+/// alphanumeric ETF codes like `"0152E0"` — KIS ISCD accepts uppercase
+/// letters in the 6-char frame).
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Symbol(String);
 
 #[derive(Debug, thiserror::Error)]
-#[error("symbol must be exactly 6 digits, got {0:?}")]
+#[error("symbol must be exactly 6 chars (digits or uppercase), got {0:?}")]
 pub struct InvalidSymbol(String);
 
 impl Symbol {
     pub fn parse(value: impl Into<String>) -> Result<Self, InvalidSymbol> {
         let value = value.into();
-        if value.len() == 6 && value.bytes().all(|b| b.is_ascii_digit()) {
+        if value.len() == 6
+            && value
+                .bytes()
+                .all(|b| b.is_ascii_digit() || b.is_ascii_uppercase())
+        {
             Ok(Self(value))
         } else {
             Err(InvalidSymbol(value))

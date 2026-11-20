@@ -51,9 +51,21 @@ from skl2onnx import to_onnx
 ROOT = Path(__file__).resolve().parents[2]
 DB_PATH = ROOT / "data" / "lossfunction.db"
 
-SYMBOLS = ("005930", "035420", "069500")
+# Universe: owner holdings (2026-11-20 decision — codes name-lookup + price-
+# cross-checked; see raw 2026-11-20 Case 13). Override with MLP_SYMBOLS=csv.
+# 017670=SK텔레콤(017660은 데이터 없음 — 웹검색 오류 정정), 미래에셋벤처투자는
+# 코드-가격 불일치(-37%)로 오너 확인 대기 중 제외(raw 2026-11-20 Case 13).
+HOLDING_SYMBOLS = (
+    "005930", "032830", "000660", "161510", "017670", "034950",
+    "010140", "006260", "034020", "489030", "0152E0", "051900",
+    "441640", "298040",
+)
+# 제외: 459580(KODEX CD금리 — 라벨 841/841 상승, 방향 불확실성 없는 현금성 상품),
+# 100790(미래에셋벤처투자 — 코드-가격 불일치, 오너 확인 대기).
+SYMBOLS = tuple(s for s in os.environ.get("MLP_SYMBOLS", ",".join(HOLDING_SYMBOLS)).split(",") if s)
 # Lookbacks may be overridden for experiments: `train_mlp.py 1,5,20,60,120`.
-LOOKBACKS = tuple(int(v) for v in (sys.argv[1].split(",") if len(sys.argv) > 1 else (1, 5, 20)))
+# Default is the promoted 5-lookback set (raw 2026-11-20 Case 10/13).
+LOOKBACKS = tuple(int(v) for v in (sys.argv[1].split(",") if len(sys.argv) > 1 else (1, 5, 20, 60, 120)))
 # Feature set: "price" (reference recipe) or "ext" (adds volume/vol/candle).
 FEATURE_SET = sys.argv[2] if len(sys.argv) > 2 else "price"
 # Experiments redirect artifacts without touching production models/.

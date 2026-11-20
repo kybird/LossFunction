@@ -105,11 +105,11 @@ mod tests {
         }
     }
 
-    /// Python onnxruntime reference for this history (2026-11-20):
-    /// 005930 prob_up = 0.4524281621 (raw features [1,5,20]).
+    /// Python onnxruntime reference for this history (2026-11-20, promoted
+    /// 5-lookback model): 005930 prob_up = 0.4813588560.
     #[test]
     fn advisory_signal_comes_from_the_ort_path_and_never_orders() {
-        let closes: Vec<f64> = (0..30)
+        let closes: Vec<f64> = (0..150)
             .map(|i| 100.0 * (1.0 + 0.01 * (((i * 7) % 13) - 6) as f64 / 6.0))
             .collect();
         let model = Arc::new(OnnxMlpDirection::load(&models_dir()).expect("models load"));
@@ -125,7 +125,7 @@ mod tests {
             .expect("probability feature present");
         let probability: f64 = feature.parse().expect("parses as f64");
         assert!(
-            (probability - 0.4524281621).abs() < 1e-5,
+            (probability - 0.4813588560).abs() < 1e-5,
             "ort-path probability drifted from the Python reference: {probability}"
         );
 
@@ -138,7 +138,7 @@ mod tests {
     fn short_history_is_skipped_not_failed() {
         let model = Arc::new(OnnxMlpDirection::load(&models_dir()).expect("models load"));
         let strategy = MlpAdvisoryStrategy::new(model);
-        let snapshot = snapshot_with_history(&[100.0; 15]);
+        let snapshot = snapshot_with_history(&[100.0; 100]); // < 121 closes
         let decision = strategy.decide(&snapshot);
         assert!(decision.intents.is_empty());
         assert_eq!(
