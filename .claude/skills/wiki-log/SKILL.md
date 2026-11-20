@@ -1,7 +1,7 @@
 ---
 name: wiki-log
 description: Record knowledge into raw memory with Karpathy-inspired Agentic Memory format. Captures errors, decisions, and discoveries with high-density grounding.
-skill-version: 1
+skill-version: 3
 ---
 # When to use
 - After an error occurs or a bug is fixed
@@ -27,10 +27,12 @@ skill-version: 1
 # Action
 1. Determine Date Filename
 - Use current date in format: YYYY-MM-DD.md
-- File path: doc/raw/YYYY-MM-DD.md
+- File path: docs/raw/YYYY-MM-DD.md
+- **Layout contract**: `docs/` (plural) is the canonical doc root — a legacy `doc/` is a
+  fallback, never the write target. When both exist, judge by `docs/`.
 
 2. Concept Drift Protection (MANDATORY)
-- **Search before naming**: Use `llm-wiki search` or `ls doc/wiki/concepts/` to find existing concepts.
+- **Search before naming**: Use `llm-wiki search` or `ls docs/wiki/concepts/` to find existing concepts.
 - Reuse existing names to maintain a dense, high-utility knowledge graph.
 - **Collect aliases**: While searching, note every other name the same concept travels under
   (Korean/English variants, error codes, product shorthand). Record them so compile can put
@@ -152,6 +154,6 @@ skill-version: 1
 ```
 
 # Output
-- File created or updated: doc/raw/YYYY-MM-DD.md
+- File created or updated: docs/raw/YYYY-MM-DD.md
 - Case anchor for direct linking: #case-N
 - **Index Update**: Run `llm-wiki compile index` to make the new case searchable (rebuilds wiki index + syncs QMD search index). If QMD is not installed, the case is still found via grep fallback.

@@ -1,11 +1,15 @@
 ---
 name: wiki-search
 description: Retrieve relevant past knowledge. Filters out deprecated practices and follows migration trails.
-skill-version: 1
+skill-version: 3
 ---
 # When to use
 - BEFORE writing any code
 - At the start of every task
+
+# Layout contract
+- `docs/` (plural) is the canonical doc root — a legacy `doc/` is a fallback (auto-migrates
+  on the next llm-wiki command). When both exist, judge by `docs/`.
 
 # Input
 - current task description
@@ -33,7 +37,7 @@ skill-version: 1
 # Answer Archiving
 - If this search produced a genuinely useful **synthesized answer** (spanning several pages,
   the kind a future session will re-derive at real cost), promote it:
-  - Write `doc/wiki/answers/<topic>.md` — frontmatter: `status: active`, `created: YYYY-MM-DD`,
+  - Write `docs/wiki/answers/<topic>.md` — frontmatter: `status: active`, `created: YYYY-MM-DD`,
     `tags: [...]`, `aliases: [...]`, plus the answer body with `[[links]]` back to sources.
   - Next `llm-wiki compile index` lists it in the Answers section and it becomes searchable.
 - Archive answers, not raw search dumps: a question answered in one page does not need this.
