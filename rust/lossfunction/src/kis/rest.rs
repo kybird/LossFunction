@@ -170,7 +170,7 @@ impl KisRestClient {
                         kind: ApiErrorKind::Server,
                         message: format!("server error {status}{detail}"),
                         msg_cd: None,
-                    })
+                    });
                 }
                 status => {
                     return Err(ApiError {

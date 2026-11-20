@@ -1,6 +1,6 @@
 ---
 title: MLP ort 추론 경로
-status: todo
+status: done
 ordinal: 23000
 created: 2026-11-20
 kind: milestone
@@ -22,3 +22,4 @@ kind: milestone
 ## Handoff
 
 ## Result
+- 2026-11-20T18:46+09:00 — 전원 종결 자동 반영: 멤버 2장 (done 2 · superseded 0 · abandoned 0) — 작업 완결이지 노선/제품 판정이 아니다(판정은 verdict 명령으로 별도 기록)

@@ -20,6 +20,8 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
 # Plain ws:// only (KIS realtime endpoint) — no TLS feature needed.
 tokio-tungstenite = { version = "0.26", default-features = false, features = ["connect"] }
 thiserror = { workspace = true }
+# ONNX Runtime bindings — advisory MLP inference without Python.
+ort = "2.0.0-rc.15"
 
 [dev-dependencies]
 tempfile = "3"
