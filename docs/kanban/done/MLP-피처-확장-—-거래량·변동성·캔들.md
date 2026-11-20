@@ -13,7 +13,7 @@ milestone: 무소속
 
 ## Acceptance Criteria
 <!-- kanban:ac:begin -->
-- [ ] #1 실험 결과가 종목별 정확도·p값과 함께 기록되고 프로덕션 models/는 무변경(실험은 MLP_MODELS_DIR 리다이렉트) / 전 피처가 t시점 이하 봉만 사용함을 코드로 보장 / 개선 시에만 승격 카드로 연결
+- [x] #1 실험 결과가 종목별 정확도·p값과 함께 기록되고 프로덕션 models/는 무변경(실험은 MLP_MODELS_DIR 리다이렉트) / 전 피처가 t시점 이하 봉만 사용함을 코드로 보장 / 개선 시에만 승격 카드로 연결
 <!-- kanban:ac:end -->
 
 ## Plan
