@@ -64,5 +64,10 @@ DEMO_LOOP=true                 # 가상 시세로 전략-주문-체결이 흐름
 ## 참고
 
 - 토큰/접속키는 앱이 자동 발급·갱신하므로 사용자가 다룰 필요 없음.
-- 도메인 구분: 실전 `openapi.koreainvestment.com`, 모의
-  `openapivts.koreainvestment.com` — 설정(KIS_ENVIRONMENT)으로만 전환.
+- 도메인 구분: 실전 `https://openapi.koreainvestment.com:9443`, 모의
+  `https://openapivts.koreainvestment.com:29443` (공식 저장소
+  [koreainvestment/open-trading-api](https://github.com/koreainvestment/open-trading-api)
+  `kis_devlp.yaml` 기준, 2026-10-13 대조) — 설정(KIS_ENVIRONMENT)으로만 전환.
+- 모의투자 체결통보(WS H0STCNI9)에는 위 3가지 외에 **HTS ID**가 추가로 필요하다
+  (공식 README: 체결통보·조건목록 확인용). 체결통보 구현 시점에 금고 `KIS 모의투자`
+  항목의 사용자 정의 필드 `HTS_ID`에서 주입 예정.

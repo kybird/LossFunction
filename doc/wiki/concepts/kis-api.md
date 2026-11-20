@@ -30,7 +30,9 @@ confidence: 4
 - WebSocket 접속키는 별도: `POST /oauth2/Approval`, body 필드명이
   **`secretkey`** (REST의 `appsecret`이 아님!).
 - 도메인: 실전 `https://openapi.koreainvestment.com:9443`, 모의
-  `https://openapivts.koreainvestment.com:9443`.
+  `https://openapivts.koreainvestment.com:29443` (공식 저장소
+  koreainvestment/open-trading-api `kis_devlp.yaml` — 2026-10-13 대조로
+  :9443→:29443 정정, raw 2026-10-13 Case 2).
 
 ## 주문/조회 REST (국내주식)
 
@@ -49,7 +51,9 @@ tr_cont. 계좌는 8-2 자리("12345678-01").
 ## WebSocket
 
 - URL: 실전 `ws://ops.koreainvestment.com:21000`, 모의
-  `ws://vops.koreainvestment.com:21000`.
+  `ws://ops.koreainvestment.com:31000` (공식 `kis_devlp.yaml` `vops` 항목 —
+  **호스트는 ops 그대로, 포트만 31000**. 커뮤니티 문서의
+  `vops.koreainvestment.com:21000`과 다름, 2026-10-13 정정).
 - 구독: `{"header": {"approval_key", "tr_type": "1"|"0", "custtype": "P"},
   "body": {"input": {"tr_id", "tr_key"}}}`.
 - 구독 ACK(실측 2026-10-02): JSON `{"header":{"tr_id","tr_key","encrypt":"N"},

@@ -19,7 +19,7 @@ const KST_OFFSET_SECS: i32 = 9 * 3600;
 pub fn kis_base_url(environment: &str) -> &'static str {
     match environment {
         "real" => "https://openapi.koreainvestment.com:9443",
-        _ => "https://openapivts.koreainvestment.com:9443",
+        _ => "https://openapivts.koreainvestment.com:29443",
     }
 }
 
@@ -27,7 +27,7 @@ pub fn kis_base_url(environment: &str) -> &'static str {
 pub fn kis_ws_url(environment: &str) -> &'static str {
     match environment {
         "real" => "ws://ops.koreainvestment.com:21000",
-        _ => "ws://vops.koreainvestment.com:21000",
+        _ => "ws://ops.koreainvestment.com:31000",
     }
 }
 

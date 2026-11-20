@@ -3,7 +3,7 @@ tags: [index]
 
 # Wiki Index
 
-LossFunction 프로젝트의 구조화된 지식 베이스입니다. `doc/raw/` 로그에서 추출한 핵심 개념과 패턴을 정리했습니다.
+LossFunction 프로젝트의 구조화된 지식 베이스입니다. `docs/raw/` 로그에서 추출한 핵심 개념과 패턴을 정리했습니다.
 
 ---
 
@@ -51,4 +51,4 @@ LossFunction 프로젝트의 구조화된 지식 베이스입니다. `doc/raw/` 
 - Total patterns: 4
 - Total anti-patterns: 1
 - Total answers: 0
-- Last updated: 2026-10-02
+- Last updated: 2026-10-13
