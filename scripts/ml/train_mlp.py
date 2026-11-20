@@ -21,6 +21,7 @@ Outputs (all git-tracked, outside data/):
 """
 
 import hashlib
+import itertools
 import json
 import sqlite3
 import sys
@@ -39,10 +40,13 @@ from skl2onnx import to_onnx
 
 ROOT = Path(__file__).resolve().parents[2]
 DB_PATH = ROOT / "data" / "lossfunction.db"
-MODELS_DIR = ROOT / "models"
 
 SYMBOLS = ("005930", "035420", "069500")
-LOOKBACKS = (1, 5, 20)
+# Lookbacks may be overridden for experiments: `train_mlp.py 1,5,20,60,120`.
+LOOKBACKS = tuple(int(v) for v in (sys.argv[1].split(",") if len(sys.argv) > 1 else (1, 5, 20)))
+# Experiments redirect artifacts without touching production models/.
+import os
+MODELS_DIR = Path(os.environ.get("MLP_MODELS_DIR", ROOT / "models"))
 TEST_FRACTION = 0.25
 RANDOM_STATE = 7
 # sklearn computes in float64, the ONNX graph in float32 — parity tolerance.
@@ -51,10 +55,8 @@ PARITY_TOLERANCE = 1e-5
 # Fixed raw-feature grid for the regression fixture (shared by all symbols).
 # Daily log-returns rarely exceed |0.08|; this grid spans the realistic range.
 FIXTURE_INPUTS = [
-    [round(a, 4), round(b, 4), round(c, 4)]
-    for a in (-0.05, 0.0, 0.05)
-    for b in (-0.05, 0.0, 0.05)
-    for c in (-0.05, 0.0, 0.05)
+    [round(v, 4) for v in combo]
+    for combo in itertools.product((-0.05, 0.0, 0.05), repeat=len(LOOKBACKS))
 ]
 
 
@@ -154,7 +156,9 @@ def train_symbol(symbol: str) -> dict:
 
     onnx_model = to_onnx(
         pipe,
-        initial_types=[("input", skl2onnx.common.data_types.FloatTensorType([None, 3]))],
+        initial_types=[
+                ("input", skl2onnx.common.data_types.FloatTensorType([None, len(LOOKBACKS)]))
+            ],
         options={id(pipe): {"zipmap": False}},
         target_opset=None,
     )
