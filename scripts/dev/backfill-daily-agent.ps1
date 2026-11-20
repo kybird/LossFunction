@@ -29,9 +29,20 @@ Set-Content -Path $status -Value "start=$(Get-Date -Format o)"
 
 Write-Host "[wrapper] backfill-daily.ps1 실행 — 프롬프트가 뜨면 마스터 비밀번호를 입력하세요." -ForegroundColor Cyan
 # 콘솔 출력을 통째로 tee — 스크립트는 시크릿을 출력하지 않으므로 안전(실패 원문 보존용).
+# PS 5.1 함정: 2>&1로 넘어온 네이티브 stderr(cargo 진행 상태 등)는 ErrorRecord로 포장되고
+# EAP=Stop이 즉시 종료시킨다(raw 2026-11-20 Case 6). 호출 구간만 EAP를 내리고 레코드를
+# 문자열로 풀어서 tee한다.
+$ErrorActionPreference = "Continue"
 & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "backfill-daily.ps1") @RemainingArgs 2>&1 |
+    ForEach-Object {
+        if ($_ -is [System.Management.Automation.ErrorRecord]) { "$($_.Exception.Message)" }
+        else { "$_" }
+    } |
     Tee-Object -FilePath $log
+$ErrorActionPreference = "Stop"
 $code = if ($null -ne $LASTEXITCODE) { $LASTEXITCODE } else { -1 }
 
 Add-Content -Path $status -Value "exit=$code end=$(Get-Date -Format o)"
-Write-Host "`n[wrapper] 백필 종료 코드: $code (상태 파일: $status) — 이 창은 닫아도 된다." -ForegroundColor Cyan
+# Tee-Object는 PS5.1에서 UTF-16LE로 쓴다 — 도구(git bash cat 등) 호환을 위해 UTF-8로 정리.
+if (Test-Path $log) { Get-Content -LiteralPath $log | Set-Content -LiteralPath $log -Encoding UTF8 }
+Write-Host "`n[wrapper] 백필 종료 코드: $code (상태: $status · 로그: $log) — 이 창은 닫아도 된다." -ForegroundColor Cyan
