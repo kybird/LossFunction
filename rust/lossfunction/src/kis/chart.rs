@@ -47,6 +47,38 @@ impl KisChartSource {
         }
     }
 
+    /// One window fetch, rate-aware: KIS caps requests per second and serves
+    /// the cap as HTTP 500 EGW00201 (raw 2026-11-20 Case 7 — burst of ~20
+    /// back-to-back window fetches trips it; recovers in seconds, no penalty).
+    /// A 200ms pause between windows keeps the walk under the cap; a tripped
+    /// EGW00201 is retried after a 1s backoff.
+    async fn fetch_window(
+        &self,
+        symbol: &Symbol,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<Vec<Bar>, MarketDataError> {
+        const MAX_ATTEMPTS: u8 = 4;
+        for attempt in 1..=MAX_ATTEMPTS {
+            if attempt > 1 {
+                tokio::time::sleep(std::time::Duration::from_millis(1_000)).await;
+            }
+            match self.fetch_page(symbol, start, end).await {
+                Ok(bars) => {
+                    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+                    return Ok(bars);
+                }
+                Err(error) => {
+                    if error.to_string().contains("EGW00201") && attempt < MAX_ATTEMPTS {
+                        continue;
+                    }
+                    return Err(error);
+                }
+            }
+        }
+        unreachable!("the loop always returns within MAX_ATTEMPTS")
+    }
+
     /// One HTTP page fetch: request a single window, parse, sort, dedup.
     async fn fetch_page(
         &self,
@@ -142,7 +174,7 @@ impl MarketDataSource for KisChartSource {
 
         let mut all = Vec::new();
         while let Some((window_start, window_end, depth)) = pending.pop() {
-            let bars = self.fetch_page(symbol, window_start, window_end).await?;
+            let bars = self.fetch_window(symbol, window_start, window_end).await?;
             if bars.len() >= PAGE_LIMIT && depth < MAX_SPLIT_DEPTH && window_start < window_end {
                 let mid = window_start + Duration::days((window_end - window_start).num_days() / 2);
                 pending.push((window_start, mid, depth + 1));

@@ -44,5 +44,14 @@ $code = if ($null -ne $LASTEXITCODE) { $LASTEXITCODE } else { -1 }
 
 Add-Content -Path $status -Value "exit=$code end=$(Get-Date -Format o)"
 # Tee-Object는 PS5.1에서 UTF-16LE로 쓴다 — 도구(git bash cat 등) 호환을 위해 UTF-8로 정리.
-if (Test-Path $log) { Get-Content -LiteralPath $log | Set-Content -LiteralPath $log -Encoding UTF8 }
+# 같은 파일을 읽으며 쓰면 파일 잠금 충돌(raw 2026-11-20 Case 7): 변수로 받았다가 쓴다.
+# 장식 단계이므로 실패해도 래퍼를 죽이지 않는다.
+try {
+    if (Test-Path $log) {
+        $plain = Get-Content -LiteralPath $log
+        Set-Content -LiteralPath $log -Value $plain -Encoding UTF8
+    }
+} catch {
+    Write-Host "[wrapper] 로그 UTF-8 정리 생략(잠금): $($_.Exception.Message)" -ForegroundColor Yellow
+}
 Write-Host "`n[wrapper] 백필 종료 코드: $code (상태: $status · 로그: $log) — 이 창은 닫아도 된다." -ForegroundColor Cyan

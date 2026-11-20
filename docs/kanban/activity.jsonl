@@ -259,3 +259,6 @@
 {"ts":"2026-11-20T04:58:14.764Z","action":"done","title":"MLP 학습·ONNX 내보내기"}
 {"ts":"2026-11-20T08:57:54.037Z","action":"created","title":"무소속","detail":"무소속 마일스톤 자동 생성(conclusion: never, 2026-10-15 규약)"}
 {"ts":"2026-11-20T08:57:54.049Z","action":"created","title":"KIS 토큰 디스크 캐시 — 공식 샘플 패턴 이관"}
+{"ts":"2026-11-20T09:24:54.241Z","action":"created","title":"KIS 백필 500 — EGW00201 초당한도: 스로틀+본문 인식"}
+{"ts":"2026-11-20T09:29:24.904Z","action":"done","title":"KIS 백필 500 — EGW00201 초당한도: 스로틀+본문 인식"}
+{"ts":"2026-11-20T09:29:25.203Z","action":"created","title":"백필 갱신 데이터로 MLP 재학습"}

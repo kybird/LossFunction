@@ -150,9 +150,25 @@ impl KisRestClient {
                     })
                 }
                 status if status >= 500 => {
+                    // KIS serves domain rejections (auth, EGW00201 rate limit)
+                    // as HTTP 5xx — the status alone cannot classify them, so
+                    // keep the body's rt_cd/msg_cd/msg1 in the error (raw
+                    // 2026-11-20 Case 7). The "server error {status}" prefix
+                    // stays: main.rs backfill retry filters on it.
+                    let body = response.text().await.unwrap_or_default();
+                    let detail = serde_json::from_str::<Value>(&body)
+                        .ok()
+                        .and_then(|payload| {
+                            let msg1 = payload["msg1"].as_str()?; // KIS-shaped only
+                            Some(format!(
+                                " rt_cd={} msg_cd={} msg1={}",
+                                payload["rt_cd"], payload["msg_cd"], msg1
+                            ))
+                        })
+                        .unwrap_or_default();
                     return Err(ApiError {
                         kind: ApiErrorKind::Server,
-                        message: format!("server error {status}"),
+                        message: format!("server error {status}{detail}"),
                         msg_cd: None,
                     })
                 }
