@@ -50,8 +50,8 @@ confidence: 5
 
 ## Grounding (References)
 
-- doc/raw/2026-09-14.md Case 5 (파싱 순서 결함, `hash:061eb5a`)
-- doc/raw/2026-09-14.md Case 9 (명시적 미구현, `hash:8c36798`)
-- doc/raw/2026-09-14.md Case 11 (fail-loud 필드 매핑, `hash:2d8d4bd`)
-- doc/raw/2026-09-14.md Case 17 (명시적 폴백, `hash:5c40d6c`)
-- doc/raw/2026-09-14.md Case 18 (기동 거부, `hash:9d0a6d3`)
+- docs/raw/2026-09-14.md Case 5 (파싱 순서 결함, `hash:061eb5a`)
+- docs/raw/2026-09-14.md Case 9 (명시적 미구현, `hash:8c36798`)
+- docs/raw/2026-09-14.md Case 11 (fail-loud 필드 매핑, `hash:2d8d4bd`)
+- docs/raw/2026-09-14.md Case 17 (명시적 폴백, `hash:5c40d6c`)
+- docs/raw/2026-09-14.md Case 18 (기동 거부, `hash:9d0a6d3`)

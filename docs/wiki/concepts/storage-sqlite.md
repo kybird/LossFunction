@@ -51,5 +51,5 @@ PostgreSQL 상주 메모리(+150~200MB)가 감당 불가했고, 단일 프로세
 
 ## Grounding (References)
 
-- doc/raw/2026-09-14.md Case 7 (PG 저장 설계 + Windows DLL 사건, `hash:afb6004`)
-- doc/raw/2026-09-14.md Case 21 (SQLite 전환, `hash:46f3713`)
+- docs/raw/2026-09-14.md Case 7 (PG 저장 설계 + Windows DLL 사건, `hash:afb6004`)
+- docs/raw/2026-09-14.md Case 21 (SQLite 전환, `hash:46f3713`)

@@ -50,8 +50,8 @@ clock/sleep/HTTP transport/연결 팩토리를 주입받게 설계해, 네트워
 
 ## Grounding (References)
 
-- doc/raw/2026-09-14.md Case 4/5 (transport·clock·sleep 주입, `hash:4228a47`, `hash:061eb5a`)
-- doc/raw/2026-09-14.md Case 6 (연결 팩토리+교착 교훈, `hash:ff1e528`)
-- doc/raw/2026-09-14.md Case 11 (ScriptedBroker, `hash:2d8d4bd`)
-- doc/raw/2026-09-14.md Case 14 (MockBroker 크로스 체결, `hash:baa55f7`)
-- doc/raw/2026-09-14.md Case 19 (알림 clock 주입, `hash:4a2bd72`)
+- docs/raw/2026-09-14.md Case 4/5 (transport·clock·sleep 주입, `hash:4228a47`, `hash:061eb5a`)
+- docs/raw/2026-09-14.md Case 6 (연결 팩토리+교착 교훈, `hash:ff1e528`)
+- docs/raw/2026-09-14.md Case 11 (ScriptedBroker, `hash:2d8d4bd`)
+- docs/raw/2026-09-14.md Case 14 (MockBroker 크로스 체결, `hash:baa55f7`)
+- docs/raw/2026-09-14.md Case 19 (알림 clock 주입, `hash:4a2bd72`)

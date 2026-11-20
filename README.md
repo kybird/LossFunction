@@ -117,8 +117,8 @@ rust/lossfunction/src/
 
 ## 기여
 
-이 저장소는 llm-wiki로 지식을 관리합니다 — `doc/`이 프로젝트 지식베이스,
-`doc/kanban/`이 작업 보드입니다. 개발 워크플로우는 `AGENTS.md`를 보세요.
+이 저장소는 llm-wiki로 지식을 관리합니다 — `docs/`이 프로젝트 지식베이스,
+`docs/kanban/`이 작업 보드입니다. 개발 워크플로우는 `AGENTS.md`를 보세요.
 
 ## 라이선스
 

@@ -51,9 +51,9 @@ confidence: 5
 
 ## Grounding (References)
 
-- doc/raw/2026-09-14.md Case 1 (verify-by-install, `hash:a79826d`)
-- doc/raw/2026-09-14.md Case 10 (전 쌍 탐사, `hash:a2470ac`)
-- doc/raw/2026-09-14.md Case 15 (lookahead 인터페이스 차단, `hash:f7c0db4`)
-- doc/raw/2026-09-14.md Case 16 (섭동 인과성+embargo, `hash:8b31303`)
-- doc/raw/2026-09-14.md Case 18 (서브프로세스 진입점, `hash:9d0a6d3`)
-- doc/raw/2026-09-14.md Case 20 (docs-as-tests, `hash:a43514c`)
+- docs/raw/2026-09-14.md Case 1 (verify-by-install, `hash:a79826d`)
+- docs/raw/2026-09-14.md Case 10 (전 쌍 탐사, `hash:a2470ac`)
+- docs/raw/2026-09-14.md Case 15 (lookahead 인터페이스 차단, `hash:f7c0db4`)
+- docs/raw/2026-09-14.md Case 16 (섭동 인과성+embargo, `hash:8b31303`)
+- docs/raw/2026-09-14.md Case 18 (서브프로세스 진입점, `hash:9d0a6d3`)
+- docs/raw/2026-09-14.md Case 20 (docs-as-tests, `hash:a43514c`)

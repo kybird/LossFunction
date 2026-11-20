@@ -50,5 +50,5 @@ PATH의 타 벤더 DLL이나 MSYS 경로 변환이 치명적 실패을 만든다
 
 ## Grounding (References)
 
-- doc/raw/2026-09-14.md Case 7 (PostgreSQL DLL 크래시, `hash:afb6004`)
-- doc/raw/2026-09-14.md Case 22 (GNU tar 함정, `hash:4f716c5`)
+- docs/raw/2026-09-14.md Case 7 (PostgreSQL DLL 크래시, `hash:afb6004`)
+- docs/raw/2026-09-14.md Case 22 (GNU tar 함정, `hash:4f716c5`)

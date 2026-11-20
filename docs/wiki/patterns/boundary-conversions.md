@@ -44,7 +44,7 @@ confidence: 5
 
 ## Grounding (References)
 
-- doc/raw/2026-09-14.md Case 4 (KST 파싱, `hash:4228a47`)
-- doc/raw/2026-09-14.md Case 17 (jsonb decode 정규화, `hash:5c40d6c`)
-- doc/raw/2026-09-14.md Case 21 (화폐 스케일, `hash:46f3713`)
-- doc/raw/2026-09-14.md Case 23 (escape-at-boundary, `hash:22c9209`)
+- docs/raw/2026-09-14.md Case 4 (KST 파싱, `hash:4228a47`)
+- docs/raw/2026-09-14.md Case 17 (jsonb decode 정규화, `hash:5c40d6c`)
+- docs/raw/2026-09-14.md Case 21 (화폐 스케일, `hash:46f3713`)
+- docs/raw/2026-09-14.md Case 23 (escape-at-boundary, `hash:22c9209`)

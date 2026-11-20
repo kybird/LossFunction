@@ -51,6 +51,6 @@ confidence: 5
 
 ## Grounding (References)
 
-- doc/raw/2026-09-14.md Case 10 (상태머신, `hash:a2470ac`)
-- doc/raw/2026-09-14.md Case 11 (reconciliation, `hash:2d8d4bd`)
-- doc/raw/2026-09-14.md Case 14 (런타임 sync/reconcile 분리, `hash:baa55f7`)
+- docs/raw/2026-09-14.md Case 10 (상태머신, `hash:a2470ac`)
+- docs/raw/2026-09-14.md Case 11 (reconciliation, `hash:2d8d4bd`)
+- docs/raw/2026-09-14.md Case 14 (런타임 sync/reconcile 분리, `hash:baa55f7`)

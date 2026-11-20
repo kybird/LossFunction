@@ -51,8 +51,8 @@ confidence: 5
 
 ## Grounding (References)
 
-- doc/raw/2026-09-14.md Case 8 (도메인 모델, `hash:b5095e4`)
-- doc/raw/2026-09-14.md Case 13 (전략 결정론, `hash:b22bda7`)
-- doc/raw/2026-09-14.md Case 16 (MLP leakage 방어, `hash:8b31303`)
-- doc/raw/2026-09-14.md Case 17 (GLM 스키마/폴백, `hash:5c40d6c`)
-- doc/raw/2026-09-14.md Case 15 (백테스트 전략 패리티, `hash:f7c0db4`)
+- docs/raw/2026-09-14.md Case 8 (도메인 모델, `hash:b5095e4`)
+- docs/raw/2026-09-14.md Case 13 (전략 결정론, `hash:b22bda7`)
+- docs/raw/2026-09-14.md Case 16 (MLP leakage 방어, `hash:8b31303`)
+- docs/raw/2026-09-14.md Case 17 (GLM 스키마/폴백, `hash:5c40d6c`)
+- docs/raw/2026-09-14.md Case 15 (백테스트 전략 패리티, `hash:f7c0db4`)
