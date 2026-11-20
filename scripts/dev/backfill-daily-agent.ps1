@@ -23,11 +23,14 @@ param(
 $ErrorActionPreference = "Stop"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $status = Join-Path $root "data\backfill-status.txt"
+$log = Join-Path $root "data\backfill-last-run.log"
 New-Item -ItemType Directory -Force -Path (Split-Path $status) | Out-Null
 Set-Content -Path $status -Value "start=$(Get-Date -Format o)"
 
 Write-Host "[wrapper] backfill-daily.ps1 실행 — 프롬프트가 뜨면 마스터 비밀번호를 입력하세요." -ForegroundColor Cyan
-& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "backfill-daily.ps1") @RemainingArgs
+# 콘솔 출력을 통째로 tee — 스크립트는 시크릿을 출력하지 않으므로 안전(실패 원문 보존용).
+& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "backfill-daily.ps1") @RemainingArgs 2>&1 |
+    Tee-Object -FilePath $log
 $code = if ($null -ne $LASTEXITCODE) { $LASTEXITCODE } else { -1 }
 
 Add-Content -Path $status -Value "exit=$code end=$(Get-Date -Format o)"
