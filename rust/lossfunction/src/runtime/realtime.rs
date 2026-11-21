@@ -96,7 +96,23 @@ impl RealtimeLoop {
 
     /// Process one live tick. Cheap paths always run (price/history update);
     /// the decision cycle + persistence run on the throttled cadence.
+    ///
+    /// Off-session ticks (장전 동시호가 08:30+, 장후 시간외 to ~18:00) are
+    /// persisted as DATA — future minute-bar material — but never touch the
+    /// trading pipeline: mixing auction/after-hours prints into the day bar
+    /// would redefine open/close away from the official candle the seeded
+    /// history and backtests use (raw 2026-11-21 Case 6).
     pub async fn on_quote(&mut self, quote: Quote) {
+        if !is_regular_session(quote.timestamp) {
+            if let Err(error) = self
+                .repository
+                .insert_quote(&quote.symbol, quote.last_price, quote.timestamp)
+                .await
+            {
+                eprintln!("off-session quote persist failed: {error}");
+            }
+            return;
+        }
         self.broker.set_price(&quote.symbol, quote.last_price);
         self.runtime.on_quote(quote.clone());
         self.pending.insert(quote.symbol.clone(), quote);
@@ -195,8 +211,35 @@ impl RealtimeLoop {
     }
 }
 
+/// KRX regular session (09:00–15:30 KST, Mon–Fri). Holidays simply have
+/// no ticks, so no calendar is needed.
+fn is_regular_session(timestamp: chrono::DateTime<chrono::Utc>) -> bool {
+    use chrono::{Datelike, Timelike};
+    let kst = timestamp + chrono::Duration::hours(9);
+    let minutes = kst.hour() * 60 + kst.minute();
+    let weekday = kst.weekday().num_days_from_monday();
+    weekday < 5 && (9 * 60..=15 * 60 + 30).contains(&minutes)
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn regular_session_boundaries_are_krx_correct() {
+        use chrono::{TimeZone, Utc};
+        // KST = UTC+9.
+        let kst_to_utc = |k_hour: u32, k_min: u32| -> chrono::DateTime<Utc> {
+            let (utc_h, day) = if k_hour >= 9 { (k_hour - 9, 23) } else { (k_hour + 15, 22) };
+            Utc.with_ymd_and_hms(2026, 11, day, utc_h, k_min, 0).unwrap()
+        };
+        assert!(!super::is_regular_session(kst_to_utc(8, 59)), "장전 동시호가 거부");
+        assert!(super::is_regular_session(kst_to_utc(9, 0)), "개장 통과");
+        assert!(super::is_regular_session(kst_to_utc(15, 30)), "마감 포함");
+        assert!(!super::is_regular_session(kst_to_utc(15, 31)), "장후 거부");
+        // 2026-11-21 = Saturday — 10:00 KST = 01:00 UTC same day.
+        let saturday = Utc.with_ymd_and_hms(2026, 11, 21, 1, 0, 0).unwrap();
+        assert!(!super::is_regular_session(saturday), "주말 거부");
+    }
+
     use super::*;
     use crate::risk::{RiskLimits, RiskManager as CoreRiskManager};
     use chrono::TimeZone;
