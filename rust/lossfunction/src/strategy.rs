@@ -158,13 +158,35 @@ impl Strategy for EntryPriceStrategy {
                 });
             }
         }
+        // Per-symbol reasons with the actual numbers — the rationale column
+        // must answer "why THIS trade" (owner request 2026-11-21), not recite
+        // the rule. Sorted for determinism regardless of map order.
+        let mut reasons: Vec<String> = intents
+            .iter()
+            .map(|intent| {
+                let entry = self
+                    .entry_prices
+                    .get(&intent.symbol)
+                    .map(|price| price.to_string())
+                    .unwrap_or_else(|| "?".into());
+                let price = intent
+                    .limit_price
+                    .map(|price| price.to_string())
+                    .unwrap_or_else(|| "시장가".into());
+                format!(
+                    "{} 현재가 {} ≤ 진입가 {} · 미보유 → {}주 매수",
+                    intent.symbol, price, entry, intent.quantity
+                )
+            })
+            .collect();
+        reasons.sort();
         StrategyDecision {
             strategy_name: self.name().to_string(),
             strategy_version: self.version().to_string(),
             rationale: if intents.is_empty() {
-                "no entry signals".to_string()
+                "진입 신호 없음".to_string()
             } else {
-                "buy symbols at/below entry with no existing position".to_string()
+                reasons.join("; ")
             },
             intents,
             features,
