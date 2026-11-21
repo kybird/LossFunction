@@ -61,6 +61,69 @@ async fn optimize_all_strategies(settings: &Settings, symbols_csv: Option<String
     }
 }
 
+/// Per-symbol × per-strategy validation-return matrix (DEFAULT params only).
+async fn matrix_per_symbol(settings: &Settings, symbols_csv: Option<String>) {
+    use lossfunction::backtest::{load_bars_from_candles, BacktestConfig};
+    use lossfunction::backtest_optimize::walk_forward;
+    use lossfunction::strategy_registry;
+    use lossfunction::types::Symbol;
+
+    let repository = Repository::open(&settings.database_path)
+        .await
+        .expect("open sqlite database");
+    let symbols: Vec<Symbol> = match symbols_csv {
+        Some(csv) => csv
+            .split(',')
+            .map(|code| code.trim())
+            .filter(|code| !code.is_empty())
+            .map(|code| Symbol::parse(code).expect("valid symbol code"))
+            .collect(),
+        None => repository
+            .watchlist()
+            .await
+            .ok()
+            .filter(|list| !list.is_empty())
+            .unwrap_or_else(|| settings.watchlist.clone()),
+    };
+    let strategies: Vec<_> = strategy_registry::registry();
+    println!(
+        "matrix: {} symbols x {} strategies (walk-forward 70/30, DEFAULT params only)",
+        symbols.len(),
+        strategies.len()
+    );
+    print!("{:<8}", "symbol");
+    for spec in &strategies {
+        print!("{:>12}", spec.key);
+    }
+    println!();
+    for symbol in &symbols {
+        let one = [symbol.clone()];
+        let bars = match load_bars_from_candles(&repository, &one, 120).await {
+            Ok(bars) => bars,
+            Err(error) => {
+                println!("{:<8} SKIP — {error}", symbol.as_str());
+                continue;
+            }
+        };
+        print!("{:<8}", symbol.as_str());
+        for spec in &strategies {
+            let cell = match walk_forward(&bars, spec.key, &one, BacktestConfig::default(), 0.7, 1).await
+            {
+                Ok(outcomes) => {
+                    let default = outcomes
+                        .iter()
+                        .find(|outcome| outcome.is_default)
+                        .expect("default outcome present");
+                    format!("{:>9.2}%", default.validation.return_pct)
+                }
+                Err(_) => "         —".to_string(),
+            };
+            print!("{cell:>12}");
+        }
+        println!();
+    }
+}
+
 async fn backfill_daily_bars(settings: &Settings, years: i64) {
     use lossfunction::kis::auth::{kis_base_url, KisAuth};
     use lossfunction::kis::chart::KisChartSource;
@@ -209,6 +272,19 @@ async fn main() {
             .nth(position + 1)
             .filter(|value| !value.starts_with('-'));
         optimize_all_strategies(&settings, symbols_csv).await;
+        return;
+    }
+
+    // Per-symbol strategy fit matrix: every registered strategy's DEFAULT
+    // parameters, walk-forward validation return, one symbol at a time.
+    // No per-symbol param selection — that would be a multiple-comparison
+    // explosion (raw 2026-11-21 Case 3); patterns, not per-symbol winners.
+    // `--matrix-per-symbol [symbols]` (default: stored watchlist).
+    if let Some(position) = std::env::args().position(|arg| arg == "--matrix-per-symbol") {
+        let symbols_csv = std::env::args()
+            .nth(position + 1)
+            .filter(|value| !value.starts_with('-'));
+        matrix_per_symbol(&settings, symbols_csv).await;
         return;
     }
     let port: u16 = std::env::var("HEALTH_PORT")

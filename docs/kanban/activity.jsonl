@@ -283,3 +283,6 @@
 {"ts":"2026-11-21T01:07:55.830Z","action":"created","title":"체결·주문 내역에 전략 사유(rationale) 표시"}
 {"ts":"2026-11-21T01:07:56.121Z","action":"claimed","title":"체결·주문 내역에 전략 사유(rationale) 표시","actor":"zcode"}
 {"ts":"2026-11-21T01:41:41.335Z","action":"done","title":"체결·주문 내역에 전략 사유(rationale) 표시"}
+{"ts":"2026-11-21T05:24:35.543Z","action":"created","title":"종목별 전략 적합성 매트릭스 — 기본 파라미터"}
+{"ts":"2026-11-21T05:24:35.802Z","action":"claimed","title":"종목별 전략 적합성 매트릭스 — 기본 파라미터","actor":"zcode"}
+{"ts":"2026-11-21T05:26:52.839Z","action":"done","title":"종목별 전략 적합성 매트릭스 — 기본 파라미터"}
