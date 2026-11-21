@@ -719,7 +719,11 @@ mod tests {
         let (_dir, repository) = repo().await;
 
         repository
-            .create_order(&order("it-1", OrderStatus::Pending), "paper", "it-rationale")
+            .create_order(
+                &order("it-1", OrderStatus::Pending),
+                "paper",
+                "it-rationale",
+            )
             .await
             .unwrap();
         assert!(repository

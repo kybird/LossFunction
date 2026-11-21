@@ -9,6 +9,9 @@ use rust_decimal::Decimal;
 
 use crate::strategies::{DonchianBreakoutStrategy, RsiReversionStrategy, SmaCrossStrategy};
 use crate::strategies2::{BollingerReversionStrategy, MacdCrossStrategy, MomentumRotationStrategy};
+use crate::strategies3::{
+    ConsecutiveRunStrategy, StrongCloseStrategy, VolatilitySqueezeBreakoutStrategy,
+};
 use crate::strategy::Strategy;
 use crate::types::{Quantity, Symbol};
 
@@ -69,6 +72,27 @@ pub fn registry() -> Vec<StrategySpec> {
             description: "MACD 신호선 상향 교차 매수, 하향 교차 매도",
             params: "12/26/9",
         },
+        StrategySpec {
+            generated: false,
+            key: "consecutive-run",
+            name: "연속 상승/하락",
+            description: "N일 연속 상승 시 매수(모멘텀 지속), 보유 중 N일 연속 하락 시 매도",
+            params: "3일 · 5주",
+        },
+        StrategySpec {
+            generated: false,
+            key: "strong-close",
+            name: "강한 종가",
+            description: "종가가 최근 N일 종가 범위의 상단 구간이면 매수, 하단이면 매도",
+            params: "10일 · 상/하 80/20%",
+        },
+        StrategySpec {
+            generated: false,
+            key: "vol-squeeze-breakout",
+            name: "변동성 확장 돌파",
+            description: "단기 변동성이 장기 대비 압축된 뒤 N일 최고가 돌파 시 매수",
+            params: "5/20일 · 0.6배 · 20일 돌파",
+        },
     ];
     all.extend(crate::strategies_generated::specs());
     all
@@ -106,6 +130,23 @@ pub fn build(key: &str, symbols: &[Symbol], quantity: Quantity) -> Option<Box<dy
         "macd-cross" => Some(Box::new(MacdCrossStrategy::new(
             symbols, 12, 26, 9, quantity,
         ))),
+        "consecutive-run" => Some(Box::new(ConsecutiveRunStrategy::new(symbols, 3, quantity))),
+        "strong-close" => Some(Box::new(StrongCloseStrategy::new(
+            symbols,
+            10,
+            Decimal::from(8) / Decimal::from(10),
+            Decimal::from(2) / Decimal::from(10),
+            quantity,
+        ))),
+        "vol-squeeze-breakout" => Some(Box::new(VolatilitySqueezeBreakoutStrategy::new(
+            symbols,
+            5,
+            20,
+            Decimal::from(6) / Decimal::from(10),
+            20,
+            10,
+            quantity,
+        ))),
         _ => crate::strategies_generated::build(key, &symbols, quantity),
     }
 }
@@ -119,13 +160,13 @@ mod tests {
     }
 
     #[test]
-    fn registry_lists_six_strategies_with_unique_keys() {
+    fn registry_lists_registered_strategies_with_unique_keys() {
         let specs = registry();
-        assert_eq!(specs.len(), 6);
+        assert_eq!(specs.len(), 9);
         let mut keys: Vec<_> = specs.iter().map(|spec| spec.key).collect();
         keys.sort_unstable();
         keys.dedup();
-        assert_eq!(keys.len(), 6, "keys must be unique");
+        assert_eq!(keys.len(), 9, "keys must be unique");
     }
 
     #[test]

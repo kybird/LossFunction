@@ -13,6 +13,9 @@ use rust_decimal::Decimal;
 use crate::backtest::{summarize, BacktestConfig, BacktestEngine, Bar, Metrics};
 use crate::broker::mock::MockBroker;
 use crate::strategies::{DonchianBreakoutStrategy, RsiReversionStrategy, SmaCrossStrategy};
+use crate::strategies3::{
+    ConsecutiveRunStrategy, StrongCloseStrategy, VolatilitySqueezeBreakoutStrategy,
+};
 use crate::strategies2::{BollingerReversionStrategy, MacdCrossStrategy, MomentumRotationStrategy};
 use crate::strategy::Strategy;
 use crate::types::{Quantity, Symbol};
@@ -145,6 +148,58 @@ pub fn param_grid(strategy_key: &str) -> Vec<ParamSet> {
                 })
             })
             .collect(),
+        "consecutive-run" => vec![
+            set("기본 3일", true, |s, q| {
+                Box::new(ConsecutiveRunStrategy::new(s.to_vec(), 3, q))
+            }),
+            set("5일", false, |s, q| {
+                Box::new(ConsecutiveRunStrategy::new(s.to_vec(), 5, q))
+            }),
+        ],
+        "strong-close" => vec![
+            set("기본 10일 80/20", true, |s, q| {
+                Box::new(StrongCloseStrategy::new(
+                    s.to_vec(),
+                    10,
+                    Decimal::from(8) / Decimal::from(10),
+                    Decimal::from(2) / Decimal::from(10),
+                    q,
+                ))
+            }),
+            set("20일 75/25", false, |s, q| {
+                Box::new(StrongCloseStrategy::new(
+                    s.to_vec(),
+                    20,
+                    Decimal::from(75) / Decimal::from(100),
+                    Decimal::from(25) / Decimal::from(100),
+                    q,
+                ))
+            }),
+        ],
+        "vol-squeeze-breakout" => vec![
+            set("기본 5/20·0.6·20일", true, |s, q| {
+                Box::new(VolatilitySqueezeBreakoutStrategy::new(
+                    s.to_vec(),
+                    5,
+                    20,
+                    Decimal::from(6) / Decimal::from(10),
+                    20,
+                    10,
+                    q,
+                ))
+            }),
+            set("0.8배·40일 돌파", false, |s, q| {
+                Box::new(VolatilitySqueezeBreakoutStrategy::new(
+                    s.to_vec(),
+                    5,
+                    20,
+                    Decimal::from(8) / Decimal::from(10),
+                    40,
+                    15,
+                    q,
+                ))
+            }),
+        ],
         _ => Vec::new(),
     }
 }

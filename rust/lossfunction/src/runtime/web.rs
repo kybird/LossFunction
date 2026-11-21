@@ -1207,7 +1207,10 @@ mod tests {
             None,
         )
         .unwrap();
-        repository.create_order(&order, "paper", "테스트 사유").await.unwrap();
+        repository
+            .create_order(&order, "paper", "테스트 사유")
+            .await
+            .unwrap();
         repository
             .record_fill(
                 "ord-0001",

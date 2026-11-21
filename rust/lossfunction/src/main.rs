@@ -107,7 +107,8 @@ async fn matrix_per_symbol(settings: &Settings, symbols_csv: Option<String>) {
         };
         print!("{:<8}", symbol.as_str());
         for spec in &strategies {
-            let cell = match walk_forward(&bars, spec.key, &one, BacktestConfig::default(), 0.7, 1).await
+            let cell = match walk_forward(&bars, spec.key, &one, BacktestConfig::default(), 0.7, 1)
+                .await
             {
                 Ok(outcomes) => {
                     let default = outcomes
