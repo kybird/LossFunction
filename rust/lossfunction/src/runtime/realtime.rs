@@ -30,6 +30,11 @@ pub struct RealtimeLoop {
     cycle_interval: Duration,
     next_cycle: Instant,
     pending: HashMap<Symbol, Quote>,
+    /// Last persisted price per symbol — quotes are recorded on PRICE
+    /// CHANGE only: minute-bar OHLC is lossless under this sampling (open/
+    /// high/low/close are all price changes) while same-price repeat prints
+    /// and 500ms resamples of a stale quote stop burning disk.
+    persisted_price: HashMap<Symbol, rust_decimal::Decimal>,
     persisted_status: HashMap<String, OrderStatus>,
     persisted_fills: Vec<String>,
 }
@@ -81,6 +86,7 @@ impl RealtimeLoop {
             cycle_interval,
             next_cycle: Instant::now(),
             pending: HashMap::new(),
+            persisted_price: HashMap::new(),
             persisted_status: HashMap::new(),
             persisted_fills: Vec::new(),
         }
@@ -94,6 +100,21 @@ impl RealtimeLoop {
         self.runtime.strategy_label()
     }
 
+    /// Record-side price gate: true only when this symbol's price moved
+    /// since the last persisted quote. Associated fn taking the map
+    /// directly so callers can hold borrows on other fields.
+    fn note_price_change(
+        seen: &mut HashMap<Symbol, rust_decimal::Decimal>,
+        symbol: &Symbol,
+        price: rust_decimal::Decimal,
+    ) -> bool {
+        if seen.get(symbol) == Some(&price) {
+            return false;
+        }
+        seen.insert(symbol.clone(), price);
+        true
+    }
+
     /// Process one live tick. Cheap paths always run (price/history update);
     /// the decision cycle + persistence run on the throttled cadence.
     ///
@@ -104,12 +125,14 @@ impl RealtimeLoop {
     /// history and backtests use (raw 2026-11-21 Case 6).
     pub async fn on_quote(&mut self, quote: Quote) {
         if !is_regular_session(quote.timestamp) {
-            if let Err(error) = self
-                .repository
-                .insert_quote(&quote.symbol, quote.last_price, quote.timestamp)
-                .await
-            {
-                eprintln!("off-session quote persist failed: {error}");
+            if Self::note_price_change(&mut self.persisted_price, &quote.symbol, quote.last_price) {
+                if let Err(error) = self
+                    .repository
+                    .insert_quote(&quote.symbol, quote.last_price, quote.timestamp)
+                    .await
+                {
+                    eprintln!("off-session quote persist failed: {error}");
+                }
             }
             return;
         }
@@ -143,9 +166,11 @@ impl RealtimeLoop {
         let now = chrono::Utc::now();
         for symbol in symbols {
             let quote = &self.pending[symbol];
-            self.repository
-                .insert_quote(symbol, quote.last_price, now)
-                .await?;
+            if Self::note_price_change(&mut self.persisted_price, symbol, quote.last_price) {
+                self.repository
+                    .insert_quote(symbol, quote.last_price, now)
+                    .await?;
+            }
         }
 
         let submitted = self.runtime.run_decision_cycle().await;
