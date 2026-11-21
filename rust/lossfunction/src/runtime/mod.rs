@@ -31,6 +31,10 @@ pub mod strategy_codegen;
 use crate::types::{OrderSide, Quote, Symbol};
 
 /// Coordinates strategy, risk, execution, and recovery.
+/// Per-process boot stamp — scopes generated client-order ids so a
+/// restarted process never re-issues ids a previous run persisted.
+static BOOT_STAMP: std::sync::OnceLock<i64> = std::sync::OnceLock::new();
+
 pub struct TradingRuntime {
     broker: Arc<dyn Broker>,
     reconciler: Reconciler,
@@ -68,7 +72,17 @@ impl TradingRuntime {
             aggregator: crate::marketdata::BarAggregator::new(),
             quotes: HashMap::new(),
             portfolio: Portfolio::new(),
-            order_prefix: order_prefix.into(),
+            // Client-order ids must never collide with rows a previous
+            // process already persisted — the in-memory seq resets on every
+            // restart (raw 2026-11-21: the demo loop died endlessly on
+            // UNIQUE(client_order_id) against a reused database). The boot
+            // stamp scopes ids per process run; retries within one run keep
+            // their idempotency semantics untouched.
+            order_prefix: format!(
+                "{}-b{}",
+                order_prefix.into(),
+                BOOT_STAMP.get_or_init(|| chrono::Utc::now().timestamp())
+            ),
             order_seq: 0,
             open_local: HashMap::new(),
         }
