@@ -13,7 +13,7 @@ milestone: 무소속
 
 ## Acceptance Criteria
 <!-- kanban:ac:begin -->
-- [ ] #1 migration v5 적용 후 기존 행 호환(기본 빈 문자열) / 개요·포지션 페이지 체결·주문 표에 사유 열 렌더(HTML 이스케이프) / cargo test 전체 통과 + 서버 재배포 후 데모 체결에 사유 표시 확인
+- [x] #1 migration v5 적용 후 기존 행 호환(기본 빈 문자열) / 개요·포지션 페이지 체결·주문 표에 사유 열 렌더(HTML 이스케이프) / cargo test 전체 통과 + 서버 재배포 후 데모 체결에 사유 표시 확인
 <!-- kanban:ac:end -->
 
 ## Plan
