@@ -303,13 +303,18 @@ impl Repository {
 
     // ── orders ─────────────────────────────────────────────────────
 
-    pub async fn create_order(&self, order: &Order, mode: &str) -> Result<(), StorageError> {
+    pub async fn create_order(
+        &self,
+        order: &Order,
+        mode: &str,
+        rationale: &str,
+    ) -> Result<(), StorageError> {
         let mut tx = self.write().await?;
         let now = now_iso();
         sqlx::query(
             "INSERT INTO orders (client_order_id, symbol, side, order_type, \
-             quantity, limit_price, status, mode, created_at, updated_at) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)",
+             quantity, limit_price, status, mode, rationale, created_at, updated_at) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10)",
         )
         .bind(order.client_order_id())
         .bind(order.symbol().as_str())
@@ -325,6 +330,7 @@ impl Repository {
         .bind(order.limit_price().map(money_to_int))
         .bind(order.status().to_string())
         .bind(mode)
+        .bind(rationale)
         .bind(&now)
         .execute(&mut *tx)
         .await?;
@@ -383,6 +389,7 @@ impl Repository {
     pub async fn recent_orders(&self, limit: i64) -> Result<Vec<RecentOrder>, StorageError> {
         let rows = sqlx::query(
             "SELECT client_order_id, symbol, side, quantity, limit_price, status, \
+             COALESCE(rationale, '') AS rationale, \
              created_at FROM orders ORDER BY created_at DESC, rowid DESC LIMIT ?1",
         )
         .bind(limit)
@@ -399,6 +406,7 @@ impl Repository {
                         .try_get::<Option<i64>, _>("limit_price")?
                         .map(int_to_money),
                     status: row.try_get("status")?,
+                    rationale: row.try_get("rationale")?,
                     created_at: parse_ts(row.try_get("created_at")?)?,
                 })
             })
@@ -453,8 +461,10 @@ impl Repository {
 
     pub async fn recent_fills(&self, limit: i64) -> Result<Vec<RecentFill>, StorageError> {
         let rows = sqlx::query(
-            "SELECT client_order_id, symbol, side, quantity, price, executed_at FROM fills \
-             ORDER BY executed_at DESC, id DESC LIMIT ?1",
+            "SELECT f.client_order_id, f.symbol, f.side, f.quantity, f.price, f.executed_at, \
+             COALESCE(o.rationale, '') AS rationale FROM fills f \
+             LEFT JOIN orders o ON o.client_order_id = f.client_order_id \
+             ORDER BY f.executed_at DESC, f.id DESC LIMIT ?1",
         )
         .bind(limit)
         .fetch_all(&self.pool)
@@ -468,6 +478,7 @@ impl Repository {
                     quantity: row.try_get("quantity")?,
                     price: int_to_money(row.try_get("price")?),
                     executed_at: parse_ts(row.try_get("executed_at")?)?,
+                    rationale: row.try_get("rationale")?,
                 })
             })
             .collect()
@@ -605,6 +616,8 @@ async fn audit(
 pub struct RecentOrder {
     pub client_order_id: String,
     pub symbol: String,
+    /// Why the strategy decided this trade (snapshot at order creation).
+    pub rationale: String,
     pub side: String,
     pub quantity: Quantity,
     pub limit_price: Option<Price>,
@@ -616,6 +629,8 @@ pub struct RecentOrder {
 pub struct RecentFill {
     pub client_order_id: String,
     pub symbol: String,
+    /// Why the strategy decided this trade (snapshot at order creation).
+    pub rationale: String,
     /// "buy" | "sell" — display decomposition of OrderSide.
     pub side: String,
     pub quantity: Quantity,
@@ -677,7 +692,7 @@ mod tests {
             .fetch_one(&repository.pool)
             .await
             .unwrap();
-        assert_eq!(version, 4); // latest registered migration
+        assert_eq!(version, 5); // latest registered migration
 
         let tables: Vec<(String,)> = sqlx::query_as(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
@@ -704,7 +719,7 @@ mod tests {
         let (_dir, repository) = repo().await;
 
         repository
-            .create_order(&order("it-1", OrderStatus::Pending), "paper")
+            .create_order(&order("it-1", OrderStatus::Pending), "paper", "it-rationale")
             .await
             .unwrap();
         assert!(repository

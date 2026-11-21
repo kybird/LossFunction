@@ -504,7 +504,7 @@ pub fn render_overview(data: &StatusPageData) -> String {
         "{cards}<h2>보유 포지션</h2>{positions}<h2>최근 체결 (<a href=\"/positions\">전체 내역</a>)</h2>{fills}",
         cards = cards,
         positions = table(&["종목", "추이", "수량", "평단가", "현재가", "평가금액", "손익"], position_rows),
-        fills = table(&["시각", "종목", "구분", "수량", "가격", "체결금액"], fill_rows_short),
+        fills = table(&["시각", "종목", "구분", "수량", "가격", "체결금액", "사유"], fill_rows_short),
     );
     layout(
         "개요",
@@ -542,11 +542,11 @@ pub fn render_positions_page(data: &StatusPageData) -> String {
             position_rows(data, &prices)
         ),
         orders = table(
-            &["시각", "종목", "구분", "수량", "주문가", "상태"],
+            &["시각", "종목", "구분", "수량", "주문가", "상태", "사유"],
             order_rows(data)
         ),
         fills = table(
-            &["시각", "종목", "구분", "수량", "가격", "체결금액"],
+            &["시각", "종목", "구분", "수량", "가격", "체결금액", "사유"],
             fill_rows(&data.fills)
         ),
     );
@@ -881,6 +881,7 @@ fn order_rows(data: &StatusPageData) -> Vec<Vec<String>> {
                 order.quantity.to_string(),
                 money(&order.limit_price),
                 status_pill(&order.status),
+                esc(&order.rationale),
             ]
         })
         .collect()
@@ -902,6 +903,7 @@ fn fill_rows(fills: &[crate::storage::RecentFill]) -> Vec<Vec<String>> {
                 fill.quantity.to_string(),
                 money(&Some(fill.price)),
                 krw_int(&(fill.price * rust_decimal::Decimal::from(fill.quantity))),
+                esc(&fill.rationale),
             ]
         })
         .collect()
@@ -1205,7 +1207,7 @@ mod tests {
             None,
         )
         .unwrap();
-        repository.create_order(&order, "paper").await.unwrap();
+        repository.create_order(&order, "paper", "테스트 사유").await.unwrap();
         repository
             .record_fill(
                 "ord-0001",

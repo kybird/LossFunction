@@ -144,8 +144,10 @@ impl SimLoop {
 
         let submitted = self.runtime.run_decision_cycle().await;
         let broker_ids = self.runtime.open_local_orders().clone();
-        for order in &submitted {
-            self.repository.create_order(order, "paper-sim").await?;
+        for (order, rationale) in &submitted {
+            self.repository
+                .create_order(order, "paper-sim", rationale)
+                .await?;
             self.persisted_status
                 .insert(order.client_order_id().to_string(), OrderStatus::Submitted);
         }

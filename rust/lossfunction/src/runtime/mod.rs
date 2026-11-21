@@ -141,10 +141,13 @@ impl TradingRuntime {
         }
     }
 
-    /// One strategy -> risk -> submit pass; returns submitted orders.
-    pub async fn run_decision_cycle(&mut self) -> Vec<Order> {
+    /// One strategy -> risk -> submit pass; returns submitted orders paired
+    /// with the strategy's rationale for the decision that produced them —
+    /// the ops layer snapshots it onto the order row so fills can show WHY.
+    pub async fn run_decision_cycle(&mut self) -> Vec<(Order, String)> {
         let snapshot = self.snapshot();
         let decision = self.decisions.decide(&snapshot);
+        let rationale = decision.rationale.clone();
         let mut submitted = Vec::new();
         for intent in &decision.intents {
             // A malformed strategy intent is rejected like a risk rejection —
@@ -164,7 +167,7 @@ impl TradingRuntime {
                 Ok(ack) => {
                     self.open_local
                         .insert(order.client_order_id().to_string(), ack.broker_order_id);
-                    submitted.push(order);
+                    submitted.push((order, rationale.clone()));
                 }
                 // Timeout: the order sits in Unknown; reconciliation is the
                 // only way out — never resubmit here.

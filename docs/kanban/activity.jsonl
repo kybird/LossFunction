@@ -280,3 +280,6 @@
 {"ts":"2026-11-20T15:31:56.103Z","action":"done","title":"시뮬레이션 피닉스 배포"}
 {"ts":"2026-11-20T15:31:56.173Z","action":"milestone-done","title":"실시세 시뮬레이션 가동","detail":"멤버 3장 전원 종결 — 작업 완결·판정 별도(verdict)"}
 {"ts":"2026-11-21T00:57:03.310Z","action":"created","title":"피닉스 데모 DB 증가율 관찰"}
+{"ts":"2026-11-21T01:07:55.830Z","action":"created","title":"체결·주문 내역에 전략 사유(rationale) 표시"}
+{"ts":"2026-11-21T01:07:56.121Z","action":"claimed","title":"체결·주문 내역에 전략 사유(rationale) 표시","actor":"zcode"}
+{"ts":"2026-11-21T01:41:41.335Z","action":"done","title":"체결·주문 내역에 전략 사유(rationale) 표시"}

@@ -96,11 +96,18 @@ CREATE TABLE strategy_suggestions (
 );
 "#;
 
+/// Order rationale snapshot (owner request 2026-11-21): why the strategy
+/// bought/sold, captured at order creation so fills can show the reason.
+const MIGRATION_5: &str = r#"
+ALTER TABLE orders ADD COLUMN rationale TEXT NOT NULL DEFAULT '';
+"#;
+
 const MIGRATIONS: &[(i64, &str)] = &[
     (1, MIGRATION_1),
     (2, MIGRATION_2),
     (3, MIGRATION_3),
     (4, MIGRATION_4),
+    (5, MIGRATION_5),
 ];
 
 /// Apply pending migrations; returns versions applied this run.
