@@ -420,3 +420,132 @@ async fn tungstenite_transport_end_to_end() {
     let captured = quotes.lock().unwrap();
     assert_eq!(captured[0].last_price, Decimal::from(80_500));
 }
+
+/// A connection that never delivers anything and never errors — the silent
+/// drop the TCP stack never reports (measured live 2026-11-24 mid-session).
+struct SilentConnection;
+
+#[async_trait::async_trait]
+impl WsConnection for SilentConnection {
+    async fn send(&self, _message: &str) -> Result<(), String> {
+        Ok(())
+    }
+
+    async fn recv(&self) -> Result<String, String> {
+        std::future::pending().await
+    }
+
+    fn pong(&self, _data: &str) {}
+}
+
+/// First connect hands out the silent connection; every later connect is a
+/// scripted normal connection, the second one recorded for replay asserts.
+struct StallFactory {
+    connects: Mutex<usize>,
+    second: Mutex<Option<Arc<FrameThenSilentConnection>>>,
+}
+
+/// Scripted frame then silence (pending recv) — unlike FakeConnection, which
+/// errors when dry, this keeps the fresh connection alive for liveness
+/// asserts.
+struct FrameThenSilentConnection {
+    script: Mutex<Vec<String>>,
+    sent: Mutex<Vec<serde_json::Value>>,
+}
+
+#[async_trait::async_trait]
+impl WsConnection for FrameThenSilentConnection {
+    async fn send(&self, message: &str) -> Result<(), String> {
+        self.sent
+            .lock()
+            .unwrap()
+            .push(serde_json::from_str(message).unwrap_or_default());
+        Ok(())
+    }
+
+    async fn recv(&self) -> Result<String, String> {
+        // Pop the guard before any await — a held std MutexGuard is !Send.
+        let frame = self.script.lock().unwrap().pop();
+        match frame {
+            Some(frame) => Ok(frame),
+            None => std::future::pending().await,
+        }
+    }
+
+    fn pong(&self, _data: &str) {}
+}
+
+#[async_trait::async_trait]
+impl ConnectionFactory for StallFactory {
+    async fn connect(&self, _url: &str) -> Result<Arc<dyn WsConnection>, String> {
+        let mut connects = self.connects.lock().unwrap();
+        *connects += 1;
+        let round = *connects;
+        drop(connects);
+        if round == 1 {
+            return Ok(Arc::new(SilentConnection));
+        }
+        let connection = Arc::new(FrameThenSilentConnection {
+            script: Mutex::new(vec![data_frame("90000", "110000", "20261124")]),
+            sent: Mutex::new(Vec::new()),
+        });
+        *self.second.lock().unwrap() = Some(Arc::clone(&connection));
+        Ok(connection)
+    }
+}
+
+#[tokio::test]
+#[serial_test::serial]
+async fn silent_stall_triggers_reconnect_and_liveness_visible() {
+    let factory = Arc::new(StallFactory {
+        connects: Mutex::new(0),
+        second: Mutex::new(None),
+    });
+    let quotes: Arc<Mutex<Vec<Quote>>> = Arc::new(Mutex::new(Vec::new()));
+    let on_quote: QuoteCallback = Arc::new(move |quote: &Quote| {
+        quotes.lock().unwrap().push(quote.clone());
+    });
+    let factory_dyn: Arc<dyn ConnectionFactory> = factory.clone();
+    let client = Arc::new(
+        KisMarketDataClient::new(
+            approval_provider(),
+            "ws://kis.example/ws".into(),
+            factory_dyn,
+            on_quote,
+        )
+        .with_stale_after(Duration::from_millis(150)),
+    );
+    client.subscribe(&symbol()).await;
+    let runner = Arc::clone(&client);
+    let task = tokio::spawn(async move {
+        runner.run().await;
+    });
+
+    wait_until(|| *factory.connects.lock().unwrap() >= 2).await;
+    wait_until(|| client.liveness().last_tick_at().is_some()).await;
+    task.abort();
+
+    assert!(
+        *factory.connects.lock().unwrap() >= 2,
+        "silent stall must force a reconnect"
+    );
+    let second = factory
+        .second
+        .lock()
+        .unwrap()
+        .clone()
+        .expect("second connection exists");
+    assert_eq!(
+        second.sent.lock().unwrap().len(),
+        1,
+        "fresh connection replays the subscription"
+    );
+    assert!(
+        client.liveness().connected(),
+        "fresh connection marks itself live"
+    );
+    assert!(
+        client.liveness().last_tick_at().is_some(),
+        "data frame stamps tick liveness"
+    );
+}

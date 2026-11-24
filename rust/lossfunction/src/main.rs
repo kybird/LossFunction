@@ -363,6 +363,7 @@ async fn main() {
     source.migrate().await.expect("migrate simulation source");
 
     let mut tasks = Vec::new();
+    let mut ws_liveness: Option<Arc<lossfunction::kis::ws::WsLiveness>> = None;
     let strategy_label = if simulation {
         let sim = SimLoop::new(
             Arc::clone(&broker),
@@ -437,12 +438,20 @@ async fn main() {
                 let _ = quote_tx.send(quote.clone());
             }) as lossfunction::kis::ws::QuoteCallback
         };
-        let client = lossfunction::kis::ws::KisMarketDataClient::new(
-            provider,
-            ws_url,
-            Arc::new(lossfunction::kis::ws::TungsteniteFactory),
-            on_quote,
+        let stale_secs: u64 = std::env::var("REALTIME_WS_STALE_SECS")
+            .ok()
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(600);
+        let client = Arc::new(
+            lossfunction::kis::ws::KisMarketDataClient::new(
+                provider,
+                ws_url,
+                Arc::new(lossfunction::kis::ws::TungsteniteFactory),
+                on_quote,
+            )
+            .with_stale_after(std::time::Duration::from_secs(stale_secs)),
         );
+        ws_liveness = Some(client.liveness());
         for symbol in &settings.watchlist {
             client.subscribe(symbol).await;
         }
@@ -513,6 +522,7 @@ async fn main() {
         } else {
             repository.clone()
         },
+        ws: ws_liveness,
     });
 
     let app = lossfunction::runtime::server::router(Arc::clone(&state));

@@ -263,6 +263,12 @@ pub struct StatusPageData {
     pub optimize: BackfillStatus,
     /// (strategy_key, params_label, improvement) — walk-forward winners.
     pub suggestions: Vec<(String, String, String)>,
+    /// Realtime WS liveness — None outside the KIS realtime path.
+    pub ws_connected: Option<bool>,
+    /// Relative age of the last frame of any kind ("5초 전").
+    pub ws_last_message: Option<String>,
+    /// Relative age of the last H0STCNT0 tick ("5초 전").
+    pub ws_last_tick: Option<String>,
 }
 
 fn table(headers: &[&str], rows: Vec<Vec<String>>) -> String {
@@ -476,6 +482,19 @@ pub fn render_overview(data: &StatusPageData) -> String {
             format!("{}분", secs / 60)
         }
     };
+    let ws_card = match (&data.ws_connected, &data.ws_last_message) {
+        (Some(connected), _) => {
+            let status = if *connected {
+                r#"<span class="up">연결됨</span>"#
+            } else {
+                r#"<span class="down">끊김</span>"#
+            };
+            let tick = data.ws_last_tick.as_deref().unwrap_or("기록 없음");
+            let frame = data.ws_last_message.as_deref().unwrap_or("기록 없음");
+            format!("{status} <small>틱 {tick} · 프레임 {frame}</small>")
+        }
+        (None, _) => "—".to_string(),
+    };
     let cards = format!(
         r#"<div class="cards">
 <div class="card"><div class="k">전략</div><div class="v">{strategy}</div></div>
@@ -484,6 +503,7 @@ pub fn render_overview(data: &StatusPageData) -> String {
 <div class="card"><div class="k">미실현 손익</div><div class="v">{pnl} <small>{pct}%</small></div></div>
 <div class="card"><div class="k">보유 종목</div><div class="v">{count}</div></div>
 <div class="card"><div class="k">가동</div><div class="v">{uptime}</div></div>
+<div class="card"><div class="k">실시간 WS</div><div class="v">{ws_card}</div></div>
 </div>"#,
         strategy = esc(&data.strategy_label),
         broker = esc(&data.broker),
@@ -503,8 +523,22 @@ pub fn render_overview(data: &StatusPageData) -> String {
     let content = format!(
         "{cards}<h2>보유 포지션</h2>{positions}<h2>최근 체결 (<a href=\"/positions\">전체 내역</a>)</h2>{fills}",
         cards = cards,
-        positions = table(&["종목", "추이", "수량", "평단가", "현재가", "평가금액", "손익"], position_rows),
-        fills = table(&["시각", "종목", "구분", "수량", "가격", "체결금액", "사유"], fill_rows_short),
+        positions = table(
+            &[
+                "종목",
+                "추이",
+                "수량",
+                "평단가",
+                "현재가",
+                "평가금액",
+                "손익"
+            ],
+            position_rows
+        ),
+        fills = table(
+            &["시각", "종목", "구분", "수량", "가격", "체결금액", "사유"],
+            fill_rows_short
+        ),
     );
     layout(
         "개요",

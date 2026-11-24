@@ -46,6 +46,9 @@ pub struct AppState {
     /// simulation session the live DB is the sim target — real bars live in
     /// the source DB, which this field points at (same DB outside sim).
     pub candle_source: Repository,
+    /// Realtime WS liveness (connection flag, last frame/tick). None outside
+    /// the KIS realtime path.
+    pub ws: Option<Arc<crate::kis::ws::WsLiveness>>,
 }
 
 pub type SharedState = Arc<AppState>;
@@ -157,6 +160,29 @@ async fn page_data(state: &SharedState) -> crate::runtime::web::StatusPageData {
         backtest: state.backtest.lock().expect("backtest status lock").clone(),
         screen: state.screen.lock().expect("screen status lock").clone(),
         optimize: state.optimize.lock().expect("optimize status lock").clone(),
+        ws_connected: state.ws.as_ref().map(|ws| ws.connected()),
+        ws_last_message: state
+            .ws
+            .as_ref()
+            .and_then(|ws| ws.last_message_at())
+            .map(relative_age),
+        ws_last_tick: state
+            .ws
+            .as_ref()
+            .and_then(|ws| ws.last_tick_at())
+            .map(relative_age),
+    }
+}
+
+/// "12초 전" style age — wall-clock recency is what a human glances at.
+fn relative_age(at_ms: i64) -> String {
+    let secs = ((chrono::Utc::now().timestamp_millis() - at_ms) / 1000).max(0);
+    if secs < 90 {
+        format!("{secs}초 전")
+    } else if secs < 3600 {
+        format!("{}분 전", secs / 60)
+    } else {
+        format!("{}시간 전", secs / 3600)
     }
 }
 
@@ -723,6 +749,7 @@ mod tests {
             screen: Arc::new(std::sync::Mutex::new(BackfillStatus::Idle)),
             optimize: Arc::new(std::sync::Mutex::new(BackfillStatus::Idle)),
             candle_source: repository.clone(),
+            ws: None,
         }
     }
 

@@ -11,6 +11,7 @@
 //! silently stop market data.
 
 use std::collections::BTreeSet;
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -297,6 +298,48 @@ pub type ApprovalKeyProvider =
 // Re-export for the provider alias above.
 pub use futures_util::future::BoxFuture;
 
+/// Liveness observability for the status page: connection flag plus epoch-ms
+/// timestamps of the last frame of any kind and the last market-data tick.
+/// The overnight failure mode is a silent drop the TCP stack never reports
+/// (measured 2026-11-24: yesterday's session went quiet through the next
+/// open), so stall detection keys off silence, not socket errors.
+#[derive(Default)]
+pub struct WsLiveness {
+    connected: AtomicBool,
+    last_message_at: AtomicI64,
+    last_tick_at: AtomicI64,
+}
+
+impl WsLiveness {
+    pub fn connected(&self) -> bool {
+        self.connected.load(Ordering::Relaxed)
+    }
+
+    /// Epoch ms of the last frame of any kind (data, keepalive, system).
+    pub fn last_message_at(&self) -> Option<i64> {
+        let value = self.last_message_at.load(Ordering::Relaxed);
+        (value > 0).then_some(value)
+    }
+
+    /// Epoch ms of the last H0STCNT0 data frame, if any.
+    pub fn last_tick_at(&self) -> Option<i64> {
+        let value = self.last_tick_at.load(Ordering::Relaxed);
+        (value > 0).then_some(value)
+    }
+
+    fn mark_connected(&self, connected: bool) {
+        self.connected.store(connected, Ordering::Relaxed);
+    }
+
+    fn mark_message(&self, at_ms: i64) {
+        self.last_message_at.store(at_ms, Ordering::Relaxed);
+    }
+
+    fn mark_tick(&self, at_ms: i64) {
+        self.last_tick_at.store(at_ms, Ordering::Relaxed);
+    }
+}
+
 /// Streaming client with desired-state subscription replay.
 pub struct KisMarketDataClient {
     approval_key: ApprovalKeyProvider,
@@ -306,6 +349,11 @@ pub struct KisMarketDataClient {
     desired: Mutex<BTreeSet<Symbol>>,
     reconnect_delays: Vec<Duration>,
     sleep: Arc<dyn Fn(Duration) -> BoxFuture<'static, ()> + Send + Sync>,
+    /// Reconnect when NOTHING (data, keepalive, system message) arrives for
+    /// this long — the silent-drop watchdog. Default 10 minutes.
+    stale_after: Duration,
+    /// Shared liveness signals for the status page.
+    state: Arc<WsLiveness>,
 }
 
 impl KisMarketDataClient {
@@ -331,7 +379,20 @@ impl KisMarketDataClient {
                 Duration::from_secs(30),
             ],
             sleep: Arc::new(|duration| Box::pin(tokio::time::sleep(duration))),
+            stale_after: Duration::from_secs(600),
+            state: Arc::new(WsLiveness::default()),
         }
+    }
+
+    /// Override the silent-drop watchdog timeout (tests + env tuning).
+    pub fn with_stale_after(mut self, stale_after: Duration) -> Self {
+        self.stale_after = stale_after;
+        self
+    }
+
+    /// Shared liveness signals (connection flag, last frame/tick timestamps).
+    pub fn liveness(&self) -> Arc<WsLiveness> {
+        Arc::clone(&self.state)
     }
 
     pub async fn desired_subscriptions(&self) -> BTreeSet<Symbol> {
@@ -387,13 +448,23 @@ impl KisMarketDataClient {
                 "ws connected to {} — {replayed} subscription(s) replayed",
                 self.url
             );
+            self.state.mark_connected(true);
 
             delay_index = 0;
-            while let Ok(raw) = connection.recv().await {
-                self.handle_raw(&connection, &raw);
-            }
-            // recv error = disconnect: desired state replays on the next one.
-            eprintln!("ws disconnected — reconnecting");
+            let reason = loop {
+                match tokio::time::timeout(self.stale_after, connection.recv()).await {
+                    Ok(Ok(raw)) => {
+                        self.state
+                            .mark_message(chrono::Utc::now().timestamp_millis());
+                        self.handle_raw(&connection, &raw);
+                    }
+                    // recv error = disconnect: desired state replays on the next one.
+                    Ok(Err(_)) => break "ws disconnected — reconnecting",
+                    Err(_) => break "ws silent — reconnecting (stall watchdog)",
+                }
+            };
+            self.state.mark_connected(false);
+            eprintln!("{reason}");
             (self.sleep)(self.reconnect_delays.first().copied().unwrap_or_default()).await;
         }
     }
@@ -404,6 +475,7 @@ impl KisMarketDataClient {
                 std::sync::atomic::AtomicBool::new(false);
             match parse_market_data(raw) {
                 Ok(quotes) => {
+                    self.state.mark_tick(chrono::Utc::now().timestamp_millis());
                     for quote in quotes {
                         (self.on_quote)(&quote);
                     }
