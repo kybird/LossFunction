@@ -1,7 +1,7 @@
 ---
 name: work-loop
 description: Unattended kanban loop — pick a card, resolve it with objective evidence, park judgment calls and move on. Board is the only task list; converge, don't diverge.
-skill-version: 14
+skill-version: 15
 ---
 # When to use
 
@@ -145,11 +145,20 @@ pick → work → 판정 ─ done / handoff / abandon / supersede / unpick(반�
    commit in the primary from here. `LLM_WIKI_WORKTREE_LOCAL=1` restores per-worktree
    boards.
 
-8. **Interrupt cards go to the unaffiliated backlog.** Follow-ups, user requests, bug cards
-   discovered mid-work → `card new "<제목>" --goal "…"` with **no** `--milestone` (2026-09-21
-   규약): never glue new work onto a live milestone — that is a scope change the CLI guards
-   with `--scope-amend`. The morning ritual triages the backlog — (가) a new milestone,
-   (나) an explicit scope change, (다) `abandon`; '나중에' is not an outcome.
+8. **Interrupt cards land in 무소속.** Follow-ups, user requests, bug cards
+   discovered mid-work → `card new "<제목>" --goal "…"` — a card born without
+   `--milestone` is auto-attached to the **무소속** milestone (2026-10-15 규약,
+   plan.md 3.8): never glue new work onto a live milestone — that is a scope change
+   the CLI guards with `--scope-amend` (무소속 itself has no seal — no finish line).
+   The morning ritual triages the backlog — (가) 사후 편입: bundle same-purpose
+   cards (concluded ones too, via `--retro "<사유>"`) under a new milestone,
+   (나) an explicit scope change, (다) leave in 무소속 (legal resting state);
+   delaying a *spotted* retro-bundle candidate is the only '나중에' that is
+   forbidden.
+8a. **Search right after pick.** Before touching code, run `llm-wiki search
+   "<card Goal keywords> <files/commands you are about to touch>"` — the
+   session-start ritual is topic-level and misses task-level knowledge; episodes
+   are only memory if retrieved at the moment of need (2026-10-15 설계 §4).
 
 # Splitting (supersede) — divergence guard
 

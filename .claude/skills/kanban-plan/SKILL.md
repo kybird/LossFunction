@@ -1,7 +1,7 @@
 ---
 name: kanban-plan
 description: Planning loop — turn a plan into board cards the work-loop can consume. Cards are written only via the CLI; decompose with divergence guards, gate what isn't ready, group multi-card plans under a milestone.
-skill-version: 7
+skill-version: 8
 ---
 # When to use
 
@@ -94,12 +94,17 @@ Abandoning a milestone requires its members to be terminal first (CLI enforces, 
 
 # While the work runs
 
-- Follow-up discovered mid-task → `card new` right away, **unaffiliated** (no `--milestone`) —
-  interrupt cards (follow-ups, user requests, bugs) go to the unaffiliated backlog, never
-  straight onto a live milestone (2026-09-21 규약). The board is the memory, not the session.
-  The morning ritual (repo AGENTS.md) triages each backlog card into (가) a new milestone,
-  (나) an explicit scope change (`--scope-amend` + reason), or (다) `abandon` — '나중에'는
-  결과가 아니다.
+- Follow-up discovered mid-task → `card new` right away — a card born without
+  `--milestone` is auto-attached to the **무소속** milestone, never straight onto a
+  live milestone (2026-10-15 규약, plan.md 3.8). The board is the memory, not the
+  session. The morning ritual (repo AGENTS.md) triages the 무소속 queue into
+  (가) 사후 편입 — bundle same-purpose cards (concluded ones too: `card edit
+  "<done 카드>" --milestone "<M>" --retro "<사유>"`) under a new milestone,
+  (나) an explicit scope change (`--scope-amend` + reason), or (다) leave in
+  무소속 (a legal resting state — it never concludes). Concluded milestones are
+  immutable: topic revision means a NEW milestone that retro-collects the old
+  cards. Spotting a retro-bundle candidate and deferring it is the only forbidden
+  '나중에'.
 - Plan changed? `supersede` the stale cards. Direction abandoned? `abandon --reason` —
   the reason is mandatory and flows into `docs/raw/` as anti-pattern material.
 - Do not start cards yourself in a planning session — leave them in `todo` for the

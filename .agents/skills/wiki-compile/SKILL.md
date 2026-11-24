@@ -1,7 +1,7 @@
 ---
 name: wiki-compile
 description: Parse raw logs to extract, synthesize, and deprecate project knowledge. Generates high-density grounded wiki pages and maintains the central index.
-skill-version: 3
+skill-version: 4
 ---
 # When to use
 - After accumulating raw logs in docs/raw/
@@ -112,4 +112,4 @@ badly or goes missing, the resolution is trivial: keep either side (or delete it
 
 ## Troubleshooting build-time CUDA failures
 
-Detailed CUDA Toolkit / MSVC / node-llama-cpp prebuilt-binary diagnostics (Windows + NVIDIA specific) live in **[TROUBLESHOOTING.md](../TROUBLESHOOTING.md)** in the package root. Consult it only if `compile index` prints `falling back to using Vulkan` or `CUDA error` messages.
+Detailed CUDA Toolkit / MSVC / node-llama-cpp prebuilt-binary diagnostics (Windows + NVIDIA specific) live in **[TROUBLESHOOTING.md](../TROUBLESHOOTING.md)** in the package root. Consult it only if `compile index` prints `falling back to using Vulkan` or `CUDA error` messages. Machine-specific measurements and procedures belong in the project's own wiki, not in this skill.
