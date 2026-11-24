@@ -71,6 +71,13 @@ tr_cont. 계좌는 8-2 자리("12345678-01").
   지표 히스토리에 들어가지 않는다(look-ahead 원천 차단) — 실시간 런타임은 백필
   봉으로 히스토리를 시딩해야 첫 틱부터 판단 가능(TradingRuntime::seed_daily_close).
 - Keepalive: 서버가 JSON(header.tr_id=="PINGPONG") 전송 → pong으로 echo.
+- **무음 스톨(2026-11-24 실측)**: KIS WS는 TCP close 없이 조용히 죽을 수 있다 —
+  어제 14:00 세션이 밤새 침묵, 개장 후 2시간 틱 0, 로그 흔적 0("ws disconnected —
+  reconnecting" 부재). 실패는 오류가 아니라 **침묵**으로 온다 → recv에 무음 감시:
+  어떤 프레임(데이터·PINGPONG·시스템)도 `REALTIME_WS_STALE_SECS`(기본 600)간 없으면
+  재접속(신규 승인키 + 구독 재생). 승인키는 재접속마다 /oauth2/Approval에서 새로
+  발급되어 REST 토큰과 무관 — **일일 재인증은 재접속에 내재**. WsLiveness 카운터로
+  상태 페이지가 연결 상태와 마지막 프레임·틱 경과를 분리 표기("healthy ≠ 데이터 유입").
 - 주문 체결통보는 암호화(AES): 실전 H0STCNI0 / **모의 H0STCNI9**.
 
 ## 에러 응답
@@ -92,3 +99,4 @@ tr_cont. 계좌는 8-2 자리("12345678-01").
 - docs/raw/2026-10-02.md Case 2 (WS 실시간 소비 계약 — 시딩 필요성)
 - docs/raw/2026-10-02.md Case 5 (토큰 1일 1회 발급 원칙 실측 + 500 자동 재시도)
 - docs/raw/2026-10-02.md Case 6 (H0STCNT0 실측 47열·구독 ACK 형상·첫 실틱 실증)
+- docs/raw/2026-11-24.md Case 1 (WS 무음 스톨 실측 + 감시 재접속·WsLiveness 구현, `hash:7288cc6`)

@@ -28,6 +28,10 @@ confidence: 5
    거부 — 컨테이너 재시작 정책이 이를 표면화한다. 조용한 폴백 금지.
 6. **audit에 실패한 시도는 기록하지 않는다**: 불법 상태 전이는 예외만.
    실패 흔적을 남기면 "시도된 것"과 "실행된 것"의 구분이 흐려진다.
+7. **silence-as-failure(2026-11-24)**: 실패가 오류로 오지 않는 경우를 감시한다.
+   KIS WS 무음 스톨 — "healthy는 프로세스가 살았다는 뜻이지 데이터가 흐른다는
+   뜻이 아니다". 프로세스 신호(healthz)와 데이터 유입 신호(마지막 프레임·틱)를
+   분리 표기하고, 침묵 임계 초과는 재접속 트리거로 쓴다.
 
 ## Why it works
 
@@ -55,3 +59,4 @@ confidence: 5
 - docs/raw/2026-09-14.md Case 11 (fail-loud 필드 매핑, `hash:2d8d4bd`)
 - docs/raw/2026-09-14.md Case 17 (명시적 폴백, `hash:5c40d6c`)
 - docs/raw/2026-09-14.md Case 18 (기동 거부, `hash:9d0a6d3`)
+- docs/raw/2026-11-24.md Case 1 (silence-as-failure — 무음 스톨 감시, `hash:7288cc6`)

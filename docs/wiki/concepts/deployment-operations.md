@@ -41,6 +41,12 @@ Docker 단일 컨테이너 + SQLite 볼륨 + PowerShell 배포 스크립트.
   무너뜨리지 않음.
 - 배포: `scripts/deploy/deploy.ps1`(패키징→업로드→원격 빌드→기동→헬스).
   Windows ssh.exe 절대경로 + 원격 ~/ 상대경로(피닉스 규칙).
+  **표준 경로(2026-11-24~): WSL Docker 빌드 → docker save|load 전송 → compose up** —
+  1코어 1G 박스의 cargo release 원격 빌드(30분+, 실측 미완료 30분 경과)를 개발 머신의
+  리눅스 도커(WSL2 Ubuntu, x86_64 — 피닉스와 동일 플랫폼)에서 이미지로 만들어
+  `wsl docker save lossfunction-runtime | ssh vault 'docker load'`로 밀어 올린다.
+  전송 ~1분·전체 수분. 서버의 ~/lossfunction/.env(자격증명)는 tar 범위 밖이라 보존됨.
+  원격 빌드는 WSL 없는 환경용 옵션.
 - 복구: 재시작 후 docs/recovery.md 절차(미결제 reconciliation → 잔고
   재구성 → 재구독 → 신규 주문).
 
@@ -53,7 +59,8 @@ Docker 단일 컨테이너 + SQLite 볼륨 + PowerShell 배포 스크립트.
 - 시세 시뮬레이션의 가용 요구는 **거래소 시간표가 결정**한다 — 틱은 장중(평일
   09:00-15:30 KST)에만 흐르므로 24/7 서버의 데이터 이득이 없다. 오너 결정
   (2026-10-02): 시뮬레이션은 개발 머신 가동, 피닉스는 장중 무인 수집·실전
-  진입 시에만 재개.
+  진입 시에만 재개. **(2026-11-23 현실 갱신: 실시세 시뮬레이션 피닉스 상시 배포 —
+  15종목 구독·donchian-breakout·MockBroker paper, WS 무음 감시 재접속 내장)**
 
 ## Trade-offs
 
@@ -74,3 +81,4 @@ Docker 단일 컨테이너 + SQLite 볼륨 + PowerShell 배포 스크립트.
 - docs/raw/2026-09-14.md Case 23 (상태 페이지, `hash:22c9209`)
 - docs/raw/2026-10-02.md Case 3 (피닉스 재검증 — Python 컨테이너 실측)
 - docs/raw/2026-10-02.md Case 4 (배포 타깃 결정 — 개발 머신 우선)
+- docs/raw/2026-11-24.md Case 2 (WSL Docker 빌드·save|load 배포 실측, `hash:7288cc6`)
