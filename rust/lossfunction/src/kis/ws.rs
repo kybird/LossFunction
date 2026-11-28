@@ -432,34 +432,35 @@ impl KisMarketDataClient {
     }
 
     /// Remaining time to the next stall deadline: total-silence always; plus
-    /// data-frame stall when the regular-session predicate holds. `Duration::ZERO`
-    /// means a watchdog has already fired.
-    fn recv_timeout_until_deadline(&self, now: chrono::DateTime<chrono::Utc>) -> Duration {
+    /// data-frame stall when the regular-session predicate holds. The tick
+    /// deadline anchors on the last tick — or, before the connection's FIRST
+    /// tick, on the connection start so "subscribed but never delivered"
+    /// still fires (a per-call window would reset on every keepalive).
+    fn recv_timeout_until_deadline(
+        &self,
+        now: chrono::DateTime<chrono::Utc>,
+        connection_started_ms: i64,
+    ) -> Duration {
         let mut remaining = self.stale_after;
         if (self.session_check)(now) {
-            let tick_remaining = self
-                .state
-                .last_tick_at()
-                .map(|at| {
-                    self.tick_stall_after.saturating_sub(Duration::from_millis(
-                        (now.timestamp_millis() - at).max(0) as u64,
-                    ))
-                })
-                // No tick yet this connection — still expect the FIRST data
-                // frame within the tick-stall window during market hours.
-                .unwrap_or(self.tick_stall_after);
+            let anchor = self.state.last_tick_at().unwrap_or(connection_started_ms);
+            let tick_remaining = self.tick_stall_after.saturating_sub(Duration::from_millis(
+                (now.timestamp_millis() - anchor).max(0) as u64,
+            ));
             remaining = remaining.min(tick_remaining);
         }
         remaining
     }
 
     /// Which watchdog fired (log ground truth).
-    fn stall_reason(&self, now: chrono::DateTime<chrono::Utc>) -> &'static str {
+    fn stall_reason(
+        &self,
+        now: chrono::DateTime<chrono::Utc>,
+        connection_started_ms: i64,
+    ) -> &'static str {
+        let anchor = self.state.last_tick_at().unwrap_or(connection_started_ms);
         if (self.session_check)(now)
-            && self.state.last_tick_at().is_some_and(|at| {
-                chrono::Utc::now().timestamp_millis() - at
-                    > self.tick_stall_after.as_millis() as i64
-            })
+            && now.timestamp_millis() - anchor > self.tick_stall_after.as_millis() as i64
         {
             "ws tick stall during regular session — reconnecting (data watchdog)"
         } else {
@@ -521,11 +522,12 @@ impl KisMarketDataClient {
                 self.url
             );
             self.state.mark_connected(true);
+            let connection_started_ms = chrono::Utc::now().timestamp_millis();
 
             delay_index = 0;
             let reason = loop {
                 match tokio::time::timeout(
-                    self.recv_timeout_until_deadline(chrono::Utc::now()),
+                    self.recv_timeout_until_deadline(chrono::Utc::now(), connection_started_ms),
                     connection.recv(),
                 )
                 .await
@@ -537,7 +539,7 @@ impl KisMarketDataClient {
                     }
                     // recv error = disconnect: desired state replays on the next one.
                     Ok(Err(_)) => break "ws disconnected — reconnecting",
-                    Err(_) => break self.stall_reason(chrono::Utc::now()),
+                    Err(_) => break self.stall_reason(chrono::Utc::now(), connection_started_ms),
                 }
             };
             self.state.mark_connected(false);

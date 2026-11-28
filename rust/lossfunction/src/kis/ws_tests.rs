@@ -494,6 +494,42 @@ impl ConnectionFactory for StallFactory {
     }
 }
 
+/// Round 1 hands out a keepalive-flowing connection (optionally with one real
+/// data frame first), later rounds scripted — isolates the tick-stall
+/// watchdog from the total-silence one.
+struct KeepaliveFactory {
+    first_data: bool,
+    connects: Mutex<usize>,
+    second: Mutex<Option<Arc<FrameThenSilentConnection>>>,
+}
+
+#[async_trait::async_trait]
+impl ConnectionFactory for KeepaliveFactory {
+    async fn connect(&self, _url: &str) -> Result<Arc<dyn WsConnection>, String> {
+        let mut connects = self.connects.lock().unwrap();
+        *connects += 1;
+        let round = *connects;
+        drop(connects);
+        if round == 1 {
+            let frame = if self.first_data {
+                Some(data_frame("90000", "110000", "20261128"))
+            } else {
+                None
+            };
+            return Ok(Arc::new(KeepaliveConnection {
+                first_data: Mutex::new(frame),
+                interval_ms: 60,
+            }));
+        }
+        let connection = Arc::new(FrameThenSilentConnection {
+            script: Mutex::new(vec![data_frame("90000", "110000", "20261128")]),
+            sent: Mutex::new(Vec::new()),
+        });
+        *self.second.lock().unwrap() = Some(Arc::clone(&connection));
+        Ok(connection)
+    }
+}
+
 /// Keepalives keep flowing forever (interval), never errors — the "connected
 /// but no data" failure mode measured live 2026-11-28: PINGPONG every ~60s
 /// while H0STCNT0 stopped for hours.
@@ -524,7 +560,8 @@ impl WsConnection for KeepaliveConnection {
 #[tokio::test]
 #[serial_test::serial]
 async fn tick_stall_with_live_keepalives_triggers_reconnect() {
-    let factory = Arc::new(StallFactory {
+    let factory = Arc::new(KeepaliveFactory {
+        first_data: true,
         connects: Mutex::new(0),
         second: Mutex::new(None),
     });
@@ -571,6 +608,62 @@ async fn tick_stall_with_live_keepalives_triggers_reconnect() {
         "fresh connection replays the subscription"
     );
     assert!(client.liveness().last_tick_at().is_some());
+}
+
+#[tokio::test]
+#[serial_test::serial]
+async fn keepalive_only_session_triggers_first_tick_stall_reconnect() {
+    // Live failure 2026-11-28: fresh connection subscribed 15 symbols at
+    // 07:24 KST, SUBSCRIBE SUCCESS x15, then ZERO data frames for hours
+    // while PINGPONG flowed - a per-call timeout window resets on every
+    // keepalive, so the data watchdog never fired. The deadline now anchors
+    // on the connection start until the first tick arrives.
+    let factory = Arc::new(KeepaliveFactory {
+        first_data: false,
+        connects: Mutex::new(0),
+        second: Mutex::new(None),
+    });
+    let quotes: Arc<Mutex<Vec<Quote>>> = Arc::new(Mutex::new(Vec::new()));
+    let on_quote: QuoteCallback = Arc::new(move |quote: &Quote| {
+        quotes.lock().unwrap().push(quote.clone());
+    });
+    let factory_dyn: Arc<dyn ConnectionFactory> = factory.clone();
+    let session_always_on: Arc<dyn Fn(chrono::DateTime<chrono::Utc>) -> bool + Send + Sync> =
+        Arc::new(|_| true);
+    let client = Arc::new(
+        KisMarketDataClient::new(
+            approval_provider(),
+            "ws://kis.example/ws".into(),
+            factory_dyn,
+            on_quote,
+        )
+        .with_tick_stall_after(Duration::from_millis(200))
+        .with_session_check(session_always_on),
+    );
+    client.subscribe(&symbol()).await;
+    let runner = Arc::clone(&client);
+    let task = tokio::spawn(async move {
+        runner.run().await;
+    });
+
+    wait_until(|| *factory.connects.lock().unwrap() >= 2).await;
+    task.abort();
+
+    assert!(
+        *factory.connects.lock().unwrap() >= 2,
+        "first-tick stall with live keepalives must force a reconnect"
+    );
+    let second = factory
+        .second
+        .lock()
+        .unwrap()
+        .clone()
+        .expect("second connection exists");
+    assert_eq!(
+        second.sent.lock().unwrap().len(),
+        1,
+        "fresh connection replays the subscription"
+    );
 }
 
 #[tokio::test]
