@@ -526,12 +526,9 @@ impl KisMarketDataClient {
 
             delay_index = 0;
             let reason = loop {
-                match tokio::time::timeout(
-                    self.recv_timeout_until_deadline(chrono::Utc::now(), connection_started_ms),
-                    connection.recv(),
-                )
-                .await
-                {
+                let remaining =
+                    self.recv_timeout_until_deadline(chrono::Utc::now(), connection_started_ms);
+                match tokio::time::timeout(remaining, connection.recv()).await {
                     Ok(Ok(raw)) => {
                         self.state
                             .mark_message(chrono::Utc::now().timestamp_millis());
