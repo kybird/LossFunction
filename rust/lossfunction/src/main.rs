@@ -479,10 +479,12 @@ async fn main() {
         }));
         tasks.push(tokio::spawn(realtime_run(realtime, quote_rx)));
         println!(
-            "realtime quotes enabled: KIS H0STCNT0 x {} symbols (strategy {}, mock fills only)",
+            "realtime quotes enabled: KIS H0STCNT0 x {} symbols (strategy {}, mock fills only); watchdogs: silence={}s tick-stall={}s (regular session)",
             settings.watchlist.len(),
-            strategy_key
-        );
+            strategy_key,
+            stale_secs,
+            tick_stall_secs
+            );
         label
     } else if demo_enabled() || settings.quotes_source == lossfunction::config::QuotesSource::Demo {
         let demo = DemoLoop::new(
