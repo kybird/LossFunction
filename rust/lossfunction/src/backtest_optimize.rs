@@ -13,10 +13,10 @@ use rust_decimal::Decimal;
 use crate::backtest::{summarize, BacktestConfig, BacktestEngine, Bar, Metrics};
 use crate::broker::mock::MockBroker;
 use crate::strategies::{DonchianBreakoutStrategy, RsiReversionStrategy, SmaCrossStrategy};
+use crate::strategies2::{BollingerReversionStrategy, MacdCrossStrategy, MomentumRotationStrategy};
 use crate::strategies3::{
     ConsecutiveRunStrategy, StrongCloseStrategy, VolatilitySqueezeBreakoutStrategy,
 };
-use crate::strategies2::{BollingerReversionStrategy, MacdCrossStrategy, MomentumRotationStrategy};
 use crate::strategy::Strategy;
 use crate::types::{Quantity, Symbol};
 

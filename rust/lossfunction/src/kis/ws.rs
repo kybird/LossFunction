@@ -100,6 +100,16 @@ fn kst() -> FixedOffset {
     FixedOffset::east_opt(9 * 3600).unwrap()
 }
 
+/// KRX regular session in KST (09:00–15:30 weekdays) — the same rule the
+/// realtime loop uses to gate fills, shared here for the tick-stall watchdog.
+pub fn is_regular_session_utc(timestamp: chrono::DateTime<chrono::Utc>) -> bool {
+    use chrono::{Datelike, Timelike};
+    let kst = timestamp + chrono::Duration::hours(9);
+    let minutes = kst.hour() * 60 + kst.minute();
+    let weekday = kst.weekday().num_days_from_monday();
+    weekday < 5 && (9 * 60..=15 * 60 + 30).contains(&minutes)
+}
+
 /// Parse one H0STCNT0 data frame into `Quote` domain events.
 pub fn parse_market_data(raw: &str) -> Result<Vec<Quote>, FrameError> {
     let fields: Vec<&str> = raw.split('|').collect();
@@ -352,6 +362,15 @@ pub struct KisMarketDataClient {
     /// Reconnect when NOTHING (data, keepalive, system message) arrives for
     /// this long — the silent-drop watchdog. Default 10 minutes.
     stale_after: Duration,
+    /// Reconnect when no DATA frame arrives this long DURING the regular
+    /// session — keepalives keep the socket alive, so total silence alone
+    /// misses "connected but no data" (measured live 2026-11-28: PINGPONG
+    /// flowed while H0STCNT0 stopped for hours). Default 3 minutes.
+    tick_stall_after: Duration,
+    /// Whether `now` counts as the regular session for the tick-stall
+    /// watchdog. Injectable for tests; defaults to KRX hours (KST 09:00–15:30
+    /// weekdays — same rule the realtime loop gates fills with).
+    session_check: Arc<dyn Fn(chrono::DateTime<chrono::Utc>) -> bool + Send + Sync>,
     /// Shared liveness signals for the status page.
     state: Arc<WsLiveness>,
 }
@@ -380,6 +399,8 @@ impl KisMarketDataClient {
             ],
             sleep: Arc::new(|duration| Box::pin(tokio::time::sleep(duration))),
             stale_after: Duration::from_secs(600),
+            tick_stall_after: Duration::from_secs(180),
+            session_check: Arc::new(is_regular_session_utc),
             state: Arc::new(WsLiveness::default()),
         }
     }
@@ -390,9 +411,60 @@ impl KisMarketDataClient {
         self
     }
 
+    /// Override the market-hours data-stall watchdog timeout.
+    pub fn with_tick_stall_after(mut self, tick_stall_after: Duration) -> Self {
+        self.tick_stall_after = tick_stall_after;
+        self
+    }
+
+    /// Override the regular-session predicate (tests inject a constant).
+    pub fn with_session_check(
+        mut self,
+        session_check: Arc<dyn Fn(chrono::DateTime<chrono::Utc>) -> bool + Send + Sync>,
+    ) -> Self {
+        self.session_check = session_check;
+        self
+    }
+
     /// Shared liveness signals (connection flag, last frame/tick timestamps).
     pub fn liveness(&self) -> Arc<WsLiveness> {
         Arc::clone(&self.state)
+    }
+
+    /// Remaining time to the next stall deadline: total-silence always; plus
+    /// data-frame stall when the regular-session predicate holds. `Duration::ZERO`
+    /// means a watchdog has already fired.
+    fn recv_timeout_until_deadline(&self, now: chrono::DateTime<chrono::Utc>) -> Duration {
+        let mut remaining = self.stale_after;
+        if (self.session_check)(now) {
+            let tick_remaining = self
+                .state
+                .last_tick_at()
+                .map(|at| {
+                    self.tick_stall_after.saturating_sub(Duration::from_millis(
+                        (now.timestamp_millis() - at).max(0) as u64,
+                    ))
+                })
+                // No tick yet this connection — still expect the FIRST data
+                // frame within the tick-stall window during market hours.
+                .unwrap_or(self.tick_stall_after);
+            remaining = remaining.min(tick_remaining);
+        }
+        remaining
+    }
+
+    /// Which watchdog fired (log ground truth).
+    fn stall_reason(&self, now: chrono::DateTime<chrono::Utc>) -> &'static str {
+        if (self.session_check)(now)
+            && self.state.last_tick_at().is_some_and(|at| {
+                chrono::Utc::now().timestamp_millis() - at
+                    > self.tick_stall_after.as_millis() as i64
+            })
+        {
+            "ws tick stall during regular session — reconnecting (data watchdog)"
+        } else {
+            "ws silent — reconnecting (stall watchdog)"
+        }
     }
 
     pub async fn desired_subscriptions(&self) -> BTreeSet<Symbol> {
@@ -452,7 +524,12 @@ impl KisMarketDataClient {
 
             delay_index = 0;
             let reason = loop {
-                match tokio::time::timeout(self.stale_after, connection.recv()).await {
+                match tokio::time::timeout(
+                    self.recv_timeout_until_deadline(chrono::Utc::now()),
+                    connection.recv(),
+                )
+                .await
+                {
                     Ok(Ok(raw)) => {
                         self.state
                             .mark_message(chrono::Utc::now().timestamp_millis());
@@ -460,7 +537,7 @@ impl KisMarketDataClient {
                     }
                     // recv error = disconnect: desired state replays on the next one.
                     Ok(Err(_)) => break "ws disconnected — reconnecting",
-                    Err(_) => break "ws silent — reconnecting (stall watchdog)",
+                    Err(_) => break self.stall_reason(chrono::Utc::now()),
                 }
             };
             self.state.mark_connected(false);

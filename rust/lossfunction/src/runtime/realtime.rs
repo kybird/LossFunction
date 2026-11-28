@@ -237,13 +237,10 @@ impl RealtimeLoop {
 }
 
 /// KRX regular session (09:00–15:30 KST, Mon–Fri). Holidays simply have
-/// no ticks, so no calendar is needed.
+/// no ticks, so no calendar is needed. Delegates to the shared rule also
+/// used by the WS tick-stall watchdog.
 fn is_regular_session(timestamp: chrono::DateTime<chrono::Utc>) -> bool {
-    use chrono::{Datelike, Timelike};
-    let kst = timestamp + chrono::Duration::hours(9);
-    let minutes = kst.hour() * 60 + kst.minute();
-    let weekday = kst.weekday().num_days_from_monday();
-    weekday < 5 && (9 * 60..=15 * 60 + 30).contains(&minutes)
+    crate::kis::ws::is_regular_session_utc(timestamp)
 }
 
 #[cfg(test)]
@@ -253,10 +250,18 @@ mod tests {
         use chrono::{TimeZone, Utc};
         // KST = UTC+9.
         let kst_to_utc = |k_hour: u32, k_min: u32| -> chrono::DateTime<Utc> {
-            let (utc_h, day) = if k_hour >= 9 { (k_hour - 9, 23) } else { (k_hour + 15, 22) };
-            Utc.with_ymd_and_hms(2026, 11, day, utc_h, k_min, 0).unwrap()
+            let (utc_h, day) = if k_hour >= 9 {
+                (k_hour - 9, 23)
+            } else {
+                (k_hour + 15, 22)
+            };
+            Utc.with_ymd_and_hms(2026, 11, day, utc_h, k_min, 0)
+                .unwrap()
         };
-        assert!(!super::is_regular_session(kst_to_utc(8, 59)), "장전 동시호가 거부");
+        assert!(
+            !super::is_regular_session(kst_to_utc(8, 59)),
+            "장전 동시호가 거부"
+        );
         assert!(super::is_regular_session(kst_to_utc(9, 0)), "개장 통과");
         assert!(super::is_regular_session(kst_to_utc(15, 30)), "마감 포함");
         assert!(!super::is_regular_session(kst_to_utc(15, 31)), "장후 거부");

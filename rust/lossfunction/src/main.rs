@@ -442,6 +442,10 @@ async fn main() {
             .ok()
             .and_then(|value| value.parse().ok())
             .unwrap_or(600);
+        let tick_stall_secs: u64 = std::env::var("REALTIME_TICK_STALL_SECS")
+            .ok()
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(180);
         let client = Arc::new(
             lossfunction::kis::ws::KisMarketDataClient::new(
                 provider,
@@ -449,7 +453,8 @@ async fn main() {
                 Arc::new(lossfunction::kis::ws::TungsteniteFactory),
                 on_quote,
             )
-            .with_stale_after(std::time::Duration::from_secs(stale_secs)),
+            .with_stale_after(std::time::Duration::from_secs(stale_secs))
+            .with_tick_stall_after(std::time::Duration::from_secs(tick_stall_secs)),
         );
         ws_liveness = Some(client.liveness());
         for symbol in &settings.watchlist {

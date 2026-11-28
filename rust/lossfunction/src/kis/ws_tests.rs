@@ -494,6 +494,85 @@ impl ConnectionFactory for StallFactory {
     }
 }
 
+/// Keepalives keep flowing forever (interval), never errors — the "connected
+/// but no data" failure mode measured live 2026-11-28: PINGPONG every ~60s
+/// while H0STCNT0 stopped for hours.
+struct KeepaliveConnection {
+    first_data: Mutex<Option<String>>,
+    interval_ms: u64,
+}
+
+#[async_trait::async_trait]
+impl WsConnection for KeepaliveConnection {
+    async fn send(&self, _message: &str) -> Result<(), String> {
+        Ok(())
+    }
+
+    async fn recv(&self) -> Result<String, String> {
+        // Deliver one real data frame first, then PINGPONG at `interval_ms`
+        // cadence forever. Guard popped before any await (!Send guard trap).
+        if let Some(frame) = self.first_data.lock().unwrap().take() {
+            return Ok(frame);
+        }
+        tokio::time::sleep(Duration::from_millis(self.interval_ms)).await;
+        Ok("{\"header\":{\"tr_id\":\"PINGPONG\"}}".to_string())
+    }
+
+    fn pong(&self, _data: &str) {}
+}
+
+#[tokio::test]
+#[serial_test::serial]
+async fn tick_stall_with_live_keepalives_triggers_reconnect() {
+    let factory = Arc::new(StallFactory {
+        connects: Mutex::new(0),
+        second: Mutex::new(None),
+    });
+    let quotes: Arc<Mutex<Vec<Quote>>> = Arc::new(Mutex::new(Vec::new()));
+    let on_quote: QuoteCallback = Arc::new(move |quote: &Quote| {
+        quotes.lock().unwrap().push(quote.clone());
+    });
+    let factory_dyn: Arc<dyn ConnectionFactory> = factory.clone();
+    let session_always_on: Arc<dyn Fn(chrono::DateTime<chrono::Utc>) -> bool + Send + Sync> =
+        Arc::new(|_| true);
+    let client = Arc::new(
+        KisMarketDataClient::new(
+            approval_provider(),
+            "ws://kis.example/ws".into(),
+            factory_dyn,
+            on_quote,
+        )
+        .with_tick_stall_after(Duration::from_millis(200))
+        .with_session_check(session_always_on),
+    );
+    client.subscribe(&symbol()).await;
+    let runner = Arc::clone(&client);
+    let task = tokio::spawn(async move {
+        runner.run().await;
+    });
+
+    wait_until(|| *factory.connects.lock().unwrap() >= 2).await;
+    wait_until(|| client.liveness().last_tick_at().is_some()).await;
+    task.abort();
+
+    assert!(
+        *factory.connects.lock().unwrap() >= 2,
+        "tick stall with live keepalives must force a reconnect"
+    );
+    let second = factory
+        .second
+        .lock()
+        .unwrap()
+        .clone()
+        .expect("second connection exists");
+    assert_eq!(
+        second.sent.lock().unwrap().len(),
+        1,
+        "fresh connection replays the subscription"
+    );
+    assert!(client.liveness().last_tick_at().is_some());
+}
+
 #[tokio::test]
 #[serial_test::serial]
 async fn silent_stall_triggers_reconnect_and_liveness_visible() {
